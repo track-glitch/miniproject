@@ -42,7 +42,7 @@ class CaretakerModel {
       'firstname': firstname,
       'lastname': lastname,
       'gender': gender,
-      'birthdate': birthdate,
+      'birthdate': birthdate.toIso8601String(),
       'phonenumber': phonenumber,
       'email': email,
       'aboutme': aboutme,

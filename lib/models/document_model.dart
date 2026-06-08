@@ -17,7 +17,7 @@ class DocumentModel {
       'documentId': documentId,
       'documenttype': documenttype,
       'filepath': filepath,
-      'uploaddate': uploaddate,
+      'uploaddate': uploaddate.toIso8601String(),
     };
   }
 

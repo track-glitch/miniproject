@@ -17,7 +17,7 @@ class NotificationModel {
       'notifyId': notifyId,
       'notifystatus': notifystatus,
       'notifydetail': notifydetail,
-      'notifydate': notifydate,
+      'notifydate': notifydate.toIso8601String(),
     };
   }
 

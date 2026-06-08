@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart'; // ดึง AuthService ของคุณมาใช้งาน
-import 'register_page.dart'; // นำเข้าหน้า Register (สมมติว่าชื่อไฟล์นี้)
+import 'register_page.dart'; // นำเข้าหน้า Register
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -10,9 +10,17 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  // สร้าง Controller สำหรับรับค่าจากช่องกรอกข้อความ
-  final TextEditingController _emailController = TextEditingController();
+  // 🛠️ เปลี่ยนชื่อตัวแปรให้สื่อความหมายว่าเป็นช่องกรอก Username
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    // 🗑️ คืนแรมทำลายทิ้งตัวควบคุมทั้งหมดเมื่อปิดหน้าจอ
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose(); 
+  }
 
   // เรียกใช้งาน AuthService
   final AuthService _authService = AuthService();
@@ -22,14 +30,14 @@ class _LoginPageState extends State<LoginPage> {
   // ตัวแปรสำหรับแสดงสถานะโหลดตอนกดปุ่มเข้าสู่ระบบ
   bool _isLoading = false;
 
-  // โทนสีหลักตาม UI ของคุณ (ปรับแก้รหัสสีได้ตามต้องการ)
+  // โทนสีหลักตาม UI 
   final Color primaryColor = const Color(0xFF9B59B6); // สีม่วงเข้ม
   final Color lightPurple = const Color(0xFFE8D4F4); // สีม่วงอ่อนของกล่อง
 
   // ฟังก์ชันจัดการการเข้าสู่ระบบ
   void _handleLogin() async {
     // ตรวจสอบว่ากรอกข้อมูลครบไหม
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+    if (_usernameController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('กรุณากรอกข้อมูลให้ครบถ้วน')),
       );
@@ -40,10 +48,9 @@ class _LoginPageState extends State<LoginPage> {
       _isLoading = true;
     });
 
-    // เรียกใช้ฟังก์ชัน loginMember จาก AuthService ของคุณ
     final user = await _authService.loginMember(
-      _emailController.text.trim(),
-      _passwordController.text.trim(),
+      username: _usernameController.text.trim(),
+      password: _passwordController.text.trim(),
     );
 
     setState(() {
@@ -52,15 +59,16 @@ class _LoginPageState extends State<LoginPage> {
 
     if (user != null) {
       // เข้าสู่ระบบสำเร็จ -> เปลี่ยนหน้าไปหน้าหลัก (Home)
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('เข้าสู่ระบบสำเร็จ!')));
-      // ตัวอย่างการเปลี่ยนหน้า (ให้เปลี่ยนเป็นหน้าหลักของคุณ)
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('เข้าสู่ระบบสำเร็จ!')),
+      );
+      
+      // TODO: เปิดสวิตช์บรรทัดนี้แล้วเปลี่ยนเป็นหน้าแรกของแอปคุณ (เช่น ฝั่งคนไข้ หรือ อาสา)
       // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
     } else {
-      // เข้าสู่ระบบไม่สำเร็จ
+      // 🛠️ ปรับข้อความเตือนให้สอดคล้องกับระบบ Username
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('อีเมลหรือรหัสผ่านไม่ถูกต้อง')),
+        const SnackBar(content: Text('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง')),
       );
     }
   }
@@ -89,11 +97,10 @@ class _LoginPageState extends State<LoginPage> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 20),
-                // โลโก้ และ ชื่อแอป (เปลี่ยนจาก Icon เป็นรูปภาพโลโก้ของคุณ)
+                // โลโก้ และ ชื่อแอป
                 Image.asset(
-                  'assets/logo.png', // ใส่ path ให้ตรงกับชื่อไฟล์ที่คุณตั้งไว้
-                  height:
-                      160, // กำหนดขนาดความสูงของรูป (ปรับตัวเลขได้ตามต้องการ)
+                  'assets/logo.png', 
+                  height: 160, 
                   fit: BoxFit.contain,
                 ),
 
@@ -125,12 +132,12 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 15),
 
-                      // ช่องกรอก ชื่อผู้ใช้ (อีเมล)
+                      // 🛠️ ช่องกรอก ชื่อผู้ใช้ (Username) 
                       TextField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
+                        controller: _usernameController,
+                        keyboardType: TextInputType.text, // เปลี่ยนจาก emailAddress เป็น text ธรรมดา
                         decoration: InputDecoration(
-                          hintText: 'ชื่อผู้ใช้ (อีเมล)',
+                          hintText: 'ชื่อผู้ใช้ (Username)', // 🛠️ เปลี่ยนคำบอกใบ้บนหน้าจอ
                           filled: true,
                           fillColor: Colors.white,
                           contentPadding: const EdgeInsets.symmetric(
@@ -251,7 +258,6 @@ class _LoginPageState extends State<LoginPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            // สมมติว่าหน้า Register ของคุณชื่อ RegisterPage
                             builder: (context) => const RegisterPage(),
                           ),
                         );

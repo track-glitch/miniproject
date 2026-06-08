@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 // --- เปลี่ยน Path ให้ตรงกับโฟลเดอร์ในโปรเจกต์ของคุณ ---
 import '../services/auth_service.dart';
-import '../services/database_service.dart';
 import '../models/caretaker_model.dart';
 import '../models/patient_model.dart';
 import '../models/relative_model.dart';
@@ -16,9 +15,8 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  // Service สำหรับจัดการ Firebase
+  // Service สำหรับจัดการ Firebase Auth และ Realtime Database
   final AuthService _authService = AuthService();
-  final DatabaseService _dbService = DatabaseService();
 
   // สถานะของหน้าจอ
   bool _isCaretaker = false;
@@ -33,6 +31,7 @@ class _RegisterPageState extends State<RegisterPage> {
   // ==========================================
   // Controllers สำหรับดึงข้อมูลจากฟอร์ม "ผู้ป่วย/ญาติ"
   // ==========================================
+  final TextEditingController _patUsernameController = TextEditingController(); 
   final TextEditingController _patEmailController = TextEditingController();
   final TextEditingController _patPasswordController = TextEditingController();
   final TextEditingController _patIdCardController = TextEditingController();
@@ -51,15 +50,48 @@ class _RegisterPageState extends State<RegisterPage> {
   // ==========================================
   // Controllers สำหรับดึงข้อมูลจากฟอร์ม "ผู้ดูแล"
   // ==========================================
+  final TextEditingController _careUsernameController = TextEditingController(); // 🛠️ เพิ่มเพื่อให้ฝั่งอาสาสมัครมีช่องเก็บ Username
   final TextEditingController _careIdCardController = TextEditingController();
   final TextEditingController _careEmailController = TextEditingController();
   final TextEditingController _carePasswordController = TextEditingController();
   final TextEditingController _careFirstNameController = TextEditingController();
   final TextEditingController _careLastNameController = TextEditingController();
   final TextEditingController _carePhoneController = TextEditingController();
-  final TextEditingController _careAddressController = TextEditingController(); // รวมที่อยู่คร่าวๆ
+  final TextEditingController _careAddressController = TextEditingController(); 
   final TextEditingController _careVehicleDescController = TextEditingController();
   final TextEditingController _careVehicleRegController = TextEditingController();
+
+  @override
+  void dispose() {
+    // 🗑️ คืนแรมทำลายทิ้งตัวควบคุมทั้งหมดเมื่อปิดหน้าจอ
+    _careUsernameController.dispose();
+    _careIdCardController.dispose();
+    _careEmailController.dispose();
+    _carePasswordController.dispose();
+    _careFirstNameController.dispose();
+    _careLastNameController.dispose();
+    _carePhoneController.dispose();
+    _careAddressController.dispose();
+    _careVehicleDescController.dispose();
+    _careVehicleRegController.dispose();
+    
+    _patUsernameController.dispose();
+    _patEmailController.dispose();
+    _patPasswordController.dispose();
+    _patIdCardController.dispose();
+    _patFirstNameController.dispose();
+    _patLastNameController.dispose();
+    _patPhoneController.dispose();
+    _patLineIdController.dispose();
+    _patAddressController.dispose();
+    
+    _relFirstNameController.dispose();
+    _relLastNameController.dispose();
+    _relPhoneController.dispose();
+    _relLineIdController.dispose();
+    _relRelationController.dispose();
+    super.dispose(); 
+  }
 
   // ฟังก์ชันจัดการการสมัครสมาชิก
   void _handleRegister() async {
@@ -68,87 +100,95 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     try {
-      // 1. ดึงอีเมลและรหัสผ่านตามแท็บที่เลือก
+      String username = _isCaretaker ? _careUsernameController.text.trim() : _patUsernameController.text.trim();
       String email = _isCaretaker ? _careEmailController.text.trim() : _patEmailController.text.trim();
       String password = _isCaretaker ? _carePasswordController.text.trim() : _patPasswordController.text.trim();
 
-      if (email.isEmpty || password.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('กรุณากรอกอีเมลและรหัสผ่าน')));
+      // ตรวจสอบค่าว่างเบื้องต้น
+      if (username.isEmpty || email.isEmpty || password.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('กรุณากรอกข้อมูล ชื่อผู้ใช้ อีเมล และรหัสผ่าน ให้ครบถ้วน')));
         setState(() => _isLoading = false);
         return;
       }
 
-      // 2. สมัครบัญชีผู้ใช้ใน Firebase Auth
-      UserCredential? userCredential = await _authService.registerMember(email, password);
+      UserCredential? userCredential;
 
-      if (userCredential != null && userCredential.user != null) {
-        String uid = userCredential.user!.uid; // ได้รหัสประจำตัวผู้ใช้ (UID) มาแล้ว
-        bool isSuccess = false;
+      // 🛠️ แยกทางเดินในการเรียกใช้ Method ตามประเภทผู้ใช้งานจริง
+      if (_isCaretaker) {
+        // 1. มัดรวมโมเดลผู้ดูแล
+        CaretakerModel caretakerData = CaretakerModel(
+          caretakerId: "", // จะถูกนำไปเขียนทับด้วย UID ในหลังบ้านครับ
+          profilephoto: "",
+          firstname: _careFirstNameController.text.trim(),
+          lastname: _careLastNameController.text.trim(),
+          gender: "ไม่ระบุ", 
+          birthdate: DateTime.now(), 
+          phonenumber: _carePhoneController.text.trim(),
+          email: email,
+          aboutme: "",
+          equipmentdetails: "${_careVehicleDescController.text.trim()} ทะเบียน ${_careVehicleRegController.text.trim()}", 
+          address: _careAddressController.text.trim(),
+          admincomment: "",
+          servicestatus: "pending",
+          accountstatus: "active",
+          latitude: 0.0,
+          longitude: 0.0,
+        );
 
-        if (_isCaretaker) {
-          // === บันทึกข้อมูล: ผู้ดูแล ===
-          CaretakerModel newCaretaker = CaretakerModel(
-            caretakerId: uid,
-            profilephoto: "",
-            firstname: _careFirstNameController.text,
-            lastname: _careLastNameController.text,
-            gender: "ไม่ระบุ", // TODO: นำค่าจาก Dropdown มาใส่
-            birthdate: DateTime.now(), // TODO: นำค่าจาก DatePicker มาใส่
-            phonenumber: _carePhoneController.text,
-            email: email,
-            aboutme: "",
-            equipmentdetails: _careVehicleDescController.text, // ประยุกต์ใช้กับยานพาหนะเบื้องต้น
-            address: _careAddressController.text,
-            admincomment: "",
-            servicestatus: "pending",
-            accountstatus: "active",
-            latitude: 0.0,
-            longitude: 0.0,
-          );
-          
-          isSuccess = await _dbService.saveCaretakerData(newCaretaker);
+        // 2. ส่งคำขอไปที่ฟังก์ชันสมัครสมาชิกของผู้ดูแล
+        userCredential = await _authService.registerCaretaker(
+          username: username,
+          password: password,
+          usertype: 'caretaker',
+          caretaker: caretakerData,
+        );
 
-        } else {
-          // === บันทึกข้อมูล: ผู้ป่วย และ ญาติ ===
-          RelativeModel newRelative = RelativeModel(
-            relativeId: uid, // ใช้ UID ผูกกับญาติที่เป็นคนสมัคร
-            firstname: _relFirstNameController.text,
-            lastname: _relLastNameController.text,
-            email: email,
-            phonenumber: _relPhoneController.text,
-            lineid: _relLineIdController.text,
-            relationship: _relRelationController.text,
-          );
-
-          PatientModel newPatient = PatientModel(
-            patientId: "PAT_$uid", // สร้าง ID ผู้ป่วยอิงจากญาติ
-            patientphoto: "",
-            firstname: _patFirstNameController.text,
-            lastname: _patLastNameController.text,
-            phonenumber: _patPhoneController.text,
-            gender: "ไม่ระบุ",
-            birthdate: DateTime.now(),
-            disease: "", // ค่าว่างไว้ก่อน (อาจให้แก้ในแอปทีหลัง)
-            mobility: "",
-            address: _patAddressController.text,
-            latitude: 0.0,
-            longitude: 0.0,
-          );
-
-          isSuccess = await _dbService.saveRelativeAndPatientData(newRelative, newPatient);
-        }
-
-        // 3. ตรวจสอบผลการบันทึกฐานข้อมูล
-        if (isSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('สมัครสมาชิกสำเร็จ!')));
-          // เด้งกลับไปหน้าเข้าสู่ระบบ
-          Navigator.pop(context);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล')));
-        }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('อีเมลนี้ถูกใช้งานแล้ว หรือข้อมูลไม่ถูกต้อง')));
+        // 1. มัดรวมโมเดลญาติ
+        RelativeModel relativeData = RelativeModel(
+          relativeId: "", 
+          firstname: _relFirstNameController.text.trim(),
+          lastname: _relLastNameController.text.trim(),
+          email: email,
+          phonenumber: _relPhoneController.text.trim(),
+          lineid: _relLineIdController.text.trim(),
+          relationship: _relRelationController.text.trim(),
+        );
+
+        // 2. มัดรวมโมเดลคนไข้
+        PatientModel patientData = PatientModel(
+          patientId: _patIdCardController.text.trim().isNotEmpty ? _patIdCardController.text.trim() : "PAT_TEMP",
+          patientphoto: "",
+          firstname: _patFirstNameController.text.trim(),
+          lastname: _patLastNameController.text.trim(),
+          phonenumber: _patPhoneController.text.trim(),
+          gender: "ไม่ระบุ",
+          birthdate: DateTime.now(),
+          disease: "", 
+          mobility: "",
+          address: _patAddressController.text.trim(),
+          latitude: 0.0,
+          longitude: 0.0,
+        );
+
+        // 3. ส่งคำขอไปที่ฟังก์ชันสมัครสมาชิกของญาติพ่วงข้อมูลคนไข้
+        userCredential = await _authService.registerRelative(
+          username: username,
+          password: password,
+          usertype: 'relative',
+          relative: relativeData,
+          patient: patientData,
+        );
       }
+
+      // ตรวจสอบผลลัพธ์การทำงาน
+      if (userCredential != null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('สมัครสมาชิกสำเร็จและบันทึกข้อมูลเรียบร้อย!')));
+        Navigator.pop(context); // เด้งกลับไปหน้าเข้าสู่ระบบ
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('เกิดข้อผิดพลาดในการสมัครสมาชิก หรือชื่อผู้ใช้นี้อาจถูกใช้ไปแล้ว')));
+      }
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
@@ -182,7 +222,6 @@ class _RegisterPageState extends State<RegisterPage> {
               _buildProfileUpload(),
               const SizedBox(height: 25),
               
-              // แสดงฟอร์มตามแท็บที่เลือก
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 child: _isCaretaker ? _buildCaretakerForm() : _buildRelativeForm(),
@@ -190,7 +229,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
               const SizedBox(height: 20),
 
-              // ปุ่มสมัครสมาชิก
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -225,49 +263,45 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  // ==========================================
-  // WIDGET FORMS
-  // ==========================================
-
   Widget _buildRelativeForm() {
     return Column(
       key: const ValueKey('RelativeForm'),
       children: [
-        _buildSection(title: 'ข้อมูลผู้ป่วย', children: [
-          _buildTextField(hint: 'ชื่อผู้ใช้ (อีเมล)', controller: _patEmailController),
+        _buildSection(title: 'ข้อมูลบัญชีเข้าสู่ระบบ', children: [
+          _buildTextField(hint: 'ชื่อผู้ใช้ (Username)', controller: _patUsernameController), 
+          _buildTextField(hint: 'อีเมลใช้สำหรับติดต่อจริง', controller: _patEmailController),
           _buildTextField(hint: 'รหัสผ่าน', controller: _patPasswordController, isPassword: true),
         ]),
-        _buildSection(title: 'ข้อมูลส่วนตัว', children: [
-          _buildTextField(hint: 'หมายเลขบัตรประชาชน', controller: _patIdCardController),
+        _buildSection(title: 'ข้อมูลส่วนตัวผู้ป่วย', children: [
+          _buildTextField(hint: 'หมายเลขบัตรประชาชนผู้ป่วย', controller: _patIdCardController),
           Row(
             children: [
-              Expanded(child: _buildTextField(hint: 'ชื่อจริง', controller: _patFirstNameController)),
+              Expanded(child: _buildTextField(hint: 'ชื่อจริงผู้ป่วย', controller: _patFirstNameController)),
               const SizedBox(width: 10),
-              Expanded(child: _buildTextField(hint: 'นามสกุล', controller: _patLastNameController)),
+              Expanded(child: _buildTextField(hint: 'นามสกุลผู้ป่วย', controller: _patLastNameController)),
             ],
           ),
-          _buildTextField(hint: 'เบอร์โทรศัพท์', controller: _patPhoneController),
-          _buildTextField(hint: 'ไอดีไลน์', controller: _patLineIdController),
+          _buildTextField(hint: 'เบอร์โทรศัพท์ผู้ป่วย', controller: _patPhoneController),
         ]),
-        _buildSection(title: 'ข้อมูลที่อยู่', children: [
+        _buildSection(title: 'ข้อมูลที่อยู่ผู้ป่วย', children: [
           _buildTextField(hint: 'รายละเอียดที่อยู่...', controller: _patAddressController, maxLines: 3),
         ]),
-        _buildSection(title: 'ข้อมูลติดต่อญาติ', children: [
+        _buildSection(title: 'ข้อมูลติดต่อญาติ (ผู้สมัครหลัก)', children: [
           Row(
             children: [
-              Expanded(child: _buildTextField(hint: 'ชื่อจริง', controller: _relFirstNameController)),
+              Expanded(child: _buildTextField(hint: 'ชื่อจริงญาติ', controller: _relFirstNameController)),
               const SizedBox(width: 10),
-              Expanded(child: _buildTextField(hint: 'นามสกุล', controller: _relLastNameController)),
+              Expanded(child: _buildTextField(hint: 'นามสกุลญาติ', controller: _relLastNameController)),
             ],
           ),
           Row(
             children: [
-              Expanded(child: _buildTextField(hint: 'เบอร์โทรติดต่อ', controller: _relPhoneController)),
+              Expanded(child: _buildTextField(hint: 'เบอร์โทรติดต่อญาติ', controller: _relPhoneController)),
               const SizedBox(width: 10),
-              Expanded(child: _buildTextField(hint: 'ไอดีไลน์', controller: _relLineIdController)),
+              Expanded(child: _buildTextField(hint: 'ไอดีไลน์ญาติ', controller: _relLineIdController)),
             ],
           ),
-          _buildTextField(hint: 'สถานะความสัมพันธ์', controller: _relRelationController),
+          _buildTextField(hint: 'สถานะความสัมพันธ์ (เช่น ลูก, หลาน)', controller: _relRelationController),
         ]),
       ],
     );
@@ -277,12 +311,13 @@ class _RegisterPageState extends State<RegisterPage> {
     return Column(
       key: const ValueKey('CaretakerForm'),
       children: [
-        _buildSection(title: 'ข้อมูลผู้ดูแล', children: [
-          _buildTextField(hint: 'หมายเลขบัตรประชาชน', controller: _careIdCardController),
-          _buildTextField(hint: 'อีเมล', controller: _careEmailController),
+        _buildSection(title: 'ข้อมูลบัญชีเข้าสู่ระบบ', children: [
+          _buildTextField(hint: 'ชื่อผู้ใช้ (Username)', controller: _careUsernameController),
+          _buildTextField(hint: 'อีเมลใช้สำหรับติดต่อจริง', controller: _careEmailController),
           _buildTextField(hint: 'รหัสผ่าน', controller: _carePasswordController, isPassword: true),
         ]),
-        _buildSection(title: 'ข้อมูลส่วนตัว', children: [
+        _buildSection(title: 'ข้อมูลส่วนตัวผู้ดูแล', children: [
+          _buildTextField(hint: 'หมายเลขบัตรประชาชน', controller: _careIdCardController),
           Row(
             children: [
               Expanded(child: _buildTextField(hint: 'ชื่อจริง', controller: _careFirstNameController)),
@@ -293,11 +328,11 @@ class _RegisterPageState extends State<RegisterPage> {
           _buildTextField(hint: 'เบอร์โทรศัพท์', controller: _carePhoneController),
         ]),
         _buildSection(title: 'ข้อมูลที่อยู่', children: [
-          _buildTextField(hint: 'ที่อยู่ปัจจุบัน', controller: _careAddressController, maxLines: 2),
+          _buildTextField(hint: 'ที่อยู่ปัจจุบันคร่าวๆ', controller: _careAddressController, maxLines: 2),
         ]),
-        _buildSection(title: 'ข้อมูลยานพาหนะและใบรับรอง', children: [
-          _buildTextField(hint: 'เช่น รุ่นรถ สีรถยนต์ ประเภท', controller: _careVehicleDescController),
-          _buildTextField(hint: 'ทะเบียนรถ', controller: _careVehicleRegController),
+        _buildSection(title: 'ข้อมูลยานพาหนะเบื้องต้น', children: [
+          _buildTextField(hint: 'เช่น รถยนต์ Toyota Fortuner สีขาว', controller: _careVehicleDescController),
+          _buildTextField(hint: 'ทะเบียนรถ (เช่น กข 1234 เชียงใหม่)', controller: _careVehicleRegController),
         ]),
       ],
     );

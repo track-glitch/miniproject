@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart'; // 1. เพิ่มบรรทัดนี้
-import 'firebase_options.dart'; // 2. เพิ่มบรรทัดนี้ (ไฟล์ตั้งค่าที่ได้จาก FlutterFire CLI)
+import 'package:firebase_core/firebase_core.dart'; // 1. เพิ่มบรรทัดนี้ // 2. เพิ่มบรรทัดนี้ (ไฟล์ตั้งค่าที่ได้จาก FlutterFire CLI)
 import 'views/login_page.dart';
 
 // 3. เปลี่ยนจาก void main() ธรรมดา เป็น Future<void> main() async
@@ -9,9 +8,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 5. สั่งเริ่มต้นการทำงานของ Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp();
 
   runApp(const MyApp());
 }
