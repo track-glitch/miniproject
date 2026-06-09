@@ -3,14 +3,17 @@ import 'package:firebase_database/firebase_database.dart'; // 🛠️ เปล�
 import '../models/relative_model.dart';
 import '../models/patient_model.dart';
 import '../models/caretaker_model.dart';
+import '../models/vehicle_model.dart';
+import '../models/document_model.dart';
+
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  
+
   // 🛠️ สร้างตัวแปรอ้างอิงไปยังถังข้อมูลของ Realtime Database
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
 
   // 🔐 1. ฟังก์ชันสมัครสมาชิก (กรอก Username, Email จริง, และ Password)
-Future<UserCredential?> registerRelative({
+  Future<UserCredential?> registerRelative({
     required String username,
     required String password,
     required String usertype,
@@ -18,25 +21,35 @@ Future<UserCredential?> registerRelative({
     required PatientModel patient,
   }) async {
     try {
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: relative.email,
-        password: password,
-      );
+      UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(
+            email: relative.email,
+            password: password,
+          );
 
       String uid = userCredential.user!.uid;
 
       // 1. บันทึกข้อมูลบัญชีหลัก
       await _dbRef.child('Login').child(uid).set({
         'username': username,
-        'email': relative.email, // 🛠️ ต้องเก็บ email ไว้ในนี้ด้วยนะน้า เอาไว้ค้นหาตอน login ครับ!
+        'password': password,
         'usertype': usertype,
       });
 
       // 2. บันทึกข้อมูลญาติ
-      await _dbRef.child('Login').child(usertype).child(uid).set(relative.toMap()); // 🛠️ แปลงเป็น toMap()
+      await _dbRef
+          .child('Login')
+          .child(uid)
+          .child('Relative')
+          .set(relative.toMap()); // 🛠️ แปลงเป็น toMap()
 
       // 3. บันทึกข้อมูลผู้ป่วย
-      await _dbRef.child('Login').child(usertype).child(uid).child('Patient').set(patient.toMap()); // 🛠️ แปลงเป็น toMap() และขยับปมให้สมเหตุสมผล
+      await _dbRef
+          .child('Login')
+          .child(uid)
+          .child('Relative')
+          .child('Patient')
+          .set(patient.toMap()); // 🛠️ แปลงเป็น toMap() และขยับปมให้สมเหตุสมผล
 
       return userCredential;
     } catch (e) {
@@ -50,46 +63,57 @@ Future<UserCredential?> registerRelative({
     required String password,
     required String usertype,
     required CaretakerModel caretaker,
+    required VehicleModel vehicle,
+    required List<DocumentModel> documents, // 2. เพิ่มการรับ List ของเอกสาร
   }) async {
     try {
-      // สเต็ป A: ส่งอีเมลจริง + รหัสผ่าน ไปขอบัญชีหลักและเอา UID ป้ายแดงมาจาก Firebase Auth
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: caretaker.email,
-        password: password,
-      );
+      UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(
+            email: caretaker.email,
+            password: password,
+          );
 
       String uid = userCredential.user!.uid;
 
-      // สเต็ป B: บันทึกคู่แฝด "username" และ "email" ลงตู้ Realtime Database ทันทีเพื่อเอาไว้สืบค้นตอนล็อกอิน
-      // โครงสร้าง JSON จะถูกเก็บไว้ที่ปม: users -> uid -> ข้อมูลส่วนตัว
+      // บันทึกข้อมูลบัญชีหลัก
       await _dbRef.child('Login').child(uid).set({
         'username': username,
         'password': password,
-        'usertype': usertype, // เก็บตำแหน่งเพื่อแยกหน้าจอแอป
+        'usertype': usertype,
+        'email': caretaker.email,
       });
 
-      await _dbRef.child('Login').child(usertype).child(uid).set({
-        'caretakerId': caretaker.caretakerId,
-        'profilephoto': caretaker.profilephoto,
-        'firstname': caretaker.firstname,
-        'lastname': caretaker.lastname,
-        'gender': caretaker.gender,
-        'birthdate': caretaker.birthdate.toIso8601String(),
-        'phonenumber': caretaker.phonenumber,
-        'email': caretaker.email,
-        'aboutme': caretaker.aboutme,
-        'equipmentdetails': caretaker.equipmentdetails,
-        'address': caretaker.address,
-        'admincomment': caretaker.admincomment,
-        'servicestatus': caretaker.servicestatus,
-        'accountstatus': caretaker.accountstatus,
-        'latitude': caretaker.latitude,
-        'longitude': caretaker.longitude,
-      });
+      // บันทึกรายละเอียดผู้ดูแล
+      Map<String, dynamic> caretakerMap = caretaker.toMap();
+      caretakerMap['caretakerId'] = uid;
+      await _dbRef
+          .child('Login')
+          .child(uid)
+          .child('Caretaker')
+          .set(caretakerMap);
+
+      // บันทึกข้อมูลยานพาหนะ
+      await _dbRef
+          .child('Login')
+          .child(uid)
+          .child('Caretaker')
+          .child('Vehicle')
+          .set(vehicle.toMap());
+
+      // 3. เพิ่มการบันทึกข้อมูลเอกสาร (ลูปตามจำนวนไฟล์ที่ส่งมา)
+      for (var doc in documents) {
+        await _dbRef
+            .child('Login')
+            .child(uid)
+            .child('Caretaker')
+            .child('Document')
+            .child(doc.documentId) // ใช้ ID เอกสารเป็นชื่อปมย่อย
+            .set(doc.toMap());
+      }
 
       return userCredential;
     } catch (e) {
-      print("เกิดข้อผิดพลาดในการสมัครสมาชิก: $e");
+      print("เกิดข้อผิดพลาดในการสมัครสมาชิกผู้ดูแล: $e");
       return null;
     }
   }

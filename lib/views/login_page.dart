@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import '../services/auth_service.dart'; // ดึง AuthService ของคุณมาใช้งาน
-import 'register_page.dart'; // นำเข้าหน้า Register
+import 'caretaker_register_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,11 +16,33 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _passwordController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _requestLocationPermissionOnStartup();
+  }
+
+  @override
   void dispose() {
     // 🗑️ คืนแรมทำลายทิ้งตัวควบคุมทั้งหมดเมื่อปิดหน้าจอ
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose(); 
+  }
+
+  // ==========================================
+  // ฟังก์ชันขออนุญาติการเข้าถึงตำแหน่งตั้งแต่หน้า login
+  // ==========================================
+  Future<void> _requestLocationPermissionOnStartup() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        await Geolocator.requestPermission();
+      } else if (permission == LocationPermission.deniedForever) {
+        await Geolocator.openLocationSettings();
+      }
+    } catch (e) {
+      print("Error requesting location permission: \$e");
+    }
   }
 
   // เรียกใช้งาน AuthService
@@ -258,7 +281,7 @@ class _LoginPageState extends State<LoginPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const RegisterPage(),
+                            builder: (context) => const CaretakerRegisterPage(),
                           ),
                         );
                       },
