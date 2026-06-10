@@ -12,6 +12,7 @@ import '../models/caretaker_model.dart';
 import '../models/vehicle_model.dart';
 import '../models/document_model.dart';
 import 'waiting_approval_page.dart';
+import 'relative_register_page.dart';
 
 class CaretakerRegisterPage extends StatefulWidget {
   const CaretakerRegisterPage({super.key});
@@ -287,6 +288,54 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         );
       },
     );
+  }
+
+  bool get _hasAnyData {
+    return [
+      _usernameCtrl,
+      _emailCtrl,
+      _passwordCtrl,
+      _citizenIdCtrl,
+      _firstNameCtrl,
+      _lastNameCtrl,
+      _birthDateCtrl,
+      _phoneCtrl,
+      _addressCtrl,
+      _vehicleTypeCtrl,
+      _brandCtrl,
+      _modelCtrl,
+      _colorCtrl,
+      _licensePlateCtrl,
+    ].any((c) => c.text.trim().isNotEmpty)
+        || _profileImageFile != null
+        || _licenseImageFile != null
+        || _insuranceImageFile != null
+        || _firstAidImageFile != null
+        || _vehicleImageFiles.isNotEmpty
+        || _selectedGender.isNotEmpty
+        || _hasPinned;
+  }
+
+  void _handleBackNavigation() {
+    if (_hasAnyData) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('ยืนยันการออก'),
+          content: const Text('คุณมีข้อมูลที่กรอกไว้บางส่วน ต้องการออกจากหน้านี้หรือไม่? ข้อมูลที่กรอกจะไม่ถูกบันทึก'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('ยกเลิก')),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('ออกจากหน้านี้', style: TextStyle(color: Colors.red))),
+          ],
+        ),
+      ).then((exit) {
+        if (exit == true) {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const RelativeRegisterPage()));
+        }
+      });
+    } else {
+      Navigator.pop(context);
+    }
   }
 
   void _handleRegisterSubmit() async {
@@ -681,17 +730,23 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
       child: Row(
         children: [
           Expanded(
-            child: Container(
-              alignment: Alignment.center,
-              decoration: BoxDecoration(color: _selectedTab == "ญาติ" ? darkPurple : Colors.transparent, borderRadius: BorderRadius.circular(25)),
-              child: Text('ญาติ', style: TextStyle(color: _selectedTab == "ญาติ" ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
+            child: GestureDetector(
+              onTap: () => _handleBackNavigation(),
+              child: Container(
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: _selectedTab == "ญาติ" ? darkPurple : Colors.transparent, borderRadius: BorderRadius.circular(25)),
+                child: Text('ญาติ', style: TextStyle(color: _selectedTab == "ญาติ" ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
+              ),
             ),
           ),
           Expanded(
-            child: Container(
-              alignment: Alignment.center,
-              decoration: BoxDecoration(color: _selectedTab == "ผู้ดูแล" ? darkPurple : Colors.transparent, borderRadius: BorderRadius.circular(25)),
-              child: Text('ผู้ดูแล', style: TextStyle(color: _selectedTab == "ผู้ดูแล" ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
+            child: GestureDetector(
+              onTap: () {}, // อยู่หน้าเดียวกัน ไม่ต้องทำอะไร
+              child: Container(
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: _selectedTab == "ผู้ดูแล" ? darkPurple : Colors.transparent, borderRadius: BorderRadius.circular(25)),
+                child: Text('ผู้ดูแล', style: TextStyle(color: _selectedTab == "ผู้ดูแล" ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
+              ),
             ),
           ),
         ],

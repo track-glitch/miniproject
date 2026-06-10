@@ -281,7 +281,7 @@ class _LoginPageState extends State<LoginPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const CaretakerRegisterPage(),
+                            builder: (context) => const RelativeRegister(),
                           ),
                         );
                       },

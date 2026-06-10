@@ -61,9 +61,9 @@ class WaitingApprovalPage extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
-                  color: lightPurple.withOpacity(0.5),
+                  color: lightPurple.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: primaryColor.withOpacity(0.3)),
+                  border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
