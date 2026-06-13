@@ -1,37 +1,33 @@
 class DocumentModel {
-  final String documentId;
-  final String documenttype;
-  final String
-  filepath; // มักเก็บเป็น URL ลิงก์ไฟล์ที่อัปโหลดขึ้น Firebase Storage
-  final DateTime uploaddate;
+  String? documentId;
+  String? documenttype;
+  String? filepath;
+  DateTime? uploaddate;
 
   DocumentModel({
-    required this.documentId,
-    required this.documenttype,
-    required this.filepath,
-    required this.uploaddate,
+    this.documentId,
+    this.documenttype,
+    this.filepath,
+    this.uploaddate,
   });
 
-  // แปลงเป็น Map สำหรับยิงขึ้นคลาวด์ Firestore
-  Map<String, dynamic> toMap() {
+  factory DocumentModel.fromJson(Map<String, dynamic> json) {
+    return DocumentModel(
+      documentId: json['documentId'],
+      documenttype: json['documenttype'],
+      filepath: json['filepath'],
+      uploaddate: json['uploaddate'] != null
+          ? DateTime.parse(json['uploaddate'])
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
     return {
       'documentId': documentId,
       'documenttype': documenttype,
       'filepath': filepath,
-      'uploaddate': uploaddate.toIso8601String(),
+      'uploaddate': uploaddate?.toIso8601String(),
     };
-  }
-
-  // แปลงกลับจาก Map มาเป็นคลาสเพื่อดึงมาใช้งานในแอป
-  factory DocumentModel.fromMap(Map<String, dynamic> map) {
-    return DocumentModel(
-      documentId: map['documentId'] ?? '',
-      documenttype: map['documenttype'] ?? '',
-      filepath: map['filepath'] ?? '',
-      uploaddate: map['uploaddate'] != null
-          ? (map['uploaddate'] as dynamic)
-                .toDate() // แปลงจาก Timestamp ของ Firebase กลับเป็น DateTime
-          : DateTime.now(),
-    );
   }
 }

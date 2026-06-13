@@ -1,7 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/auth_service.dart'; // ดึง AuthService ของคุณมาใช้งาน
 import 'caretaker_register_page.dart';
+import 'relative/relative_home_page.dart';
+import 'admin/list_caretaker_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -57,7 +60,6 @@ class _LoginPageState extends State<LoginPage> {
   final Color primaryColor = const Color(0xFF9B59B6); // สีม่วงเข้ม
   final Color lightPurple = const Color(0xFFE8D4F4); // สีม่วงอ่อนของกล่อง
 
-  // ฟังก์ชันจัดการการเข้าสู่ระบบ
   void _handleLogin() async {
     // ตรวจสอบว่ากรอกข้อมูลครบไหม
     if (_usernameController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -71,27 +73,44 @@ class _LoginPageState extends State<LoginPage> {
       _isLoading = true;
     });
 
-    final user = await _authService.loginMember(
-      username: _usernameController.text.trim(),
-      password: _passwordController.text.trim(),
+    // 🚀 เรียกใช้ฟังก์ชันล็อกอินที่เราเพิ่งสร้าง
+    var result = await _authService.loginWithUsername(
+      _usernameController.text.trim(),
+      _passwordController.text.trim(),
     );
 
     setState(() {
       _isLoading = false;
     });
 
-    if (user != null) {
-      // เข้าสู่ระบบสำเร็จ -> เปลี่ยนหน้าไปหน้าหลัก (Home)
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('เข้าสู่ระบบสำเร็จ!')));
+    // เช็กผลลัพธ์
+    if (result != null && result['success'] == true) {
+      String usertype = result['usertype']; // ดึงประเภทผู้ใช้ออกมา
+      String uid = result['uid'];
 
-      // TODO: เปิดสวิตช์บรรทัดนี้แล้วเปลี่ยนเป็นหน้าแรกของแอปคุณ (เช่น ฝั่งคนไข้ หรือ อาสา)
-      // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
+      // 🔀 แยกการนำทาง (Navigation) ตามประเภทผู้ใช้งาน
+      if (usertype == 'patient' || usertype == 'relative') {
+        // ไปหน้าของญาติ/ผู้ป่วย
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const RelativeHomePage()),
+        );
+      } else if (usertype == 'caretaker') {
+        // ไปหน้าของผู้ดูแล (TODO: ใส่หน้าโฮมของผู้ดูแลของคุณ)
+        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const CaretakerHomePage()));
+        print("ล็อกอินสำเร็จ! ไปหน้าผู้ดูแล"); 
+      } else if (usertype == 'admin') {
+        // ไปหน้าของแอดมิน (TODO: ใส่หน้าโฮมของแอดมิน)
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ListCaretakerPage(uid: uid,)));
+        print("ล็อกอินสำเร็จ! ไปหน้าแอดมิน");
+      }
     } else {
-      // 🛠️ ปรับข้อความเตือนให้สอดคล้องกับระบบ Username
+      // ถ้ารหัสผิด หรือ ไม่มีไอดี จะโชว์แจ้งเตือนด้านล่าง
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง')),
+        SnackBar(
+          content: Text(result?['message'] ?? 'เกิดข้อผิดพลาด'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }

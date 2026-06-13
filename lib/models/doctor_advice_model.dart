@@ -1,31 +1,51 @@
 class DoctorAdviceModel {
-  final String doctoradviceId;
-  final String doctorname;
-  final String advicedetail;
-  final String departmentname;
-  final String hospitalname;
-  final DateTime appointmentdate;
-  final String appointmenttime;
-  final String medicalphoto;
+  String? doctoradviceId;
+  String? doctorname;
+  String? advicedetail;
+  String? departmentname;
+  String? hospitalname;
+  DateTime? appointmentdate;
+  DateTime? appointmenttime;
+  String? medicalphoto;
 
   DoctorAdviceModel({
-    required this.doctoradviceId,
-    required this.doctorname,
-    required this.advicedetail,
-    required this.departmentname,
-    required this.hospitalname,
-    required this.appointmentdate,
-    required this.appointmenttime,
-    required this.medicalphoto,
+    this.doctoradviceId,
+    this.doctorname,
+    this.advicedetail,
+    this.departmentname,
+    this.hospitalname,
+    this.appointmentdate,
+    this.appointmenttime,
+    this.medicalphoto,
   });
-  Map<String, dynamic> toMap() => {
-    'doctoradviceId': doctoradviceId,
-    'doctorname': doctorname,
-    'advicedetail': advicedetail,
-    'departmentname': departmentname,
-    'hospitalname': hospitalname,
-    'appointmentdate': appointmentdate.toIso8601String(),
-    'appointmenttime': appointmenttime,
-    'medicalphoto': medicalphoto,
-  };
+
+  factory DoctorAdviceModel.fromJson(Map<String, dynamic> json) {
+    return DoctorAdviceModel(
+      doctoradviceId: json['doctoradviceId'],
+      doctorname: json['doctorname'],
+      advicedetail: json['advicedetail'],
+      departmentname: json['departmentname'],
+      hospitalname: json['hospitalname'],
+      appointmentdate: json['appointmentdate'] != null
+          ? DateTime.parse(json['appointmentdate'])
+          : null,
+      appointmenttime: json['appointmenttime'] != null
+          ? DateTime.parse(json['appointmenttime'])
+          : null,
+      medicalphoto: json['medicalphoto'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'doctoradviceId': doctoradviceId,
+      'doctorname': doctorname,
+      'advicedetail': advicedetail,
+      'departmentname': departmentname,
+      'hospitalname': hospitalname,
+      'appointmentdate': appointmentdate?.toIso8601String(),
+      'appointmenttime': appointmenttime?.toIso8601String(),
+      'medicalphoto': medicalphoto,
+    };
+  }
 }

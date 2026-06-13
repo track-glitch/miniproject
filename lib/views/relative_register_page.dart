@@ -87,7 +87,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         lastname: _relLastNameController.text.trim(),
         email: email,
         phonenumber: _relPhoneController.text.trim(),
-        lineid: _relLineIdController.text.trim(),
+        lineId: _relLineIdController.text.trim(),
         relationship: _relRelationController.text.trim(),
       );
 
@@ -104,7 +104,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         birthdate: DateTime.now(),
         disease: "",
         mobility: "",
-        address: _patAddressController.text.trim(),
         latitude: 0.0,
         longitude: 0.0,
       );

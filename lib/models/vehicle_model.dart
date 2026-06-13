@@ -1,24 +1,43 @@
+import 'package:miniproject/models/vehicle_photo_model.dart';
+
 class VehicleModel {
-  final String vehicleId;
-  final String vehicletype;
-  final String brand;
-  final String model;
-  final String licenseplate;
-  final String color;
-  final List<String>
-  vehiclePhotos; // เก็บเป็น List เพื่อรองรับ Vehiclephoto (1..n) ในภาพ
+  String? vehicleId;
+  String? vehicletype;
+  String? brand;
+  String? model;
+  String? licenseplate;
+  String? color;
+
+  // ความสัมพันธ์ 1 : 1..n
+  List<VehiclePhotoModel>? vehiclephotos;
 
   VehicleModel({
-    required this.vehicleId,
-    required this.vehicletype,
-    required this.brand,
-    required this.model,
-    required this.licenseplate,
-    required this.color,
-    required this.vehiclePhotos,
+    this.vehicleId,
+    this.vehicletype,
+    this.brand,
+    this.model,
+    this.licenseplate,
+    this.color,
+    this.vehiclephotos,
   });
 
-  Map<String, dynamic> toMap() {
+  factory VehicleModel.fromJson(Map<String, dynamic> json) {
+    return VehicleModel(
+      vehicleId: json['vehicleId'],
+      vehicletype: json['vehicletype'],
+      brand: json['brand'],
+      model: json['model'],
+      licenseplate: json['licenseplate'],
+      color: json['color'],
+      vehiclephotos: json['vehiclephotos'] != null
+          ? (json['vehiclephotos'] as List)
+              .map((e) => VehiclePhotoModel.fromJson(e))
+              .toList()
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
     return {
       'vehicleId': vehicleId,
       'vehicletype': vehicletype,
@@ -26,7 +45,7 @@ class VehicleModel {
       'model': model,
       'licenseplate': licenseplate,
       'color': color,
-      'vehiclePhotos': vehiclePhotos,
+      'vehiclephotos': vehiclephotos?.map((e) => e.toJson()).toList(),
     };
   }
 }

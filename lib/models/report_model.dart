@@ -1,22 +1,37 @@
 class ReportModel {
-  final String reportId;
-  final String reporttype;
-  final String reportdetail;
-  final String reportphoto;
-  final DateTime reportdate;
+  String? reportId;
+  String? reporttype;
+  String? reportdetail;
+  String? reportphoto;
+  DateTime? reportdate;
 
   ReportModel({
-    required this.reportId,
-    required this.reporttype,
-    required this.reportdetail,
-    required this.reportphoto,
-    required this.reportdate,
+    this.reportId,
+    this.reporttype,
+    this.reportdetail,
+    this.reportphoto,
+    this.reportdate,
   });
-  Map<String, dynamic> toMap() => {
-    'reportId': reportId,
-    'reporttype': reporttype,
-    'reportdetail': reportdetail,
-    'reportphoto': reportphoto,
-    'reportdate': reportdate.toIso8601String(),
-  };
+
+  factory ReportModel.fromJson(Map<String, dynamic> json) {
+    return ReportModel(
+      reportId: json['reportId'],
+      reporttype: json['reporttype'],
+      reportdetail: json['reportdetail'],
+      reportphoto: json['reportphoto'],
+      reportdate: json['reportdate'] != null
+          ? DateTime.parse(json['reportdate'])
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'reportId': reportId,
+      'reporttype': reporttype,
+      'reportdetail': reportdetail,
+      'reportphoto': reportphoto,
+      'reportdate': reportdate?.toIso8601String(),
+    };
+  }
 }

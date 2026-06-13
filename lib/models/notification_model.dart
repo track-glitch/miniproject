@@ -1,35 +1,31 @@
 class NotificationModel {
-  final String notifyId;
-  final String notifystatus;
-  final String notifydetail;
-  final DateTime notifydate;
+  String? notifyId;
+  String? notifystatus;
+  String? notifydetail;
+  String? notifydate;
 
   NotificationModel({
-    required this.notifyId,
-    required this.notifystatus,
-    required this.notifydetail,
-    required this.notifydate,
+    this.notifyId,
+    this.notifystatus,
+    this.notifydetail,
+    this.notifydate,
   });
 
-  // แปลงเป็น Map สำหรับส่งเข้าคอลเลกชันแจ้งเตือน
-  Map<String, dynamic> toMap() {
+  factory NotificationModel.fromJson(Map<String, dynamic> json) {
+    return NotificationModel(
+      notifyId: json['notifyId'],
+      notifystatus: json['notifystatus'],
+      notifydetail: json['notifydetail'],
+      notifydate: json['notifydate'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
     return {
       'notifyId': notifyId,
       'notifystatus': notifystatus,
       'notifydetail': notifydetail,
-      'notifydate': notifydate.toIso8601String(),
+      'notifydate': notifydate,
     };
-  }
-
-  // แปลงกลับจาก Map มาเป็นคลาสเพื่อโชว์ในหน้าต่างกระดิ่งแจ้งเตือนของแอป
-  factory NotificationModel.fromMap(Map<String, dynamic> map) {
-    return NotificationModel(
-      notifyId: map['notifyId'] ?? '',
-      notifystatus: map['notifystatus'] ?? '',
-      notifydetail: map['notifydetail'] ?? '',
-      notifydate: map['notifydate'] != null
-          ? (map['notifydate'] as dynamic).toDate()
-          : DateTime.now(),
-    );
   }
 }

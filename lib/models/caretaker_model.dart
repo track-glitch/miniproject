@@ -1,48 +1,99 @@
+import 'package:miniproject/models/login_model.dart';
+import 'package:miniproject/models/vehicle_model.dart';
+import 'package:miniproject/models/document_model.dart';
+import 'package:miniproject/models/request_model.dart';
+
 class CaretakerModel {
-  final String caretakerId;
-  final String profilephoto;
-  final String firstname;
-  final String lastname;
-  final String gender;
-  final DateTime birthdate;
-  final String phonenumber;
-  final String email;
-  final String aboutme;
-  final String equipmentdetails;
-  final String address;
-  final String admincomment;
-  final String servicestatus;
-  final String accountstatus;
-  final double latitude;
-  final double longitude;
+  String? caretakerId;
+  String? profilephoto;
+  String? firstname;
+  String? lastname;
+  String? gender;
+  DateTime? birthdate;
+  String? phonenumber;
+  String? email;
+  String? aboutme;
+  String? equipmentdetails;
+  String? address;
+  String? admincomment;
+  String? servicestatus;
+  String? accountstatus;
+  double? latitude;
+  double? longitude;
+
+  // ความสัมพันธ์
+  LoginModel? login;                   // 1 : 1
+  VehicleModel? vehicle;               // 1 : 1
+  List<DocumentModel>? documents;      // 1 : 1..n
+  List<RequestModel>? requests;        // 1 : 1..n
 
   CaretakerModel({
-    required this.caretakerId,
-    required this.profilephoto,
-    required this.firstname,
-    required this.lastname,
-    required this.gender,
-    required this.birthdate,
-    required this.phonenumber,
-    required this.email,
-    required this.aboutme,
-    required this.equipmentdetails,
-    required this.address,
-    required this.admincomment,
-    required this.servicestatus,
-    required this.accountstatus,
-    required this.latitude,
-    required this.longitude,
+    this.caretakerId,
+    this.profilephoto,
+    this.firstname,
+    this.lastname,
+    this.gender,
+    this.birthdate,
+    this.phonenumber,
+    this.email,
+    this.aboutme,
+    this.equipmentdetails,
+    this.address,
+    this.admincomment,
+    this.servicestatus,
+    this.accountstatus,
+    this.latitude,
+    this.longitude,
+    this.login,
+    this.vehicle,
+    this.documents,
+    this.requests,
   });
 
-  Map<String, dynamic> toMap() {
+  factory CaretakerModel.fromJson(Map<String, dynamic> json) {
+    return CaretakerModel(
+      caretakerId: json['caretakerId'],
+      profilephoto: json['profilephoto'],
+      firstname: json['firstname'],
+      lastname: json['lastname'],
+      gender: json['gender'],
+      birthdate: json['birthdate'] != null
+          ? DateTime.parse(json['birthdate'])
+          : null,
+      phonenumber: json['phonenumber'],
+      email: json['email'],
+      aboutme: json['aboutme'],
+      equipmentdetails: json['equipmentdetails'],
+      address: json['address'],
+      admincomment: json['admincomment'],
+      servicestatus: json['servicestatus'],
+      accountstatus: json['accountstatus'],
+      latitude: json['latitude']?.toDouble(),
+      longitude: json['longitude']?.toDouble(),
+      login: json['login'] != null ? LoginModel.fromJson(json['login']) : null,
+      vehicle:
+          json['vehicle'] != null ? VehicleModel.fromJson(json['vehicle']) : null,
+      documents: json['documents'] != null
+          ? (json['documents'] as List)
+              .map((e) => DocumentModel.fromJson(e))
+              .toList()
+          : null,
+      requests: json['requests'] != null
+          ? (json['requests'] as List)
+              .map((e) => RequestModel.fromJson(e))
+              .toList()
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
     return {
       'caretakerId': caretakerId,
       'profilephoto': profilephoto,
       'firstname': firstname,
       'lastname': lastname,
       'gender': gender,
-      'birthdate': birthdate.toIso8601String(),
+      'birthdate': birthdate?.toIso8601String(),
       'phonenumber': phonenumber,
       'email': email,
       'aboutme': aboutme,
@@ -53,6 +104,10 @@ class CaretakerModel {
       'accountstatus': accountstatus,
       'latitude': latitude,
       'longitude': longitude,
+      'login': login?.toJson(),
+      'vehicle': vehicle?.toJson(),
+      'documents': documents?.map((e) => e.toJson()).toList(),
+      'requests': requests?.map((e) => e.toJson()).toList(),
     };
   }
 }

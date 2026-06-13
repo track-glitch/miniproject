@@ -23,7 +23,7 @@ class AuthService {
     try {
       UserCredential userCredential = await _auth
           .createUserWithEmailAndPassword(
-            email: relative.email,
+            email: relative.email!,
             password: password,
           );
 
@@ -41,7 +41,7 @@ class AuthService {
           .child('Login')
           .child(uid)
           .child('Relative')
-          .set(relative.toMap()); // 🛠️ แปลงเป็น toMap()
+          .set(relative.toJson()); // 🛠️ แปลงเป็น toJson()
 
       // 3. บันทึกข้อมูลผู้ป่วย
       await _dbRef
@@ -49,7 +49,7 @@ class AuthService {
           .child(uid)
           .child('Relative')
           .child('Patient')
-          .set(patient.toMap()); // 🛠️ แปลงเป็น toMap() และขยับปมให้สมเหตุสมผล
+          .set(patient.toJson()); // 🛠️ แปลงเป็น toJson() และขยับปมให้สมเหตุสมผล
 
       return userCredential;
     } catch (e) {
@@ -69,7 +69,7 @@ class AuthService {
     try {
       UserCredential userCredential = await _auth
           .createUserWithEmailAndPassword(
-            email: caretaker.email,
+            email: caretaker.email!,
             password: password,
           );
 
@@ -83,7 +83,7 @@ class AuthService {
       });
 
       // บันทึกรายละเอียดผู้ดูแล
-      Map<String, dynamic> caretakerMap = caretaker.toMap();
+      Map<String, dynamic> caretakerMap = caretaker.toJson();
       caretakerMap['caretakerId'] = uid;
       await _dbRef
           .child('Login')
@@ -97,7 +97,7 @@ class AuthService {
           .child(uid)
           .child('Caretaker')
           .child('Vehicle')
-          .set(vehicle.toMap());
+          .set(vehicle.toJson());
 
       // 3. เพิ่มการบันทึกข้อมูลเอกสาร (ลูปตามจำนวนไฟล์ที่ส่งมา)
       for (var doc in documents) {
@@ -106,8 +106,8 @@ class AuthService {
             .child(uid)
             .child('Caretaker')
             .child('Document')
-            .child(doc.documentId) // ใช้ ID เอกสารเป็นชื่อปมย่อย
-            .set(doc.toMap());
+            .child(doc.documentId!) // ใช้ ID เอกสารเป็นชื่อปมย่อย
+            .set(doc.toJson());
       }
 
       return userCredential;
@@ -117,46 +117,42 @@ class AuthService {
     }
   }
 
-  // 🔑 2. ฟังก์ชันเข้าสู่ระบบด้วย Username + Password
-  Future<UserCredential?> loginMember({
-    required String username,
-    required String password,
-  }) async {
+  // 🔐 3. ฟังก์ชันเข้าสู่ระบบด้วย Username (ค้นหาจาก Realtime Database)
+  Future<Map<String, dynamic>?> loginWithUsername(String username, String password) async {
     try {
-      // สเต็ป A: วิ่งไปส่องต้นไม้ JSON เพื่อค้นหาว่ามีใครใช้ username นี้ไหม
-      // สั่งค้นหาปมใน 'users' ที่มีฟิลด์ 'username' ตรงกับที่กรอกเข้ามา
-      DataSnapshot snapshot = await _dbRef
+      // 1. ค้นหาในโหนด 'Login' ว่ามีใครใช้ username นี้ไหม
+      DatabaseEvent event = await _dbRef
           .child('Login')
           .orderByChild('username')
           .equalTo(username)
-          .get();
+          .once();
 
-      // ถ้าไม่เจอชื่อผู้ใช้นี้เลยในฐานข้อมูล
-      if (!snapshot.exists || snapshot.value == null) {
-        print("ไม่พบชื่อผู้ใช้นี้ในระบบ");
-        return null;
+      // 2. ถ้าเจอข้อมูล (มี username นี้ในระบบ)
+      if (event.snapshot.exists) {
+        // แปลงข้อมูลที่ได้มาเป็น Map
+        Map<dynamic, dynamic> users = event.snapshot.value as Map<dynamic, dynamic>;
+        
+        // ดึง key (uid) ของคนแรกที่เจอ
+        String uid = users.keys.first;
+        Map<dynamic, dynamic> userData = users[uid];
+
+        // 3. เช็กว่ารหัสผ่านตรงไหม
+        if (userData['password'] == password) {
+          return {
+            'success': true,
+            'uid': uid,
+            'usertype': userData['usertype'], // ส่งประเภทผู้ใช้กลับไปให้หน้า UI
+          };
+        } else {
+          return {'success': false, 'message': 'รหัสผ่านไม่ถูกต้อง'};
+        }
+      } else {
+        return {'success': false, 'message': 'ไม่พบชื่อผู้ใช้นี้ในระบบ'};
       }
-
-      // เนื่องจาก Realtime DB จะคืนค่ากลับมาเป็น Map เราต้องแกะเอาอีเมลจริงที่ซ่อนอยู่ข้างในออกมา
-      Map<dynamic, dynamic> usersMap = snapshot.value as Map<dynamic, dynamic>;
-      String realEmail = "";
-
-      for (var entry in usersMap.values) {
-        realEmail = entry['email'] ?? "";
-      }
-
-      if (realEmail.isEmpty) return null;
-
-      // สเต็ป B: ได้อีเมลจริงมาแล้ว! เอาอีเมลจริง + พาสเวิร์ด ส่งไปล็อกอินกับ Firebase Auth ตามสูตรสากลครับ
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: realEmail,
-        password: password,
-      );
-
-      return userCredential;
     } catch (e) {
-      print("เกิดข้อผิดพลาดในการเข้าสู่ระบบ: $e");
-      return null;
+      print("Login Error: $e");
+      return {'success': false, 'message': 'เกิดข้อผิดพลาดในการเชื่อมต่อ'};
     }
   }
+
 }

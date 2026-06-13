@@ -4,7 +4,8 @@ import '../../services/admin_service.dart';
 import 'view_caretaker_registration_page.dart'; // อย่าลืม import หน้าดูรายละเอียด
 
 class ListCaretakerPage extends StatefulWidget {
-  const ListCaretakerPage({super.key});
+  final String uid;
+  const ListCaretakerPage({super.key, required this.uid});
 
   @override
   State<ListCaretakerPage> createState() => _ListCaretakerPageState();
@@ -12,14 +13,31 @@ class ListCaretakerPage extends StatefulWidget {
 
 class _ListCaretakerPageState extends State<ListCaretakerPage> {
   final AdminService _adminService = AdminService();
-
+  String adminName = '';  
   // ตัวแปรเก็บสถานะแท็บปัจจุบัน ค่าเริ่มต้นคือรอดำเนินการ
   String _selectedStatus = 'Pending'; 
+  
 
   final Color primaryColor = const Color(0xFFA052BE);
   final Color backgroundColor = const Color(0xFFEDE4FF);
   final Color cardColor = const Color(0xFFF6EFFF);
 
+  @override
+  void initState() {
+    super.initState();
+    // 3. ให้เรียกใช้ฟังก์ชันดึงข้อมูลทันทีที่เปิดหน้านี้ขึ้นมา
+    _fetchAdminName();
+  }
+
+  Future<void> _fetchAdminName() async {
+    // สังเกตว่าเราใช้ widget.uid เพื่อดึงค่า uid ที่ส่งมาจากหน้าก่อน
+    String name = await AdminService().getAdminName(widget.uid);
+    
+    // 5. เมื่อได้ข้อมูลมาแล้ว ใช้ setState เพื่อสั่งให้หน้าจออัปเดตข้อความ
+    setState(() {
+      adminName = name;
+    });
+  }
   // ฟังก์ชันคำนวณอายุจากวันเกิด
   int _calculateAge(DateTime birthDate) {
     DateTime currentDate = DateTime.now();
@@ -86,8 +104,8 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
         backgroundColor: primaryColor,
         elevation: 4,
         centerTitle: true,
-        title: const Text(
-          'แอดมิน มิก',
+        title: Text(
+          'Hello, $adminName',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 20),
         ),
       ),
@@ -107,13 +125,13 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: primaryColor.withOpacity(0.3)),
+                border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
                   _buildTab('รอตรวจสอบ', 'Pending', const Color(0xFFFFD600)),
                   _buildTab('อนุมัติแล้ว', 'Approved', const Color(0xFF00FF29)),
-                  _buildTab('', 'Suspended', const Color(0xFFFF0000)), // หรือ 'Rejected' ตาม DB
+                  _buildTab('ระงับสิทธิ์', 'Suspended', const Color(0xFFFF0000)), // หรือ 'Rejected' ตาม DB
                 ],
               ),
             ),
@@ -143,7 +161,7 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                   itemCount: caretakers.length,
                   itemBuilder: (context, index) {
                     final caretaker = caretakers[index];
-                    final int age = _calculateAge(caretaker.birthdate);
+                    final int age = caretaker.birthdate != null ? _calculateAge(caretaker.birthdate!) : 0;
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 16),
@@ -176,10 +194,10 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                               CircleAvatar(
                                 radius: 32,
                                 backgroundColor: const Color(0xFF82CDA4),
-                                backgroundImage: caretaker.profilephoto.isNotEmpty
-                                    ? AssetImage('assets/images/Profile/${caretaker.profilephoto}')
+                                backgroundImage: (caretaker.profilephoto?.isNotEmpty ?? false)
+                                    ? AssetImage('assets/images/Profile/${caretaker.profilephoto!}')
                                     : null,
-                                child: caretaker.profilephoto.isEmpty
+                                child: (caretaker.profilephoto?.isEmpty ?? true)
                                     ? const Icon(Icons.person, size: 36, color: Colors.white)
                                     : null,
                               ),
@@ -191,13 +209,13 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                                     Text.rich(TextSpan(
                                       text: 'เบอร์ติดต่อ: ',
                                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black),
-                                      children: [TextSpan(text: caretaker.phonenumber, style: const TextStyle(fontWeight: FontWeight.w300))],
+                                      children: [TextSpan(text: caretaker.phonenumber ?? '-', style: const TextStyle(fontWeight: FontWeight.w300))],
                                     )),
                                     const SizedBox(height: 2),
                                     Text.rich(TextSpan(
                                       text: 'เพศ/อายุ: ',
                                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black),
-                                      children: [TextSpan(text: '${caretaker.gender}, $age ปี', style: const TextStyle(fontWeight: FontWeight.w300))],
+                                      children: [TextSpan(text: '${caretaker.gender ?? '-'}, $age ปี', style: const TextStyle(fontWeight: FontWeight.w300))],
                                     )),
                                     const SizedBox(height: 2),
                                     Text.rich(TextSpan(
@@ -205,7 +223,7 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black),
                                       children: [
                                         TextSpan(
-                                          text: caretaker.equipmentdetails.isNotEmpty ? caretaker.equipmentdetails : '-',
+                                          text: (caretaker.equipmentdetails?.isNotEmpty ?? false) ? caretaker.equipmentdetails! : '-',
                                           style: const TextStyle(fontWeight: FontWeight.w300)
                                         )
                                       ],
@@ -219,7 +237,19 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                             alignment: Alignment.bottomRight,
                             child: ElevatedButton(
                               onPressed: () {
-                                // โค้ดสำหรับไปหน้า ViewCaretakerRegistrationPage
+                                // 🚀 ใส่ฟังก์ชันเปิดหน้ารายละเอียดตรงนี้
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ViewCaretakerRegistrationPage(
+                                      caretaker: caretaker, // ส่งข้อมูลคนนี้ไปให้หน้ารายละเอียด
+                                    ),
+                                  ),
+                                ).then((_) {
+                                  // 🔄 เมื่อกดย้อนกลับมาจากหน้ารายละเอียด ให้สั่งรีเฟรชหน้าจอนี้ 1 ครั้ง
+                                  // เพื่อให้รายชื่อที่เพิ่งถูกอนุมัติ/ปฏิเสธ หายไปจากลิสต์ "รอตรวจสอบ"
+                                  setState(() {}); 
+                                });
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: primaryColor,

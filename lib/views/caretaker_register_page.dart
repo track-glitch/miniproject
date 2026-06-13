@@ -10,6 +10,7 @@ import 'package:geolocator/geolocator.dart';
 import '../services/auth_service.dart';
 import '../models/caretaker_model.dart';
 import '../models/vehicle_model.dart';
+import '../models/vehicle_photo_model.dart';
 import '../models/document_model.dart';
 import 'waiting_approval_page.dart';
 import 'relative_register_page.dart';
@@ -486,7 +487,12 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         model: _modelCtrl.text.trim(),
         licenseplate: _licensePlateCtrl.text.trim(),
         color: _colorCtrl.text.trim(),
-        vehiclePhotos: _vehiclePhotoNames, // ส่งอาเรย์ของชื่อไฟล์รูปภาพรถ
+        vehiclephotos: _vehiclePhotoNames
+            .map((photoName) => VehiclePhotoModel(
+                  vehiclephotoid: "VP-${DateTime.now().millisecondsSinceEpoch}",
+                  photo: photoName,
+                ))
+            .toList(),
       );
 
       UserCredential? result = await _authService.registerCaretaker(

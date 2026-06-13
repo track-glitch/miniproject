@@ -1,34 +1,49 @@
 class PatientModel {
-  final String patientId;
-  final String patientphoto;
-  final String firstname;
-  final String lastname;
-  final String phonenumber;
-  final String gender;
-  final DateTime birthdate;
-  final String disease;
-  final String mobility;
-  final String address;
-  final double latitude;
-  final double longitude;
+  String? patientId;
+  String? patientphoto;
+  String? firstname;
+  String? lastname;
+  String? phonenumber;
+  String? gender;
+  DateTime? birthdate;
+  String? disease;
+  String? mobility;
+  double? latitude;
+  double? longitude;
 
   PatientModel({
-    required this.patientId,
-    required this.patientphoto,
-    required this.firstname,
-    required this.lastname,
-    required this.phonenumber,
-    required this.gender,
-    required this.birthdate,
-    required this.disease,
-    required this.mobility,
-    required this.address,
-    required this.latitude,
-    required this.longitude,
+    this.patientId,
+    this.patientphoto,
+    this.firstname,
+    this.lastname,
+    this.phonenumber,
+    this.gender,
+    this.birthdate,
+    this.disease,
+    this.mobility,
+    this.latitude,
+    this.longitude,
   });
 
-  // ✨ แปลงข้อมูลในคลาสให้เป็น Map เพื่อใช้บันทึกลง Firebase Firestore
-  Map<String, dynamic> toMap() {
+  factory PatientModel.fromJson(Map<String, dynamic> json) {
+    return PatientModel(
+      patientId: json['patientId'],
+      patientphoto: json['patientphoto'],
+      firstname: json['firstname'],
+      lastname: json['lastname'],
+      phonenumber: json['phonenumber'],
+      gender: json['gender'],
+      birthdate: json['birthdate'] != null
+          ? DateTime.parse(json['birthdate'])
+          : null,
+      disease: json['disease'],
+      mobility: json['mobility'],
+      latitude: json['latitude']?.toDouble(),
+      longitude: json['longitude']?.toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
     return {
       'patientId': patientId,
       'patientphoto': patientphoto,
@@ -36,11 +51,9 @@ class PatientModel {
       'lastname': lastname,
       'phonenumber': phonenumber,
       'gender': gender,
-      'birthdate': birthdate
-          .toIso8601String(), // Firestore จัดการเป็น Timestamp ให้เองครับ
+      'birthdate': birthdate?.toIso8601String(),
       'disease': disease,
       'mobility': mobility,
-      'address': address,
       'latitude': latitude,
       'longitude': longitude,
     };
