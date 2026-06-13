@@ -219,11 +219,11 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                                     )),
                                     const SizedBox(height: 2),
                                     Text.rich(TextSpan(
-                                      text: 'อุปกรณ์/รถ: ',
+                                      text: '${caretaker.vehicle?.vehicletype} ',
                                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black),
                                       children: [
                                         TextSpan(
-                                          text: (caretaker.equipmentdetails?.isNotEmpty ?? false) ? caretaker.equipmentdetails! : '-',
+                                          text: '${caretaker.vehicle?.brand} ${caretaker.vehicle?.model} สี${caretaker.vehicle?.color}',
                                           style: const TextStyle(fontWeight: FontWeight.w300)
                                         )
                                       ],

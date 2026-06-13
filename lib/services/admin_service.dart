@@ -122,7 +122,7 @@ class AdminService {
   // ไม่อนุมัติผู้ดูแล (เปลี่ยนเป็น Failed และเก็บเหตุผล)
   Future<void> rejectCaretaker(String caretakerId, String reason) async {
     await _dbRef.child('Login').child(caretakerId).child('Caretaker').update({
-      'accountstatus': 'Failed', 
+      'accountstatus': 'Rejected', 
       'admincomment': reason, // เก็บหมายเหตุว่าทำไมถึงไม่อนุมัติ
     });
   }

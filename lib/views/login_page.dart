@@ -5,7 +5,8 @@ import '../services/auth_service.dart'; // ดึง AuthService ของคุ
 import 'caretaker_register_page.dart';
 import 'relative/relative_home_page.dart';
 import 'admin/list_caretaker_page.dart';
-
+import 'caretaker/caretaker_home_page.dart';
+import 'waiting_approval_page.dart';
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -96,8 +97,15 @@ class _LoginPageState extends State<LoginPage> {
           MaterialPageRoute(builder: (context) => const RelativeHomePage()),
         );
       } else if (usertype == 'caretaker') {
-        // ไปหน้าของผู้ดูแล (TODO: ใส่หน้าโฮมของผู้ดูแลของคุณ)
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const CaretakerHomePage()));
+        if (result['accountstatus'] == 'Pending') {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const WaitingApprovalPage()));
+          return;
+        } 
+        if (result['accountstatus'] == 'Suspended' || result['status'] == 'Rejected') {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'])));
+          return;
+        }
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => CaretakerHomePage()));
         print("ล็อกอินสำเร็จ! ไปหน้าผู้ดูแล"); 
       } else if (usertype == 'admin') {
         // ไปหน้าของแอดมิน (TODO: ใส่หน้าโฮมของแอดมิน)

@@ -118,6 +118,7 @@ class AuthService {
   }
 
   // 🔐 3. ฟังก์ชันเข้าสู่ระบบด้วย Username (ค้นหาจาก Realtime Database)
+// 🔐 3. ฟังก์ชันเข้าสู่ระบบด้วย Username 
   Future<Map<String, dynamic>?> loginWithUsername(String username, String password) async {
     try {
       // 1. ค้นหาในโหนด 'Login' ว่ามีใครใช้ username นี้ไหม
@@ -127,21 +128,24 @@ class AuthService {
           .equalTo(username)
           .once();
 
-      // 2. ถ้าเจอข้อมูล (มี username นี้ในระบบ)
       if (event.snapshot.exists) {
-        // แปลงข้อมูลที่ได้มาเป็น Map
         Map<dynamic, dynamic> users = event.snapshot.value as Map<dynamic, dynamic>;
-        
-        // ดึง key (uid) ของคนแรกที่เจอ
         String uid = users.keys.first;
         Map<dynamic, dynamic> userData = users[uid];
 
-        // 3. เช็กว่ารหัสผ่านตรงไหม
+        // 2. เช็กว่ารหัสผ่านตรงไหม
         if (userData['password'] == password) {
+
+        String status = userData['Caretaker']['accountstatus'] ?? '';
+        String reason = userData['Caretaker']['admincomment'] ?? '';
+
+          // ถ้าเป็นญาติ หรือ เป็นผู้ดูแลที่ Approved แล้ว ให้ผ่านได้ปกติ
           return {
             'success': true,
             'uid': uid,
-            'usertype': userData['usertype'], // ส่งประเภทผู้ใช้กลับไปให้หน้า UI
+            'usertype': userData['usertype'], 
+            'accountstatus' : status,
+            'admincomment' : reason,
           };
         } else {
           return {'success': false, 'message': 'รหัสผ่านไม่ถูกต้อง'};
