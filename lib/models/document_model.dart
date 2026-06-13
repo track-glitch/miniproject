@@ -1,7 +1,8 @@
 class DocumentModel {
   final String documentId;
   final String documenttype;
-  final String filepath; // มักเก็บเป็น URL ลิงก์ไฟล์ที่อัปโหลดขึ้น Firebase Storage
+  final String
+  filepath; // มักเก็บเป็น URL ลิงก์ไฟล์ที่อัปโหลดขึ้น Firebase Storage
   final DateTime uploaddate;
 
   DocumentModel({
@@ -27,8 +28,9 @@ class DocumentModel {
       documentId: map['documentId'] ?? '',
       documenttype: map['documenttype'] ?? '',
       filepath: map['filepath'] ?? '',
-      uploaddate: map['uploaddate'] != null 
-          ? (map['uploaddate'] as dynamic).toDate() // แปลงจาก Timestamp ของ Firebase กลับเป็น DateTime
+      uploaddate: map['uploaddate'] != null
+          ? (map['uploaddate'] as dynamic)
+                .toDate() // แปลงจาก Timestamp ของ Firebase กลับเป็น DateTime
           : DateTime.now(),
     );
   }

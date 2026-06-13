@@ -80,7 +80,6 @@ class AuthService {
         'username': username,
         'password': password,
         'usertype': usertype,
-        'email': caretaker.email,
       });
 
       // บันทึกรายละเอียดผู้ดูแล

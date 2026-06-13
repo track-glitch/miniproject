@@ -5,7 +5,8 @@ class VehicleModel {
   final String model;
   final String licenseplate;
   final String color;
-  final List<String> vehiclePhotos; // เก็บเป็น List เพื่อรองรับ Vehiclephoto (1..n) ในภาพ
+  final List<String>
+  vehiclePhotos; // เก็บเป็น List เพื่อรองรับ Vehiclephoto (1..n) ในภาพ
 
   VehicleModel({
     required this.vehicleId,

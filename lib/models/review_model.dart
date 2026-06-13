@@ -4,6 +4,16 @@ class ReviewModel {
   final String comment;
   final DateTime reviewdate;
 
-  ReviewModel({required this.reviewId, required this.ratingscore, required this.comment, required this.reviewdate});
-  Map<String, dynamic> toMap() => {'reviewId': reviewId, 'ratingscore': ratingscore, 'comment': comment, 'reviewdate': reviewdate.toIso8601String()};
+  ReviewModel({
+    required this.reviewId,
+    required this.ratingscore,
+    required this.comment,
+    required this.reviewdate,
+  });
+  Map<String, dynamic> toMap() => {
+    'reviewId': reviewId,
+    'ratingscore': ratingscore,
+    'comment': comment,
+    'reviewdate': reviewdate.toIso8601String(),
+  };
 }

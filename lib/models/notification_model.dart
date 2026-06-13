@@ -27,8 +27,8 @@ class NotificationModel {
       notifyId: map['notifyId'] ?? '',
       notifystatus: map['notifystatus'] ?? '',
       notifydetail: map['notifydetail'] ?? '',
-      notifydate: map['notifydate'] != null 
-          ? (map['notifydate'] as dynamic).toDate() 
+      notifydate: map['notifydate'] != null
+          ? (map['notifydate'] as dynamic).toDate()
           : DateTime.now(),
     );
   }

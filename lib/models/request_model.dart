@@ -6,7 +6,7 @@ class RequestModel {
   final String hospitalname;
   final String departmentname;
   final DateTime appointmentdate; // ใช้ DateTime แทน Date
-  final String appointmenttime;   // เก็บเป็น String หรือใช้ TimeOfDay ก็ได้
+  final String appointmenttime; // เก็บเป็น String หรือใช้ TimeOfDay ก็ได้
   final DateTime requestdate;
   final String requeststatus;
   final double latitude;

@@ -11,7 +11,10 @@ class WaitingApprovalPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('สมัครสมาชิก', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'สมัครสมาชิก',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         backgroundColor: primaryColor,
         elevation: 0,
@@ -38,24 +41,36 @@ class WaitingApprovalPage extends StatelessWidget {
                     CircleAvatar(
                       radius: 50,
                       backgroundColor: primaryColor,
-                      child: const Icon(Icons.hourglass_empty, size: 50, color: Colors.white),
+                      child: const Icon(
+                        Icons.hourglass_empty,
+                        size: 50,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 20),
                     Text(
                       'รออนุมัติจากแอดมิน',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: primaryColor),
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     const Text(
                       'ข้อมูลของคุณได้รับการส่งเรียบร้อยแล้ว\nกรุณารอการตรวจสอบและอนุมัติ',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: Colors.black87, height: 1.5),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                        height: 1.5,
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 20),
-              
+
               // กล่องแจ้งรายละเอียดระยะเวลาดำเนินการ
               Container(
                 width: double.infinity,
@@ -63,15 +78,30 @@ class WaitingApprovalPage extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: lightPurple.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: primaryColor.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        const Text('ระยะเวลาดำเนินการ: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        Text('1-3 วันทำการ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: primaryColor)),
+                        const Text(
+                          'ระยะเวลาดำเนินการ: ',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          '1-3 วันทำการ',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: primaryColor,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -83,18 +113,27 @@ class WaitingApprovalPage extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              
+
               // ท้ายหน้าจอกลับไปหน้า Login
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('มีบัญชีอยู่แล้ว? ', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'มีบัญชีอยู่แล้ว? ',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   TextButton(
                     onPressed: () {
                       // เด้งออกจากหน้านี้กลับไปหน้าแรกสุดของแอป (หน้า Login)
                       Navigator.of(context).popUntil((route) => route.isFirst);
                     },
-                    child: Text('เข้าสู่ระบบ', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
+                    child: Text(
+                      'เข้าสู่ระบบ',
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),

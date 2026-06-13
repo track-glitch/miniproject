@@ -36,7 +36,8 @@ class PatientModel {
       'lastname': lastname,
       'phonenumber': phonenumber,
       'gender': gender,
-      'birthdate': birthdate.toIso8601String(), // Firestore จัดการเป็น Timestamp ให้เองครับ
+      'birthdate': birthdate
+          .toIso8601String(), // Firestore จัดการเป็น Timestamp ให้เองครับ
       'disease': disease,
       'mobility': mobility,
       'address': address,

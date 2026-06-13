@@ -26,7 +26,7 @@ class _LoginPageState extends State<LoginPage> {
     // 🗑️ คืนแรมทำลายทิ้งตัวควบคุมทั้งหมดเมื่อปิดหน้าจอ
     _usernameController.dispose();
     _passwordController.dispose();
-    super.dispose(); 
+    super.dispose();
   }
 
   // ==========================================
@@ -53,7 +53,7 @@ class _LoginPageState extends State<LoginPage> {
   // ตัวแปรสำหรับแสดงสถานะโหลดตอนกดปุ่มเข้าสู่ระบบ
   bool _isLoading = false;
 
-  // โทนสีหลักตาม UI 
+  // โทนสีหลักตาม UI
   final Color primaryColor = const Color(0xFF9B59B6); // สีม่วงเข้ม
   final Color lightPurple = const Color(0xFFE8D4F4); // สีม่วงอ่อนของกล่อง
 
@@ -82,10 +82,10 @@ class _LoginPageState extends State<LoginPage> {
 
     if (user != null) {
       // เข้าสู่ระบบสำเร็จ -> เปลี่ยนหน้าไปหน้าหลัก (Home)
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('เข้าสู่ระบบสำเร็จ!')),
-      );
-      
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('เข้าสู่ระบบสำเร็จ!')));
+
       // TODO: เปิดสวิตช์บรรทัดนี้แล้วเปลี่ยนเป็นหน้าแรกของแอปคุณ (เช่น ฝั่งคนไข้ หรือ อาสา)
       // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
     } else {
@@ -122,8 +122,8 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 20),
                 // โลโก้ และ ชื่อแอป
                 Image.asset(
-                  'assets/logo.png', 
-                  height: 160, 
+                  'assets/logo.png',
+                  height: 160,
                   fit: BoxFit.contain,
                 ),
 
@@ -155,12 +155,14 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 15),
 
-                      // 🛠️ ช่องกรอก ชื่อผู้ใช้ (Username) 
+                      // 🛠️ ช่องกรอก ชื่อผู้ใช้ (Username)
                       TextField(
                         controller: _usernameController,
-                        keyboardType: TextInputType.text, // เปลี่ยนจาก emailAddress เป็น text ธรรมดา
+                        keyboardType: TextInputType
+                            .text, // เปลี่ยนจาก emailAddress เป็น text ธรรมดา
                         decoration: InputDecoration(
-                          hintText: 'ชื่อผู้ใช้ (Username)', // 🛠️ เปลี่ยนคำบอกใบ้บนหน้าจอ
+                          hintText:
+                              'ชื่อผู้ใช้ (Username)', // 🛠️ เปลี่ยนคำบอกใบ้บนหน้าจอ
                           filled: true,
                           fillColor: Colors.white,
                           contentPadding: const EdgeInsets.symmetric(
@@ -281,7 +283,7 @@ class _LoginPageState extends State<LoginPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const RelativeRegister(),
+                            builder: (context) => const CaretakerRegisterPage(),
                           ),
                         );
                       },
