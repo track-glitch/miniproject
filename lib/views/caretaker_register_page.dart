@@ -29,7 +29,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
 
   bool _isObscure = true;
   bool _isLoading = false;
-  String _selectedTab = "ผู้ดูแล";
+  final _selectedTab = "ผู้ดูแล";
   String _selectedGender = ""; // For gender dropdown
 
   // เก็บข้อมูลพิกัดละติจูด/ลองจิจูด จริง
@@ -470,12 +470,12 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         birthdate: parsedDate,
         phonenumber: _phoneCtrl.text.trim(),
         email: _emailCtrl.text.trim(),
-        aboutme: "",
-        equipmentdetails: "",
+        aboutme: _aboutMeCtrl.text.trim(),
+        equipmentdetails: _equipmentCtrl.text.trim(),
         address: _addressCtrl.text.trim(),
         admincomment: "",
-        servicestatus: "closed",
-        accountstatus: "pending",
+        servicestatus: "Offline",
+        accountstatus: "Pending",
         latitude: _hasPinned ? _selectedLocation.latitude : 0.0,
         longitude: _hasPinned ? _selectedLocation.longitude : 0.0,
       );
@@ -488,10 +488,12 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         licenseplate: _licensePlateCtrl.text.trim(),
         color: _colorCtrl.text.trim(),
         vehiclephotos: _vehiclePhotoNames
-            .map((photoName) => VehiclePhotoModel(
-                  vehiclephotoid: "VP-${DateTime.now().millisecondsSinceEpoch}",
-                  photo: photoName,
-                ))
+            .map(
+              (photoName) => VehiclePhotoModel(
+                vehiclephotoid: "VP-${DateTime.now().millisecondsSinceEpoch}",
+                photo: photoName,
+              ),
+            )
             .toList(),
       );
 
@@ -571,17 +573,22 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             hint: 'ชื่อผู้ใช้ (Username)',
                             controller: _usernameCtrl,
                             validator: (val) {
-                              if (val == null || val.trim().isEmpty)
+                              if (val == null || val.trim().isEmpty) {
                                 return 'กรุณากรอกชื่อผู้ใช้';
-                              if (val.contains(' '))
+                              }
+                              if (val.contains(' ')) {
                                 return 'ต้องไม่มีเว้นวรรคหรือช่องว่าง';
-                              if (val.length < 4 || val.length > 20)
+                              }
+                              if (val.length < 4 || val.length > 20) {
                                 return 'ความยาวต้องอยู่ระหว่าง 4-20 ตัวอักษร';
-                              if (!RegExp(r'^[a-zA-Z0-9_.-]+$').hasMatch(val))
+                              }
+                              if (!RegExp(r'^[a-zA-Z0-9_.-]+$').hasMatch(val)) {
                                 return 'ใช้อักษรภาษาอังกฤษ ตัวเลข และ (_, -, .) เท่านั้น';
+                              }
                               if (RegExp(r'^[_.-]').hasMatch(val) ||
-                                  RegExp(r'[_.-]$').hasMatch(val))
+                                  RegExp(r'[_.-]$').hasMatch(val)) {
                                 return 'ห้ามขึ้นต้นหรือลงท้ายด้วยอักขระพิเศษ';
+                              }
                               return null;
                             },
                           ),
@@ -591,16 +598,20 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             controller: _passwordCtrl,
                             isPassword: true,
                             validator: (val) {
-                              if (val == null || val.trim().isEmpty)
+                              if (val == null || val.trim().isEmpty) {
                                 return 'กรุณากรอกรหัสผ่าน';
-                              if (val.contains(' '))
+                              }
+                              if (val.contains(' ')) {
                                 return 'ต้องไม่มีเว้นวรรคหรือช่องว่าง';
-                              if (val.length < 8 || val.length > 16)
+                              }
+                              if (val.length < 8 || val.length > 16) {
                                 return 'ความยาวต้องอยู่ระหว่าง 8-16 ตัวอักษร';
+                              }
                               if (!RegExp(
                                 r'^[a-zA-Z0-9!#_.\s@]+$',
-                              ).hasMatch(val))
+                              ).hasMatch(val)) {
                                 return 'อนุญาตเฉพาะอักษร อังกฤษ เลข และ [!#_. @] เท่านั้น';
+                              }
                               return null;
                             },
                           ),
@@ -609,12 +620,14 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             hint: 'อีเมล',
                             controller: _emailCtrl,
                             validator: (val) {
-                              if (val == null || val.trim().isEmpty)
+                              if (val == null || val.trim().isEmpty) {
                                 return 'กรุณากรอกอีเมล';
+                              }
                               if (!RegExp(
                                 r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-                              ).hasMatch(val))
+                              ).hasMatch(val)) {
                                 return 'รูปแบบอีเมลไม่ถูกต้อง';
+                              }
                               return null;
                             },
                           ),
@@ -634,13 +647,16 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             keyboardType: TextInputType.number,
                             maxLength: 13,
                             validator: (val) {
-                              if (val == null || val.trim().isEmpty)
+                              if (val == null || val.trim().isEmpty) {
                                 return 'กรุณากรอกเลขบัตรประชาชน';
-                              if (val.contains(' '))
+                              }
+                              if (val.contains(' ')) {
                                 return 'ต้องไม่มีเว้นวรรคหรือช่องว่าง';
+                              }
                               if (val.length != 13 ||
-                                  !RegExp(r'^[0-9]+$').hasMatch(val))
+                                  !RegExp(r'^[0-9]+$').hasMatch(val)) {
                                 return 'ต้องเป็นตัวเลขความยาว 13 หลัก';
+                              }
                               return null;
                             },
                           ),
@@ -1218,19 +1234,21 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
 
   Widget _buildGenderDropdown() {
     return DropdownButtonFormField<String>(
-      value: _selectedGender.isEmpty ? null : _selectedGender,
+      initialValue: _selectedGender.isEmpty ? null : _selectedGender,
       decoration: InputDecoration(
         hintText: 'เลือกเพศ',
+        hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
+        filled: true,
+        fillColor: Colors.white,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,
-          vertical: 14,
+          vertical: 12,
         ),
       ),
       items: const [
         DropdownMenuItem(value: 'ชาย', child: Text('ชาย')),
         DropdownMenuItem(value: 'หญิง', child: Text('หญิง')),
-        DropdownMenuItem(value: 'อื่นๆ', child: Text('อื่นๆ')),
       ],
       onChanged: (value) {
         setState(() {

@@ -1,12 +1,13 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:miniproject/views/relative_register_page.dart';
 import '../services/auth_service.dart'; // ดึง AuthService ของคุณมาใช้งาน
 import 'caretaker_register_page.dart';
 import 'relative/relative_home_page.dart';
 import 'admin/list_caretaker_page.dart';
 import 'caretaker/caretaker_home_page.dart';
 import 'waiting_approval_page.dart';
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -90,7 +91,7 @@ class _LoginPageState extends State<LoginPage> {
       String uid = result['uid'];
 
       // 🔀 แยกการนำทาง (Navigation) ตามประเภทผู้ใช้งาน
-      if (usertype == 'patient' || usertype == 'relative') {
+      if (usertype == 'relative') {
         // ไปหน้าของญาติ/ผู้ป่วย
         Navigator.pushReplacement(
           context,
@@ -98,18 +99,32 @@ class _LoginPageState extends State<LoginPage> {
         );
       } else if (usertype == 'caretaker') {
         if (result['accountstatus'] == 'Pending') {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const WaitingApprovalPage()));
-          return;
-        } 
-        if (result['accountstatus'] == 'Suspended' || result['status'] == 'Rejected') {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'])));
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const WaitingApprovalPage(),
+            ),
+          );
           return;
         }
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => CaretakerHomePage()));
-        print("ล็อกอินสำเร็จ! ไปหน้าผู้ดูแล"); 
+        if (result['accountstatus'] == 'Suspended' ||
+            result['status'] == 'Suspended') {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(result['message'])));
+          return;
+        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => CaretakerHomePage()),
+        );
+        print("ล็อกอินสำเร็จ! ไปหน้าผู้ดูแล");
       } else if (usertype == 'admin') {
         // ไปหน้าของแอดมิน (TODO: ใส่หน้าโฮมของแอดมิน)
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ListCaretakerPage(uid: uid,)));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => ListCaretakerPage(uid: uid)),
+        );
         print("ล็อกอินสำเร็จ! ไปหน้าแอดมิน");
       }
     } else {
@@ -163,7 +178,7 @@ class _LoginPageState extends State<LoginPage> {
                     borderRadius: BorderRadius.circular(15),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.3),
+                        color: Colors.grey.withValues(alpha: 0.3),
                         spreadRadius: 1,
                         blurRadius: 5,
                         offset: const Offset(0, 3),
@@ -310,7 +325,7 @@ class _LoginPageState extends State<LoginPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const CaretakerRegisterPage(),
+                            builder: (context) => const RelativeRegisterPage(),
                           ),
                         );
                       },

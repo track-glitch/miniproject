@@ -49,7 +49,9 @@ class AuthService {
           .child(uid)
           .child('Relative')
           .child('Patient')
-          .set(patient.toJson()); // 🛠️ แปลงเป็น toJson() และขยับปมให้สมเหตุสมผล
+          .set(
+            patient.toJson(),
+          ); // 🛠️ แปลงเป็น toJson() และขยับปมให้สมเหตุสมผล
 
       return userCredential;
     } catch (e) {
@@ -118,8 +120,11 @@ class AuthService {
   }
 
   // 🔐 3. ฟังก์ชันเข้าสู่ระบบด้วย Username (ค้นหาจาก Realtime Database)
-// 🔐 3. ฟังก์ชันเข้าสู่ระบบด้วย Username 
-  Future<Map<String, dynamic>?> loginWithUsername(String username, String password) async {
+  // 🔐 3. ฟังก์ชันเข้าสู่ระบบด้วย Username
+  Future<Map<String, dynamic>?> loginWithUsername(
+    String username,
+    String password,
+  ) async {
     try {
       // 1. ค้นหาในโหนด 'Login' ว่ามีใครใช้ username นี้ไหม
       DatabaseEvent event = await _dbRef
@@ -129,23 +134,32 @@ class AuthService {
           .once();
 
       if (event.snapshot.exists) {
-        Map<dynamic, dynamic> users = event.snapshot.value as Map<dynamic, dynamic>;
+        Map<dynamic, dynamic> users =
+            event.snapshot.value as Map<dynamic, dynamic>;
         String uid = users.keys.first;
         Map<dynamic, dynamic> userData = users[uid];
 
         // 2. เช็กว่ารหัสผ่านตรงไหม
         if (userData['password'] == password) {
 
-        String status = userData['Caretaker']['accountstatus'] ?? '';
-        String reason = userData['Caretaker']['admincomment'] ?? '';
+          if (userData['usertype'] == 'caretaker') {
+            
+            String status = userData['Caretaker']['accountstatus'] ?? '';
+            String reason = userData['Caretaker']['admincomment'] ?? '';
 
+            return {
+              'success': true,
+              'uid': uid,
+              'usertype': userData['usertype'],
+              'accountstatus': status,
+              'admincomment': reason,
+            };
+          }
           // ถ้าเป็นญาติ หรือ เป็นผู้ดูแลที่ Approved แล้ว ให้ผ่านได้ปกติ
           return {
             'success': true,
             'uid': uid,
-            'usertype': userData['usertype'], 
-            'accountstatus' : status,
-            'admincomment' : reason,
+            'usertype': userData['usertype'],
           };
         } else {
           return {'success': false, 'message': 'รหัสผ่านไม่ถูกต้อง'};
@@ -158,5 +172,4 @@ class AuthService {
       return {'success': false, 'message': 'เกิดข้อผิดพลาดในการเชื่อมต่อ'};
     }
   }
-
 }
