@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../models/patient_model.dart';
 import '../models/relative_model.dart';
+import 'caretaker_register_page.dart'; // Import หน้าผู้ดูแลเพื่อใช้ในการสลับหน้า
 
 class RelativeRegisterPage extends StatefulWidget {
   const RelativeRegisterPage({super.key});
@@ -19,9 +20,13 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
   // สถานะของหน้าจอ
   bool _isObscure = true;
   bool _isLoading = false;
+  
+  // กำหนดค่า Tab ปัจจุบันของหน้านี้เป็น "ญาติ"
+  final String _selectedTab = "ญาติ"; 
 
   // โทนสี
   final Color primaryColor = const Color(0xFF9B59B6);
+  final Color darkPurple = const Color(0xFF7D3C98);
   final Color lightPurple = const Color(0xFFF4E8FA);
   final Color bgColor = const Color(0xFFFAFAFA);
 
@@ -60,6 +65,64 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     super.dispose();
   }
 
+  // ฟังก์ชันเช็คว่าฝั่งญาติ/ผู้ป่วย มีการกรอกข้อมูลไว้บ้างหรือยัง
+  bool get _hasAnyData {
+    return [
+      _patUsernameController,
+      _patEmailController,
+      _patPasswordController,
+      _patIdCardController,
+      _patFirstNameController,
+      _patLastNameController,
+      _patPhoneController,
+      _patAddressController,
+      _relFirstNameController,
+      _relLastNameController,
+      _relPhoneController,
+      _relLineIdController,
+      _relRelationController,
+    ].any((c) => c.text.trim().isNotEmpty);
+  }
+
+  // ฟังก์ชันจัดการเมื่อกดสลับไปหน้า "ผู้ดูแล"
+  void _handleToggleToCaretaker() {
+    if (_hasAnyData) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('ยืนยันการเปลี่ยนหน้า'),
+          content: const Text(
+            'คุณมีข้อมูลที่กรอกไว้บางส่วนในหน้าญาติ ต้องการสลับไปหน้าสมัครผู้ดูแลหรือไม่? ข้อมูลที่กรอกในหน้านี้จะไม่ถูกบันทึก',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('ยกเลิก'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // ปิด Dialog
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CaretakerRegisterPage()),
+                );
+              },
+              child: const Text(
+                'สลับหน้า',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const CaretakerRegisterPage()),
+      );
+    }
+  }
+
   void _handleRegister() async {
     setState(() => _isLoading = true);
 
@@ -80,7 +143,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         return;
       }
 
-      // 1. มัดรวมโมเดลญาติ
       RelativeModel relativeData = RelativeModel(
         relativeId: "",
         firstname: _relFirstNameController.text.trim(),
@@ -91,7 +153,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         relationship: _relRelationController.text.trim(),
       );
 
-      // 2. มัดรวมโมเดลคนไข้
       PatientModel patientData = PatientModel(
         patientId: _patIdCardController.text.trim().isNotEmpty
             ? _patIdCardController.text.trim()
@@ -108,11 +169,10 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         longitude: 0.0,
       );
 
-      // 3. ส่งคำขอสมัครสมาชิกของญาติพ่วงข้อมูลคนไข้
       UserCredential? userCredential = await _authService.registerRelative(
         username: username,
         password: password,
-        usertype: 'relative',
+        usertype: 'relative', 
         relative: relativeData,
         patient: patientData,
       );
@@ -148,26 +208,30 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
       backgroundColor: bgColor,
       appBar: AppBar(
         title: const Text(
-          'สมัครสมาชิก (ญาติ/ผู้ป่วย)',
+          'สมัครสมาชิก',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         backgroundColor: primaryColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
           child: Column(
             children: [
+              // เมนูเลือกด้านบนสุด (Toggle Tab)
+              _buildTopToggleTab(),
+              const SizedBox(height: 10),
+
               _buildProfileUpload(),
               const SizedBox(height: 25),
 
-              // ฟอร์มญาติและผู้ป่วย
+              // ฟอร์มข้อมูลต่างๆ
               _buildSection(
                 title: 'ข้อมูลบัญชีเข้าสู่ระบบ',
                 children: [
@@ -272,6 +336,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
 
               const SizedBox(height: 20),
 
+              // ปุ่มสมัครสมาชิก
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -279,7 +344,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   onPressed: _isLoading ? null : _handleRegister,
@@ -327,6 +392,74 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
   // ==========================================
   // HELPER WIDGETS
   // ==========================================
+  
+  // ส่วนประกอบระบบเลือกด้านบนสุด (Toggle Tab)
+  Widget _buildTopToggleTab() {
+    return Center(
+      child: Container(
+        width: 280,
+        height: 46,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(23),
+          border: Border.all(color: primaryColor, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            // ฝั่งปุ่ม "ญาติ"
+            Expanded(
+              child: GestureDetector(
+                onTap: () {}, // อยู่หน้าตัวเองอยู่แล้ว ไม่ต้องทำอะไร
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: _selectedTab == "ญาติ" ? primaryColor : Colors.transparent, // ใช้ primaryColor ไฮไลท์หน้าปัจจุบัน
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(21),
+                      bottomLeft: Radius.circular(21),
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'ญาติ',
+                    style: TextStyle(
+                      color: _selectedTab == "ญาติ" ? Colors.white : primaryColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // ฝั่งปุ่ม "ผู้ดูแล"
+            Expanded(
+              child: GestureDetector(
+                onTap: _handleToggleToCaretaker, // เรียกฟังก์ชันเช็คข้อมูลก่อนเปิดเพจผู้ดูแล
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: _selectedTab == "ผู้ดูแล" ? darkPurple : Colors.transparent,
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(21),
+                      bottomRight: Radius.circular(21),
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'ผู้ดูแล',
+                    style: TextStyle(
+                      color: _selectedTab == "ผู้ดูแล" ? Colors.white : primaryColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildProfileUpload() {
     return Column(
       children: [
@@ -367,7 +500,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: lightPurple,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade400),
       ),
       child: Column(
@@ -375,7 +508,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         children: [
           Text(
             title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: darkPurple),
           ),
           const SizedBox(height: 10),
           ...children,
@@ -386,7 +519,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
 
   Widget _buildTextField({
     required String hint,
-    TextEditingController? controller,
+    required TextEditingController? controller,
     bool isPassword = false,
     int maxLines = 1,
   }) {
@@ -415,7 +548,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: primaryColor),
+            borderSide: BorderSide(color: primaryColor, width: 1.5),
           ),
           suffixIcon: isPassword
               ? IconButton(

@@ -353,14 +353,14 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         _hasPinned;
   }
 
-  void _handleBackNavigation() {
+  void _handleToggleToRelative() {
     if (_hasAnyData) {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('ยืนยันการออก'),
+          title: const Text('ยืนยันการเปลี่ยนหน้า'),
           content: const Text(
-            'คุณมีข้อมูลที่กรอกไว้บางส่วน ต้องการออกจากหน้านี้หรือไม่? ข้อมูลที่กรอกจะไม่ถูกบันทึก',
+            'คุณมีข้อมูลที่กรอกไว้บางส่วนในหน้าผู้ดูแล ต้องการสลับไปหน้าสมัครญาติหรือไม่? ข้อมูลที่กรอกในหน้านี้จะไม่ถูกบันทึก',
           ),
           actions: [
             TextButton(
@@ -368,26 +368,30 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
               child: const Text('ยกเลิก'),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RelativeRegisterPage(),
+                  ),
+                );
+              },
               child: const Text(
-                'ออกจากหน้านี้',
+                'สลับหน้า',
                 style: TextStyle(color: Colors.red),
               ),
             ),
           ],
         ),
-      ).then((exit) {
-        if (exit == true) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const RelativeRegisterPage(),
-            ),
-          );
-        }
-      });
+      );
     } else {
-      Navigator.pop(context);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const RelativeRegisterPage(),
+        ),
+      );
     }
   }
 
@@ -1053,7 +1057,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                           TextButton(
-                            onPressed: () => _handleRegisterSubmit(),
+                            onPressed: () => Navigator.pop(context),
                             child: Text(
                               'เข้าสู่ระบบ',
                               style: TextStyle(
@@ -1076,60 +1080,68 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   }
 
   Widget _buildTopToggleTab() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-      height: 45,
-      decoration: BoxDecoration(
-        color: lightPurple,
-        borderRadius: BorderRadius.circular(25),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () => _handleBackNavigation(),
-              child: Container(
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: _selectedTab == "ญาติ"
-                      ? darkPurple
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: Text(
-                  'ญาติ',
-                  style: TextStyle(
-                    color: _selectedTab == "ญาติ" ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.bold,
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+        width: 280,
+        height: 46,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(23),
+          border: Border.all(color: primaryColor, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            // ฝั่งปุ่ม "ญาติ"
+            Expanded(
+              child: GestureDetector(
+                onTap: _handleToggleToRelative,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: _selectedTab == "ญาติ" ? primaryColor : Colors.transparent,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(21),
+                      bottomLeft: Radius.circular(21),
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'ญาติ',
+                    style: TextStyle(
+                      color: _selectedTab == "ญาติ" ? Colors.white : primaryColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          Expanded(
-            child: GestureDetector(
-              onTap: () {}, // อยู่หน้าเดียวกัน ไม่ต้องทำอะไร
-              child: Container(
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: _selectedTab == "ผู้ดูแล"
-                      ? darkPurple
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: Text(
-                  'ผู้ดูแล',
-                  style: TextStyle(
-                    color: _selectedTab == "ผู้ดูแล"
-                        ? Colors.white
-                        : Colors.black,
-                    fontWeight: FontWeight.bold,
+            // ฝั่งปุ่ม "ผู้ดูแล"
+            Expanded(
+              child: GestureDetector(
+                onTap: () {}, // อยู่หน้าเดียวกัน ไม่ต้องทำอะไร
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: _selectedTab == "ผู้ดูแล" ? primaryColor : Colors.transparent,
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(21),
+                      bottomRight: Radius.circular(21),
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'ผู้ดูแล',
+                    style: TextStyle(
+                      color: _selectedTab == "ผู้ดูแล" ? Colors.white : primaryColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
