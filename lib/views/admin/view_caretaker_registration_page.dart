@@ -325,7 +325,7 @@ class _ViewCaretakerRegistrationPageState extends State<ViewCaretakerRegistratio
                       : GridView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: vehicle!.vehiclephotos!.length,
+                          itemCount: vehicle.vehiclephotos!.length,
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 3, 
                             crossAxisSpacing: 10, 
@@ -334,7 +334,7 @@ class _ViewCaretakerRegistrationPageState extends State<ViewCaretakerRegistratio
                           ),
                           itemBuilder: (context, index) {
                             // 1. ดึงก้อนโมเดลรูปรถออกมา
-                            var photoModel = vehicle!.vehiclephotos![index];
+                            var photoModel = vehicle.vehiclephotos![index];
                             
                             // 2. ดึงเฉพาะชื่อไฟล์รูปออกมาจากตัวแปร photo
                             String photoPath = photoModel.photo ?? ''; 

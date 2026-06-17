@@ -45,14 +45,14 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   File? _licenseImageFile;
   File? _insuranceImageFile;
   File? _firstAidImageFile;
-  List<File> _vehicleImageFiles = [];
+  final List<File> _vehicleImageFiles = [];
 
   // ชื่อไฟล์รูปภาพที่จะใช้นำไป insert ลงฐานข้อมูล
   String? _profilePhotoName;
   String? _licenseCardPhotoName;
   String? _insurancePhotoName;
   String? _firstAidPhotoName;
-  List<String> _vehiclePhotoNames = [];
+  final List<String> _vehiclePhotoNames = [];
 
   // Controllers สำหรับ Form
   final TextEditingController _usernameCtrl = TextEditingController();
@@ -388,9 +388,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     } else {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => const RelativeRegisterPage(),
-        ),
+        MaterialPageRoute(builder: (context) => const RelativeRegisterPage()),
       );
     }
   }
@@ -776,8 +774,10 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                               ),
                             ],
                           ),
+                          SizedBox(height: 10),
                           _buildLabelField('เพศ', isRequired: true),
                           _buildGenderDropdown(),
+                          SizedBox(height: 10),
                           _buildLabelField('เบอร์โทรศัพท์', isRequired: true),
                           _buildInputField(
                             hint: 'เบอร์โทรศัพท์',
@@ -800,7 +800,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                           ),
                           _buildLabelField('อุปกรณ์ที่มี', isRequired: true),
                           _buildInputField(
-                            hint: 'อธิบายอุปกรณ์ที่มี...',
+                            hint: 'อุปกรณ์ที่มีในการรองรับผู้ป่วย',
                             controller: _equipmentCtrl,
                             maxLines: 4,
                             maxLength: 500,
@@ -910,12 +910,27 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             validator: (val) =>
                                 val!.isEmpty ? 'กรุณากรอกทะเบียนรถ' : null,
                           ),
-                          const SizedBox(height: 5),
-                          const Text(
-                            'ภาพถ่ายภายในและภายนอกยานพาหนะ (สูงสุด 4 รูป)',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
+                          const SizedBox(height: 3),
+                          RichText(
+                            text: const TextSpan(
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.black,
+                              ), // สไตล์ข้อความหลัก
+                              children: [
+                                TextSpan(
+                                  text:
+                                      'ภาพถ่ายภายในและภายนอกยานพาหนะสูงสุด 4 รูป', // 💡 ข้อความขึ้นก่อน
+                                ),
+                                TextSpan(
+                                  text:
+                                      ' *', // 💡 ดอกจันสีแดงย้ายมาต่อท้ายสุดตรงนี้
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -999,10 +1014,11 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                         title: 'ข้อมูลเอกสาร',
                         children: [
                           _buildUploadDocRow(
-                            'รูปถ่ายใบอนุญาตขับขี่ *',
+                            'รูปถ่ายใบอนุญาตขับขี่',
                             _licenseImageFile,
                             _licenseCardPhotoName,
                             () => _pickImageReal('license'),
+                            isRequired: true,
                           ),
                           const Divider(),
                           _buildUploadDocRow(
@@ -1010,6 +1026,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             _insuranceImageFile,
                             _insurancePhotoName,
                             () => _pickImageReal('insurance'),
+                            isRequired: true,
                           ),
                           const Divider(),
                           _buildUploadDocRow(
@@ -1017,6 +1034,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             _firstAidImageFile,
                             _firstAidPhotoName,
                             () => _pickImageReal('firstaid'),
+                            isRequired: true,
                           ),
                         ],
                       ),
@@ -1098,7 +1116,9 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                 onTap: _handleToggleToRelative,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: _selectedTab == "ญาติ" ? primaryColor : Colors.transparent,
+                    color: _selectedTab == "ญาติ"
+                        ? primaryColor
+                        : Colors.transparent,
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(21),
                       bottomLeft: Radius.circular(21),
@@ -1108,7 +1128,9 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                   child: Text(
                     'ญาติ',
                     style: TextStyle(
-                      color: _selectedTab == "ญาติ" ? Colors.white : primaryColor,
+                      color: _selectedTab == "ญาติ"
+                          ? Colors.white
+                          : primaryColor,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1122,7 +1144,9 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                 onTap: () {}, // อยู่หน้าเดียวกัน ไม่ต้องทำอะไร
                 child: Container(
                   decoration: BoxDecoration(
-                    color: _selectedTab == "ผู้ดูแล" ? primaryColor : Colors.transparent,
+                    color: _selectedTab == "ผู้ดูแล"
+                        ? primaryColor
+                        : Colors.transparent,
                     borderRadius: const BorderRadius.only(
                       topRight: Radius.circular(21),
                       bottomRight: Radius.circular(21),
@@ -1132,7 +1156,9 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                   child: Text(
                     'ผู้ดูแล',
                     style: TextStyle(
-                      color: _selectedTab == "ผู้ดูแล" ? Colors.white : primaryColor,
+                      color: _selectedTab == "ผู้ดูแล"
+                          ? Colors.white
+                          : primaryColor,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1340,8 +1366,9 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     String title,
     File? imageFile,
     String? fileName,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    bool isRequired = false,
+  }) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: imageFile != null
@@ -1360,9 +1387,27 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
               color: Colors.grey.shade200,
               child: const Icon(Icons.insert_drive_file, color: Colors.grey),
             ),
-      title: Text(
-        title,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+      title: RichText(
+        text: TextSpan(
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.black, // กำหนดสีหลักของข้อความ
+            fontFamily:
+                'Sukhumvit', // ใส่ชื่อ ฟอนต์หลัก ของแอปคุณตรงนี้ (ถ้ามี)
+          ),
+          children: [
+            TextSpan(text: title), // ข้อความหัวข้อหลัก
+            if (isRequired) // 💡 ถ้าเป็นช่องที่จำเป็น จะใส่ดอกจันสีแดงต่อท้ายให้ทันที
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+          ],
+        ),
       ),
       subtitle: fileName != null
           ? Text(

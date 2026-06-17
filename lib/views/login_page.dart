@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:miniproject/views/relative_register_page.dart';
 import '../services/auth_service.dart'; // ดึง AuthService ของคุณมาใช้งาน
-import 'caretaker_register_page.dart';
 import 'relative/relative_home_page.dart';
 import 'admin/list_caretaker_page.dart';
 import 'caretaker/caretaker_home_page.dart';
