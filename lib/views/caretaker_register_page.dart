@@ -30,31 +30,33 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   bool _isObscure = true;
   bool _isLoading = false;
   final _selectedTab = "ผู้ดูแล";
-  String _selectedGender = ""; // For gender dropdown
+  String _selectedGender = "";
 
-  // เก็บข้อมูลพิกัดละติจูด/ลองจิจูด จริง
-  LatLng _selectedLocation = const LatLng(
-    13.7563,
-    100.5018,
-  ); // ค่าเริ่มต้น: กรุงเทพฯ
+  LatLng _selectedLocation = const LatLng(13.7563, 100.5018);
   bool _hasPinned = false;
-  bool _isLoadingLocation = false; // Loading status for location
+  bool _isLoadingLocation = false;
 
-  // ไฟล์รูปภาพจริงสำหรับแสดงผล Preview บนหน้าจอ
   File? _profileImageFile;
   File? _licenseImageFile;
   File? _insuranceImageFile;
   File? _firstAidImageFile;
   final List<File> _vehicleImageFiles = [];
 
-  // ชื่อไฟล์รูปภาพที่จะใช้นำไป insert ลงฐานข้อมูล
+  // เก็บเป็น Base64 ตามที่ต้องการ
+  String? _profilePhotoBase64;
+  String? _licensePhotoBase64;
+  String? _insurancePhotoBase64;
+  String? _firstAidPhotoBase64;
+  List<String> _vehiclePhotoBase64List = [];
+
+  // ชื่อไฟล์รูปภาพ
   String? _profilePhotoName;
   String? _licenseCardPhotoName;
   String? _insurancePhotoName;
   String? _firstAidPhotoName;
   final List<String> _vehiclePhotoNames = [];
 
-  // Controllers สำหรับ Form
+  // Controllers Form
   final TextEditingController _usernameCtrl = TextEditingController();
   final TextEditingController _emailCtrl = TextEditingController();
   final TextEditingController _passwordCtrl = TextEditingController();
@@ -76,12 +78,9 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
 
   final Color primaryColor = const Color(0xFF9B59B6);
   final Color darkPurple = const Color(0xFF7D3C98);
-  final Color lightPurple = const Color(0xFFF4E8FA);
-  final Color greyBorder = const Color(0xFFD5D8DC);
+  final Color lightPurple = const Color(0xFFF3E5F5);
+  final Color greyBorder = const Color(0xFFE1BEE7);
 
-  // ==========================================
-  // ฟังก์ชันขออนุญาติการเข้าถึงตำแหน่ง
-  // ==========================================
   Future<bool> _requestLocationPermission() async {
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
@@ -100,9 +99,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         permission == LocationPermission.always;
   }
 
-  // ==========================================
-  // ฟังก์ชันดึงตำแหน่งปัจจุบัน
-  // ==========================================
   Future<LatLng?> _getCurrentLocation() async {
     try {
       bool hasPermission = await _requestLocationPermission();
@@ -120,9 +116,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     }
   }
 
-  // ==========================================
-  // ฟังก์ชันเลือกวันที่เกิด
-  // ==========================================
   Future<void> _selectBirthDate() async {
     DateTime? selectedDate = await showDatePicker(
       context: context,
@@ -133,24 +126,20 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     if (selectedDate != null) {
       setState(() {
         _birthDateCtrl.text =
-            "${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.year + 543}"; // แสดงปีพุทธศักราช
+            "${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.year + 543}";
       });
     }
   }
 
-  // ==========================================
-  // ฟังก์ชันเลือกรูปภาพจากมือถือจริง (ดึงทั้ง File และชื่อไฟล์)
-  // ==========================================
   Future<void> _pickImageReal(String type) async {
     final XFile? pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 80, // บีบอัดความละเอียดภาพเล็กน้อยเพื่อประหยัดพื้นที่
+      imageQuality: 80,
     );
 
     if (pickedFile != null) {
       File file = File(pickedFile.path);
 
-      // ตรวจสอบขนาดไฟล์ไม่ให้เกิน 20MB
       int fileSizeInBytes = await file.length();
       double fileSizeInMB = fileSizeInBytes / (1024 * 1024);
 
@@ -161,26 +150,33 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         return;
       }
 
-      setState(() {
-        String fileName =
-            pickedFile.name; // ดึงชื่อไฟล์พร้อมนามสกุล เช่น image.jpg
+      // ดึง Base64 ไว้ก่อนทำ setState
+      String fileName = pickedFile.name;
+      List<int> imageBytes = await file.readAsBytes();
+      String base64String = base64Encode(imageBytes);
 
+      setState(() {
         if (type == 'profile') {
           _profileImageFile = file;
           _profilePhotoName = fileName;
+          _profilePhotoBase64 = base64String;
         } else if (type == 'license') {
           _licenseImageFile = file;
           _licenseCardPhotoName = fileName;
+          _licensePhotoBase64 = base64String;
         } else if (type == 'insurance') {
           _insuranceImageFile = file;
           _insurancePhotoName = fileName;
+          _insurancePhotoBase64 = base64String;
         } else if (type == 'firstaid') {
           _firstAidImageFile = file;
           _firstAidPhotoName = fileName;
+          _firstAidPhotoBase64 = base64String;
         } else if (type == 'vehicle') {
           if (_vehicleImageFiles.length < 4) {
             _vehicleImageFiles.add(file);
             _vehiclePhotoNames.add(fileName);
+            _vehiclePhotoBase64List.add(base64String); // เก็บ Base64 เข้า List
           } else {
             _showErrorSnackBar('อัปโหลดรูปยานพาหนะได้สูงสุด 4 รูป');
           }
@@ -189,9 +185,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     }
   }
 
-  // ==========================================
-  // ฟังก์ชันแปลงพิกัดละติจูด/ลองจิจูด เป็นที่อยู่ภาษาไทยผ่าน OpenStreetMap API
-  // ==========================================
   Future<void> _getAddressFromLatLng(LatLng location) async {
     final url = Uri.parse(
       'https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.latitude}&lon=${location.longitude}&accept-language=th',
@@ -207,7 +200,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         final address = data['address'];
 
         if (address != null) {
-          // ดึงรายละเอียดสถานที่ตามที่ OpenStreetMap ส่งกลับมา
           String subdistrict =
               address['subdistrict'] ??
               address['village'] ??
@@ -221,7 +213,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
           setState(() {
             _selectedLocation = location;
             _hasPinned = true;
-            // ประกอบข้อความแสดงใน Textbox ให้ผู้ใช้แก้ไขเพิ่มเติมได้
             _addressCtrl.text =
                 "$subdistrict $district $province รหัสไปรษณีย์ $postcode";
           });
@@ -232,11 +223,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     }
   }
 
-  // ==========================================
-  // ส่วนแสดงหน้าต่างแผนที่ให้เลือกปักหมุด
-  // ==========================================
   void _showMapModal() async {
-    // ขออนุญาติและดึงตำแหน่งปัจจุบัน
     setState(() => _isLoadingLocation = true);
     LatLng? currentLocation = await _getCurrentLocation();
     setState(() => _isLoadingLocation = false);
@@ -415,48 +402,46 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     try {
       List<DocumentModel> documentList = [];
 
+      // ส่งรูปแบบ Base64
       documentList.add(
         DocumentModel(
           documentId: "DOC-LICENSE-${DateTime.now().millisecondsSinceEpoch}",
           documenttype: "driver_license",
-          filepath: _licenseCardPhotoName!, // ส่งชื่อไฟล์ที่เลือกไป insert
+          filepath: _licensePhotoBase64!, 
           uploaddate: DateTime.now(),
         ),
       );
 
-      if (_insurancePhotoName != null) {
+      if (_insurancePhotoBase64 != null) {
         documentList.add(
           DocumentModel(
             documentId:
                 "DOC-INSURANCE-${DateTime.now().millisecondsSinceEpoch}",
             documenttype: "car_insurance",
-            filepath: _insurancePhotoName!,
+            filepath: _insurancePhotoBase64!,
             uploaddate: DateTime.now(),
           ),
         );
       }
 
-      if (_firstAidPhotoName != null) {
+      if (_firstAidPhotoBase64 != null) {
         documentList.add(
           DocumentModel(
             documentId: "DOC-FIRSTAID-${DateTime.now().millisecondsSinceEpoch}",
             documenttype: "first_aid_certificate",
-            filepath: _firstAidPhotoName!,
+            filepath: _firstAidPhotoBase64!,
             uploaddate: DateTime.now(),
           ),
         );
       }
 
-      // Parse the birthdate from DD/MM/YYYY format (Buddhist calendar)
       DateTime parsedDate = DateTime.now();
       try {
         List<String> dateParts = _birthDateCtrl.text.split('/');
         if (dateParts.length == 3) {
           int day = int.parse(dateParts[0]);
           int month = int.parse(dateParts[1]);
-          int year =
-              int.parse(dateParts[2]) -
-              543; // Convert from Buddhist to Gregorian
+          int year = int.parse(dateParts[2]) - 543;
           parsedDate = DateTime(year, month, day);
         }
       } catch (e) {
@@ -465,7 +450,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
 
       CaretakerModel caretakerData = CaretakerModel(
         caretakerId: "",
-        profilephoto: _profilePhotoName!, // ส่งชื่อไฟล์รูปโปรไฟล์ไป insert
+        profilephoto: _profilePhotoBase64!,
         firstname: _firstNameCtrl.text.trim(),
         lastname: _lastNameCtrl.text.trim(),
         gender: _selectedGender,
@@ -489,11 +474,12 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         model: _modelCtrl.text.trim(),
         licenseplate: _licensePlateCtrl.text.trim(),
         color: _colorCtrl.text.trim(),
-        vehiclephotos: _vehiclePhotoNames
+        // ส่ง Base64 ของรูปยานพาหนะ
+        vehiclephotos: _vehiclePhotoBase64List
             .map(
-              (photoName) => VehiclePhotoModel(
+              (base64Str) => VehiclePhotoModel(
                 vehiclephotoid: "VP-${DateTime.now().millisecondsSinceEpoch}",
-                photo: photoName,
+                photo: base64Str,
               ),
             )
             .toList(),
@@ -825,7 +811,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                                 : null,
                           ),
                           InkWell(
-                            onTap: _showMapModal, // เรียกเปิดหน้าต่างแผนที่จริง
+                            onTap: _showMapModal,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
@@ -954,54 +940,25 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                                 ),
                               ),
                               const SizedBox(width: 10),
+                              // นำ "เลือกปักหมุดแผนที่" ออก และแทนที่ด้วยพรีวิวภาพรถ
                               Expanded(
-                                child: SizedBox(
-                                  height: 60,
-                                  child: ListView.builder(
-                                    scrollDirection: Axis.horizontal,
-                                    itemCount: _vehicleImageFiles.length,
-                                    itemBuilder: (context, index) {
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: _vehicleImageFiles.map((file) {
                                       return Padding(
-                                        padding: const EdgeInsets.only(
-                                          right: 8,
-                                        ),
-                                        child: Stack(
-                                          alignment: Alignment.topRight,
-                                          children: [
-                                            ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              child: Image.file(
-                                                _vehicleImageFiles[index],
-                                                width: 60,
-                                                height: 60,
-                                                fit: BoxFit.cover,
-                                              ),
-                                            ),
-                                            GestureDetector(
-                                              onTap: () {
-                                                setState(() {
-                                                  _vehicleImageFiles.removeAt(
-                                                    index,
-                                                  );
-                                                  _vehiclePhotoNames.removeAt(
-                                                    index,
-                                                  );
-                                                });
-                                              },
-                                              child: Container(
-                                                color: Colors.red,
-                                                child: const Icon(
-                                                  Icons.close,
-                                                  size: 16,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
+                                        padding: const EdgeInsets.only(right: 8.0),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Image.file(
+                                            file,
+                                            width: 60,
+                                            height: 60,
+                                            fit: BoxFit.cover,
+                                          ),
                                         ),
                                       );
-                                    },
+                                    }).toList(),
                                   ),
                                 ),
                               ),
@@ -1110,15 +1067,12 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         ),
         child: Row(
           children: [
-            // ฝั่งปุ่ม "ญาติ"
             Expanded(
               child: GestureDetector(
                 onTap: _handleToggleToRelative,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: _selectedTab == "ญาติ"
-                        ? primaryColor
-                        : Colors.transparent,
+                    color: _selectedTab == "ญาติ" ? primaryColor : Colors.transparent,
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(21),
                       bottomLeft: Radius.circular(21),
@@ -1128,9 +1082,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                   child: Text(
                     'ญาติ',
                     style: TextStyle(
-                      color: _selectedTab == "ญาติ"
-                          ? Colors.white
-                          : primaryColor,
+                      color: _selectedTab == "ญาติ" ? Colors.white : primaryColor,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1138,15 +1090,12 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                 ),
               ),
             ),
-            // ฝั่งปุ่ม "ผู้ดูแล"
             Expanded(
               child: GestureDetector(
                 onTap: () {}, // อยู่หน้าเดียวกัน ไม่ต้องทำอะไร
                 child: Container(
                   decoration: BoxDecoration(
-                    color: _selectedTab == "ผู้ดูแล"
-                        ? primaryColor
-                        : Colors.transparent,
+                    color: _selectedTab == "ผู้ดูแล" ? primaryColor : Colors.transparent,
                     borderRadius: const BorderRadius.only(
                       topRight: Radius.circular(21),
                       bottomRight: Radius.circular(21),
@@ -1156,9 +1105,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                   child: Text(
                     'ผู้ดูแล',
                     style: TextStyle(
-                      color: _selectedTab == "ผู้ดูแล"
-                          ? Colors.white
-                          : primaryColor,
+                      color: _selectedTab == "ผู้ดูแล" ? Colors.white : primaryColor,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1179,25 +1126,32 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
           alignment: Alignment.bottomRight,
           children: [
             CircleAvatar(
-              radius: 45,
-              backgroundColor: Colors.grey.shade200,
-              backgroundImage: _profileImageFile != null
-                  ? FileImage(_profileImageFile!)
-                  : null,
-              child: _profileImageFile == null
-                  ? const Icon(Icons.person, size: 50, color: Colors.grey)
-                  : null,
+              radius: 43,
+              backgroundColor: primaryColor,
+              child: CircleAvatar(
+                radius: 40,
+                backgroundColor: Colors.white,
+                backgroundImage: _profileImageFile != null
+                    ? FileImage(_profileImageFile!)
+                    : null,
+                child: _profileImageFile == null
+                    ? const Icon(Icons.person, size: 55, color: Colors.black)
+                    : null,
+              ),
             ),
             InkWell(
               onTap: () => _pickImageReal('profile'),
               child: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: primaryColor,
                   shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(blurRadius: 3, color: Colors.black26)],
                 ),
-                child: Icon(Icons.camera_alt, size: 20, color: primaryColor),
+                child: const Icon(
+                  Icons.camera_alt,
+                  size: 16,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],
