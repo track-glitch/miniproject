@@ -30,11 +30,11 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   bool _isObscure = true;
   bool _isLoading = false;
   final _selectedTab = "ผู้ดูแล";
-  String _selectedGender = ""; 
+  String _selectedGender = "";
 
-  LatLng _selectedLocation = const LatLng(13.7563, 100.5018); 
+  LatLng _selectedLocation = const LatLng(13.7563, 100.5018);
   bool _hasPinned = false;
-  bool _isLoadingLocation = false; 
+  bool _isLoadingLocation = false;
 
   File? _profileImageFile;
   File? _licenseImageFile;
@@ -42,6 +42,14 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   File? _firstAidImageFile;
   List<File> _vehicleImageFiles = [];
 
+  // เก็บเป็น Base64 ตามที่ต้องการ
+  String? _profilePhotoBase64;
+  String? _licensePhotoBase64;
+  String? _insurancePhotoBase64;
+  String? _firstAidPhotoBase64;
+  List<String> _vehiclePhotoBase64List = [];
+
+  // ชื่อไฟล์รูปภาพ
   String? _profilePhotoName;
   String? _licenseCardPhotoName;
   String? _insurancePhotoName;
@@ -68,13 +76,10 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   final TextEditingController _colorCtrl = TextEditingController();
   final TextEditingController _licensePlateCtrl = TextEditingController();
 
-  // ==========================================
-  // ส่วนแก้ไข: ปรับเฉดสีให้เหมือนตามรูปภาพตัวอย่างเป๊ะๆ
-  // ==========================================
   final Color primaryColor = const Color(0xFF9B59B6);
   final Color darkPurple = const Color(0xFF7D3C98);
-  final Color lightPurple = const Color(0xFFF3E5F5); // สีม่วงพาสเทลของกล่อง Section หลังข้อความ
-  final Color greyBorder = const Color(0xFFE1BEE7); // สีกรอบของช่องกรอกข้อมูล (TextField) ด้านใน
+  final Color lightPurple = const Color(0xFFF3E5F5);
+  final Color greyBorder = const Color(0xFFE1BEE7);
 
   Future<bool> _requestLocationPermission() async {
     LocationPermission permission = await Geolocator.checkPermission();
@@ -121,7 +126,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     if (selectedDate != null) {
       setState(() {
         _birthDateCtrl.text =
-            "${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.year + 543}"; 
+            "${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.year + 543}";
       });
     }
   }
@@ -129,7 +134,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   Future<void> _pickImageReal(String type) async {
     final XFile? pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 80, 
+      imageQuality: 80,
     );
 
     if (pickedFile != null) {
@@ -145,25 +150,33 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         return;
       }
 
-      setState(() {
-        String fileName = pickedFile.name; 
+      // ดึง Base64 ไว้ก่อนทำ setState
+      String fileName = pickedFile.name;
+      List<int> imageBytes = await file.readAsBytes();
+      String base64String = base64Encode(imageBytes);
 
+      setState(() {
         if (type == 'profile') {
           _profileImageFile = file;
           _profilePhotoName = fileName;
+          _profilePhotoBase64 = base64String;
         } else if (type == 'license') {
           _licenseImageFile = file;
           _licenseCardPhotoName = fileName;
+          _licensePhotoBase64 = base64String;
         } else if (type == 'insurance') {
           _insuranceImageFile = file;
           _insurancePhotoName = fileName;
+          _insurancePhotoBase64 = base64String;
         } else if (type == 'firstaid') {
           _firstAidImageFile = file;
           _firstAidPhotoName = fileName;
+          _firstAidPhotoBase64 = base64String;
         } else if (type == 'vehicle') {
           if (_vehicleImageFiles.length < 4) {
             _vehicleImageFiles.add(file);
             _vehiclePhotoNames.add(fileName);
+            _vehiclePhotoBase64List.add(base64String); // เก็บ Base64 เข้า List
           } else {
             _showErrorSnackBar('อัปโหลดรูปยานพาหนะได้สูงสุด 4 รูป');
           }
@@ -362,9 +375,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     } else {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => const RelativeRegisterPage(),
-        ),
+        MaterialPageRoute(builder: (context) => const RelativeRegisterPage()),
       );
     }
   }
@@ -391,33 +402,34 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     try {
       List<DocumentModel> documentList = [];
 
+      // ส่งรูปแบบ Base64
       documentList.add(
         DocumentModel(
           documentId: "DOC-LICENSE-${DateTime.now().millisecondsSinceEpoch}",
           documenttype: "driver_license",
-          filepath: _licenseCardPhotoName!, 
+          filepath: _licensePhotoBase64!, 
           uploaddate: DateTime.now(),
         ),
       );
 
-      if (_insurancePhotoName != null) {
+      if (_insurancePhotoBase64 != null) {
         documentList.add(
           DocumentModel(
             documentId:
                 "DOC-INSURANCE-${DateTime.now().millisecondsSinceEpoch}",
             documenttype: "car_insurance",
-            filepath: _insurancePhotoName!,
+            filepath: _insurancePhotoBase64!,
             uploaddate: DateTime.now(),
           ),
         );
       }
 
-      if (_firstAidPhotoName != null) {
+      if (_firstAidPhotoBase64 != null) {
         documentList.add(
           DocumentModel(
             documentId: "DOC-FIRSTAID-${DateTime.now().millisecondsSinceEpoch}",
             documenttype: "first_aid_certificate",
-            filepath: _firstAidPhotoName!,
+            filepath: _firstAidPhotoBase64!,
             uploaddate: DateTime.now(),
           ),
         );
@@ -429,9 +441,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         if (dateParts.length == 3) {
           int day = int.parse(dateParts[0]);
           int month = int.parse(dateParts[1]);
-          int year =
-              int.parse(dateParts[2]) -
-              543; 
+          int year = int.parse(dateParts[2]) - 543;
           parsedDate = DateTime(year, month, day);
         }
       } catch (e) {
@@ -440,7 +450,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
 
       CaretakerModel caretakerData = CaretakerModel(
         caretakerId: "",
-        profilephoto: _profilePhotoName!, 
+        profilephoto: _profilePhotoBase64!,
         firstname: _firstNameCtrl.text.trim(),
         lastname: _lastNameCtrl.text.trim(),
         gender: _selectedGender,
@@ -464,11 +474,12 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         model: _modelCtrl.text.trim(),
         licenseplate: _licensePlateCtrl.text.trim(),
         color: _colorCtrl.text.trim(),
-        vehiclephotos: _vehiclePhotoNames
+        // ส่ง Base64 ของรูปยานพาหนะ
+        vehiclephotos: _vehiclePhotoBase64List
             .map(
-              (photoName) => VehiclePhotoModel(
+              (base64Str) => VehiclePhotoModel(
                 vehiclephotoid: "VP-${DateTime.now().millisecondsSinceEpoch}",
-                photo: photoName,
+                photo: base64Str,
               ),
             )
             .toList(),
@@ -798,7 +809,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                                 : null,
                           ),
                           InkWell(
-                            onTap: _showMapModal, 
+                            onTap: _showMapModal,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
@@ -912,23 +923,25 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                                 ),
                               ),
                               const SizedBox(width: 10),
+                              // นำ "เลือกปักหมุดแผนที่" ออก และแทนที่ด้วยพรีวิวภาพรถ
                               Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: greyBorder),
-                                  ),
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
                                   child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        _hasPinned ? 'แก้ไขพิกัดที่ตั้งบนแผนที่' : 'เลือกปักหมุดที่อยู่บนแผนที่',
-                                        style: TextStyle(color: _hasPinned ? primaryColor : Colors.grey, fontSize: 13, fontWeight: _hasPinned ? FontWeight.bold : FontWeight.normal),
-                                      ),
-                                      Icon(Icons.map_outlined, color: Colors.green.shade600),
-                                    ],
+                                    children: _vehicleImageFiles.map((file) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(right: 8.0),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Image.file(
+                                            file,
+                                            width: 60,
+                                            height: 60,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
                                   ),
                                 ),
                               ),
@@ -1038,9 +1051,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
               child: GestureDetector(
                 onTap: _handleToggleToRelative,
                 child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                  ),
+                  decoration: BoxDecoration(color: Colors.transparent),
                   alignment: Alignment.center,
                   child: Text(
                     'ญาติ',
@@ -1087,10 +1098,10 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
           children: [
             CircleAvatar(
               radius: 43,
-              backgroundColor: primaryColor, 
+              backgroundColor: primaryColor,
               child: CircleAvatar(
                 radius: 40,
-                backgroundColor: Colors.white, 
+                backgroundColor: Colors.white,
                 backgroundImage: _profileImageFile != null
                     ? FileImage(_profileImageFile!)
                     : null,
@@ -1103,8 +1114,15 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
               onTap: () => _pickImageReal('profile'),
               child: Container(
                 padding: const EdgeInsets.all(5),
-                decoration: BoxDecoration(color: primaryColor, shape: BoxShape.circle),
-                child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                decoration: BoxDecoration(
+                  color: primaryColor,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.camera_alt,
+                  size: 16,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],

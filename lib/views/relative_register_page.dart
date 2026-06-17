@@ -35,13 +35,14 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
   DateTime? _patBirthDate;
 
   // เก็บข้อมูลพิกัดละติจูด/ลองจิจูด จริงของผู้ป่วย
-  LatLng _selectedLocation = const LatLng(13.7563, 100.5018); // ค่าเริ่มต้น: กรุงเทพฯ[cite: 5]
+  LatLng _selectedLocation = const LatLng(13.7563, 100.5018); // ค่าเริ่มต้น: กรุงเทพฯ
   bool _hasPinned = false;
   bool _isLoadingLocation = false;
 
   // ไฟล์รูปภาพและชื่อไฟล์จริงสำหรับโปรไฟล์ผู้ป่วย
   File? _profileImageFile;
   String? _profilePhotoName;
+  String? _profilePhotoBase64; // เพิ่มตัวแปรสำหรับเก็บ Base64
 
   // ==========================================
   // ส่วนแก้ไข: ปรับเฉดสีให้เหมือนตามรูปภาพตัวอย่างเป๊ะๆ
@@ -270,7 +271,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
   }
 
   // ==========================================
-  // ระบบเลือกรูปภาพและวันเกิด
+  // ระบบเลือกรูปภาพและแปลง Base64
   // ==========================================
   Future<void> _pickImageReal() async {
     final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
@@ -281,9 +282,15 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         _showErrorSnackBar('ขนาดไฟล์รูปภาพโปรไฟล์ต้องไม่เกิน 20MB');
         return;
       }
+
+      // ดึง Base64 
+      List<int> imageBytes = await file.readAsBytes();
+      String base64String = base64Encode(imageBytes);
+
       setState(() {
         _profileImageFile = file;
         _profilePhotoName = pickedFile.name;
+        _profilePhotoBase64 = base64String; // เก็บ Base64 ไว้ใช้ตอนกดสมัคร
       });
     }
   }
@@ -314,7 +321,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
       _showErrorSnackBar('กรุณาเลือกเพศผู้ป่วย');
       return;
     }
-    if (_profilePhotoName == null) {
+    if (_profilePhotoBase64 == null) {
       _showErrorSnackBar('กรุณาอัปโหลดรูปภาพโปรไฟล์ของผู้ป่วย');
       return;
     }
@@ -337,7 +344,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
 
       PatientModel patientData = PatientModel(
         patientId: _patIdCardController.text.trim(),
-        patientphoto: _profilePhotoName!, 
+        patientphoto: _profilePhotoBase64!, // เปลี่ยนไปส่งเป็น Base64
         firstname: _patFirstNameController.text.trim(),
         lastname: _patLastNameController.text.trim(),
         phonenumber: _patPhoneController.text.trim(),
