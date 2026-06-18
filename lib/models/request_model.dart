@@ -1,8 +1,8 @@
+import 'package:http/http.dart';
 import 'package:miniproject/models/review_model.dart';
 import 'package:miniproject/models/report_model.dart';
 import 'package:miniproject/models/notification_model.dart';
 import 'package:miniproject/models/doctor_advice_model.dart';
-
 
 class RequestModel {
   String? requestId;
@@ -19,10 +19,10 @@ class RequestModel {
   double? longitude;
 
   // ความสัมพันธ์
-  ReviewModel? review;                       // 1 : 1
-  DoctorAdviceModel? doctoradvice;           // 1 : 1
-  ReportModel? report;                       // 1 : 1
-  List<NotificationModel>? notifications;    // 1 : 1..n
+  ReviewModel? review; // 1 : 1
+  DoctorAdviceModel? doctoradvice; // 1 : 1
+  ReportModel? report; // 1 : 1
+  List<NotificationModel>? notifications; // 1 : 1..n
 
   RequestModel({
     this.requestId,
@@ -63,20 +63,26 @@ class RequestModel {
       requeststatus: json['requeststatus'],
       latitude: json['latitude']?.toDouble(),
       longitude: json['longitude']?.toDouble(),
-      review: json['review'] != null ? ReviewModel.fromJson(json['review']) : null,
+      review: json['review'] != null
+          ? ReviewModel.fromJson(json['review'])
+          : null,
       doctoradvice: json['doctoradvice'] != null
           ? DoctorAdviceModel.fromJson(json['doctoradvice'])
           : null,
-      report: json['report'] != null ? ReportModel.fromJson(json['report']) : null,
+      report: json['report'] != null
+          ? ReportModel.fromJson(json['report'])
+          : null,
       notifications: json['notifications'] != null
           ? (json['notifications'] as List)
-              .map((e) => NotificationModel.fromJson(e))
-              .toList()
+                .map((e) => NotificationModel.fromJson(e))
+                .toList()
           : null,
     );
   }
 
   Map<String, dynamic> toJson() {
+    RequestModel requestModel = new RequestModel();
+
     return {
       'requestId': requestId,
       'requestdetail': requestdetail,

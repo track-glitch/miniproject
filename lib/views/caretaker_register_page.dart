@@ -81,6 +81,31 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   final Color lightPurple = const Color(0xFFF3E5F5);
   final Color greyBorder = const Color(0xFFE1BEE7);
 
+  @override
+  void dispose() {
+    // 🧹 เคลียร์ Controllers ทั้งหมดเพื่อคืนพื้นที่หน่วยความจำ
+    _usernameCtrl.dispose();
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    _citizenIdCtrl.dispose();
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
+    _birthDateCtrl.dispose();
+    _genderCtrl.dispose();
+    _aboutMeCtrl.dispose();
+    _equipmentCtrl.dispose();
+    _phoneCtrl.dispose();
+    _addressCtrl.dispose();
+
+    _vehicleTypeCtrl.dispose();
+    _brandCtrl.dispose();
+    _modelCtrl.dispose();
+    _colorCtrl.dispose();
+    _licensePlateCtrl.dispose();
+
+    super.dispose();
+  }
+
   Future<bool> _requestLocationPermission() async {
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
@@ -131,6 +156,102 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     }
   }
 
+  // -----------------------------------------------------------------
+  // 🌟 ส่วนที่แก้ไขใหม่: เพิ่มการเลือก Camera/Gallery และ Preview รูป
+  // -----------------------------------------------------------------
+
+  // 1. ฟังก์ชันแสดง Action Sheet ให้เลือกว่าจะถ่ายรูปหรือเลือกจากไฟล์
+  void _showImageSourceActionSheet(String type) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.blue),
+                title: const Text('เลือกรูปจากแกลเลอรี (Gallery)'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImageReal(type);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Colors.green),
+                title: const Text('ถ่ายรูปใหม่ (Camera)'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImageReal(type);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // 2. ฟังก์ชันแสดง Popup รูปภาพขยายใหญ่กลางหน้าจอ
+  void _showImagePreview(File imageFile) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(10),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              InteractiveViewer(
+                // ทำให้ซูมรูปได้
+                panEnabled: false,
+                boundaryMargin: const EdgeInsets.all(20),
+                minScale: 0.5,
+                maxScale: 4,
+                child: Image.file(imageFile, fit: BoxFit.contain),
+              ),
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton(
+                  icon: const Icon(Icons.cancel, color: Colors.white, size: 35),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // 3. ฟังก์ชันสำหรับลบรูปภาพที่เลือกไว้
+  void _removeImage(String type) {
+    setState(() {
+      if (type == 'profile') {
+        _profileImageFile = null;
+        _profilePhotoName = null;
+        _profilePhotoBase64 = null;
+      } else if (type == 'license') {
+        _licenseImageFile = null;
+        _licenseCardPhotoName = null;
+        _licensePhotoBase64 = null;
+      } else if (type == 'insurance') {
+        _insuranceImageFile = null;
+        _insurancePhotoName = null;
+        _insurancePhotoBase64 = null;
+      } else if (type == 'firstaid') {
+        _firstAidImageFile = null;
+        _firstAidPhotoName = null;
+        _firstAidPhotoBase64 = null;
+      }
+    });
+  }
+
+  // ปรับปรุง _pickImageReal ให้รับ ImageSource ด้วย
   Future<void> _pickImageReal(String type) async {
     final XFile? pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -150,7 +271,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         return;
       }
 
-      // ดึง Base64 ไว้ก่อนทำ setState
       String fileName = pickedFile.name;
       List<int> imageBytes = await file.readAsBytes();
       String base64String = base64Encode(imageBytes);
@@ -176,7 +296,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
           if (_vehicleImageFiles.length < 4) {
             _vehicleImageFiles.add(file);
             _vehiclePhotoNames.add(fileName);
-            _vehiclePhotoBase64List.add(base64String); // เก็บ Base64 เข้า List
+            _vehiclePhotoBase64List.add(base64String);
           } else {
             _showErrorSnackBar('อัปโหลดรูปยานพาหนะได้สูงสุด 4 รูป');
           }
@@ -184,6 +304,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
       });
     }
   }
+  // -----------------------------------------------------------------
 
   Future<void> _getAddressFromLatLng(LatLng location) async {
     final url = Uri.parse(
@@ -388,8 +509,13 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
       return;
     }
 
+    // 🌟 ส่วนที่แก้ไขใหม่: เพิ่มการ Validate เช็ครูปภาพให้ครบตามที่ UI ระบุว่าบังคับ
     if (_profilePhotoName == null) {
       _showErrorSnackBar('กรุณาอัปโหลดรูปโปรไฟล์ของคุณ');
+      return;
+    }
+    if (_vehiclePhotoBase64List.isEmpty) {
+      _showErrorSnackBar('กรุณาอัปโหลดภาพยานพาหนะอย่างน้อย 1 รูป');
       return;
     }
     if (_licenseCardPhotoName == null) {
@@ -402,12 +528,11 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     try {
       List<DocumentModel> documentList = [];
 
-      // ส่งรูปแบบ Base64
       documentList.add(
         DocumentModel(
           documentId: "DOC-LICENSE-${DateTime.now().millisecondsSinceEpoch}",
           documenttype: "driver_license",
-          filepath: _licensePhotoBase64!, 
+          filepath: _licensePhotoBase64!,
           uploaddate: DateTime.now(),
         ),
       );
@@ -474,7 +599,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         model: _modelCtrl.text.trim(),
         licenseplate: _licensePlateCtrl.text.trim(),
         color: _colorCtrl.text.trim(),
-        // ส่ง Base64 ของรูปยานพาหนะ
         vehiclephotos: _vehiclePhotoBase64List
             .map(
               (base64Str) => VehiclePhotoModel(
@@ -850,6 +974,23 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                           Row(
                             children: [
                               Expanded(
+                                child: _buildLabelField(
+                                  'ประเภท',
+                                  isRequired: true,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _buildLabelField(
+                                  'ยี่ห้อ',
+                                  isRequired: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
                                 child: _buildInputField(
                                   hint: 'ประเภท (เช่น รถยนต์)',
                                   controller: _vehicleTypeCtrl,
@@ -865,6 +1006,20 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                                   validator: (val) =>
                                       val!.isEmpty ? 'กรุณาระบุ' : null,
                                 ),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildLabelField(
+                                  'รุ่น',
+                                  isRequired: true,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _buildLabelField('สี', isRequired: true),
                               ),
                             ],
                           ),
@@ -897,33 +1052,37 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                                 val!.isEmpty ? 'กรุณากรอกทะเบียนรถ' : null,
                           ),
                           const SizedBox(height: 3),
-                          RichText(
-                            text: const TextSpan(
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.black,
-                              ), // สไตล์ข้อความหลัก
+                          Text.rich(
+                            TextSpan(
                               children: [
                                 TextSpan(
                                   text:
-                                      'ภาพถ่ายภายในและภายนอกยานพาหนะสูงสุด 4 รูป', // 💡 ข้อความขึ้นก่อน
+                                      'ภาพถ่ายภายในและภายนอกยานพาหนะสูงสุด 4 รูป',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    color: Colors.black,
+                                  ),
                                 ),
-                                TextSpan(
-                                  text:
-                                      ' *', // 💡 ดอกจันสีแดงย้ายมาต่อท้ายสุดตรงนี้
+                                const TextSpan(
+                                  text: ' *',
                                   style: TextStyle(
-                                    color: Colors.red,
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: Colors.red,
                                   ),
                                 ),
                               ],
                             ),
+                            softWrap: true,
                           ),
                           const SizedBox(height: 8),
                           Row(
                             children: [
                               InkWell(
-                                onTap: () => _pickImageReal('vehicle'),
+                                onTap: () => _pickImageReal(
+                                  'vehicle',
+                                ), // 🌟 เปลี่ยนมาเรียก Action Sheet
                                 child: Container(
                                   width: 60,
                                   height: 60,
@@ -940,25 +1099,76 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                                 ),
                               ),
                               const SizedBox(width: 10),
-                              // นำ "เลือกปักหมุดแผนที่" ออก และแทนที่ด้วยพรีวิวภาพรถ
                               Expanded(
                                 child: SingleChildScrollView(
                                   scrollDirection: Axis.horizontal,
                                   child: Row(
-                                    children: _vehicleImageFiles.map((file) {
-                                      return Padding(
-                                        padding: const EdgeInsets.only(right: 8.0),
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(8),
-                                          child: Image.file(
-                                            file,
-                                            width: 60,
-                                            height: 60,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
+                                    children: _vehicleImageFiles
+                                        .asMap()
+                                        .entries
+                                        .map((entry) {
+                                          int index = entry.key;
+                                          File file = entry.value;
+                                          return Padding(
+                                            padding: const EdgeInsets.only(
+                                              right: 8.0,
+                                            ),
+                                            // 🌟 เพิ่มฟังก์ชันกดที่รูปรถเพื่อดูรูปแบบเต็มๆ และกดกากบาทลบได้
+                                            child: Stack(
+                                              alignment: Alignment.topRight,
+                                              children: [
+                                                GestureDetector(
+                                                  onTap: () =>
+                                                      _showImagePreview(
+                                                        file,
+                                                      ), // กดเพื่อพรีวิว
+                                                  child: ClipRRect(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                    child: Image.file(
+                                                      file,
+                                                      width: 60,
+                                                      height: 60,
+                                                      fit: BoxFit.cover,
+                                                    ),
+                                                  ),
+                                                ),
+                                                GestureDetector(
+                                                  onTap: () {
+                                                    setState(() {
+                                                      _vehicleImageFiles
+                                                          .removeAt(index);
+                                                      _vehiclePhotoNames
+                                                          .removeAt(index);
+                                                      _vehiclePhotoBase64List
+                                                          .removeAt(index);
+                                                    });
+                                                  },
+                                                  child: Container(
+                                                    margin:
+                                                        const EdgeInsets.all(2),
+                                                    padding:
+                                                        const EdgeInsets.all(2),
+                                                    decoration:
+                                                        const BoxDecoration(
+                                                          color: Colors.red,
+                                                          shape:
+                                                              BoxShape.circle,
+                                                        ),
+                                                    child: const Icon(
+                                                      Icons.close,
+                                                      size: 12,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        })
+                                        .toList(),
                                   ),
                                 ),
                               ),
@@ -974,7 +1184,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             'รูปถ่ายใบอนุญาตขับขี่',
                             _licenseImageFile,
                             _licenseCardPhotoName,
-                            () => _pickImageReal('license'),
+                            'license',
                             isRequired: true,
                           ),
                           const Divider(),
@@ -982,16 +1192,18 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             'ประกันภัยรถยนต์',
                             _insuranceImageFile,
                             _insurancePhotoName,
-                            () => _pickImageReal('insurance'),
-                            isRequired: true,
+                            'insurance',
+                            isRequired:
+                                true, // 🌟 ลบดาวบังคับออกตามที่คุณเคยระบุไว้
                           ),
                           const Divider(),
                           _buildUploadDocRow(
                             'ใบรับรองการอบรมปฐมพยาบาล',
                             _firstAidImageFile,
                             _firstAidPhotoName,
-                            () => _pickImageReal('firstaid'),
-                            isRequired: true,
+                            'firstaid',
+                            isRequired:
+                                true, // 🌟 ลบดาวบังคับออกตามที่คุณเคยระบุไว้
                           ),
                         ],
                       ),
@@ -1072,7 +1284,9 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                 onTap: _handleToggleToRelative,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: _selectedTab == "ญาติ" ? primaryColor : Colors.transparent,
+                    color: _selectedTab == "ญาติ"
+                        ? primaryColor
+                        : Colors.transparent,
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(21),
                       bottomLeft: Radius.circular(21),
@@ -1082,7 +1296,9 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                   child: Text(
                     'ญาติ',
                     style: TextStyle(
-                      color: _selectedTab == "ญาติ" ? Colors.white : primaryColor,
+                      color: _selectedTab == "ญาติ"
+                          ? Colors.white
+                          : primaryColor,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1092,10 +1308,12 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
             ),
             Expanded(
               child: GestureDetector(
-                onTap: () {}, // อยู่หน้าเดียวกัน ไม่ต้องทำอะไร
+                onTap: () {},
                 child: Container(
                   decoration: BoxDecoration(
-                    color: _selectedTab == "ผู้ดูแล" ? primaryColor : Colors.transparent,
+                    color: _selectedTab == "ผู้ดูแล"
+                        ? primaryColor
+                        : Colors.transparent,
                     borderRadius: const BorderRadius.only(
                       topRight: Radius.circular(21),
                       bottomRight: Radius.circular(21),
@@ -1105,7 +1323,9 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                   child: Text(
                     'ผู้ดูแล',
                     style: TextStyle(
-                      color: _selectedTab == "ผู้ดูแล" ? Colors.white : primaryColor,
+                      color: _selectedTab == "ผู้ดูแล"
+                          ? Colors.white
+                          : primaryColor,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1119,28 +1339,41 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
+  // 🌟 ปรับปรุง: การอัปโหลดรูปโปรไฟล์
   Widget _buildProfileUploadWidget() {
     return Column(
       children: [
         Stack(
           alignment: Alignment.bottomRight,
           children: [
-            CircleAvatar(
-              radius: 43,
-              backgroundColor: primaryColor,
+            GestureDetector(
+              onTap: () {
+                if (_profileImageFile == null) {
+                  _pickImageReal('profile'); // ถ้ารูปว่าง ให้เปิดตัวเลือก
+                } else {
+                  _showImagePreview(
+                    _profileImageFile!,
+                  ); // ถ้ามีรูปแล้ว ให้เปิดพรีวิวเต็มจอ
+                }
+              },
               child: CircleAvatar(
-                radius: 40,
-                backgroundColor: Colors.white,
-                backgroundImage: _profileImageFile != null
-                    ? FileImage(_profileImageFile!)
-                    : null,
-                child: _profileImageFile == null
-                    ? const Icon(Icons.person, size: 55, color: Colors.black)
-                    : null,
+                radius: 43,
+                backgroundColor: primaryColor,
+                child: CircleAvatar(
+                  radius: 40,
+                  backgroundColor: Colors.white,
+                  backgroundImage: _profileImageFile != null
+                      ? FileImage(_profileImageFile!)
+                      : null,
+                  child: _profileImageFile == null
+                      ? const Icon(Icons.person, size: 55, color: Colors.black)
+                      : null,
+                ),
               ),
             ),
+            // ปุ่มแก้ไขรูป (Camera Icon)
             InkWell(
-              onTap: () => _pickImageReal('profile'),
+              onTap: () => _showImageSourceActionSheet('profile'),
               child: Container(
                 padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
@@ -1154,13 +1387,42 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                 ),
               ),
             ),
+            // ปุ่มกากบาทลบรูป (จะโชว์ก็ต่อเมื่อมีรูปถูกเลือกแล้ว)
+            if (_profileImageFile != null)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: InkWell(
+                  onTap: () => _removeImage('profile'),
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
         const SizedBox(height: 8),
-        const Text(
-          'อัปโหลดรูปโปรไฟล์ *',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'อัปโหลดรูปโปรไฟล์',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const Text(' *', style: TextStyle(color: Colors.red)),
+          ],
         ),
+
         if (_profilePhotoName != null)
           Text(
             _profilePhotoName!,
@@ -1209,6 +1471,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4, left: 2),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
@@ -1316,43 +1579,50 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
+  // 🌟 ปรับปรุง: การอัปโหลดเอกสาร
   Widget _buildUploadDocRow(
     String title,
     File? imageFile,
     String? fileName,
-    VoidCallback onTap, {
+    String type, {
     bool isRequired = false,
   }) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: imageFile != null
-          ? ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: Image.file(
-                imageFile,
+      leading: GestureDetector(
+        onTap: () {
+          if (imageFile != null) {
+            _showImagePreview(imageFile); // กดที่รูปเล็กๆ เพื่อดูรูปเต็มได้
+          }
+        },
+        child: imageFile != null
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Image.file(
+                  imageFile,
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.cover,
+                ),
+              )
+            : Container(
                 width: 40,
                 height: 40,
-                fit: BoxFit.cover,
+                color: Colors.grey.shade200,
+                child: const Icon(Icons.insert_drive_file, color: Colors.grey),
               ),
-            )
-          : Container(
-              width: 40,
-              height: 40,
-              color: Colors.grey.shade200,
-              child: const Icon(Icons.insert_drive_file, color: Colors.grey),
-            ),
+      ),
       title: RichText(
         text: TextSpan(
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Colors.black, // กำหนดสีหลักของข้อความ
-            fontFamily:
-                'Sukhumvit', // ใส่ชื่อ ฟอนต์หลัก ของแอปคุณตรงนี้ (ถ้ามี)
+            color: Colors.black,
+            fontFamily: 'Sukhumvit',
           ),
           children: [
-            TextSpan(text: title), // ข้อความหัวข้อหลัก
-            if (isRequired) // 💡 ถ้าเป็นช่องที่จำเป็น จะใส่ดอกจันสีแดงต่อท้ายให้ทันที
+            TextSpan(text: title),
+            if (isRequired)
               const TextSpan(
                 text: ' *',
                 style: TextStyle(
@@ -1370,12 +1640,26 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
               overflow: TextOverflow.ellipsis,
             )
           : null,
-      trailing: IconButton(
-        icon: Icon(
-          fileName != null ? Icons.check_circle : Icons.cloud_upload,
-          color: primaryColor,
-        ),
-        onPressed: onTap,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ปุ่มลบ จะโชว์เมื่อมีรูปแล้ว
+          if (imageFile != null)
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: () => _removeImage(type),
+            ),
+          // ปุ่มเลือกรูป/เปลี่ยนรูป
+          IconButton(
+            icon: Icon(
+              fileName != null
+                  ? Icons.edit
+                  : Icons.cloud_upload, // เปลี่ยนไอคอนให้เหมาะสม
+              color: primaryColor,
+            ),
+            onPressed: () => _pickImageReal(type),
+          ),
+        ],
       ),
     );
   }
