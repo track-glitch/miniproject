@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart'; // เปลี่ยนมาใช้ Realtime Database
+import 'package:miniproject/views/relative/view_caretaker_profile_page.dart';
 import 'dart:convert';
 
 class CaretakerSearchPage extends StatefulWidget {
@@ -63,7 +64,12 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: lightPurple.withOpacity(0.5), // พื้นหลังสีม่วงพาสเทลจางๆ
+      backgroundColor: Color.fromARGB(
+        255,
+        239,
+        199,
+        255,
+      ), // พื้นหลังสีม่วงพาสเทลจางๆ
       appBar: AppBar(
         title: const Text(
           'ขอใช้บริการ',
@@ -188,10 +194,10 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
 
                           data['id'] = userUidKey;
 
-                          // Vehicle อยู่ภายใน Caretaker
-                          if (data.containsKey('Vehicle')) {
+                          // Vehicle อยู่ระดับเดียวกับ Caretaker
+                          if (userNodeValue.containsKey('Vehicle')) {
                             data['vehicle'] = Map<String, dynamic>.from(
-                              data['Vehicle'],
+                              userNodeValue['Vehicle'],
                             );
                           }
 
@@ -312,9 +318,9 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: lightPurple.withOpacity(0.3), // กล่องการ์ดซ้อนหลัง
+        color: lightPurple.withValues(alpha: 0.3), // กล่องการ์ดซ้อนหลัง
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: greyBorder, width: 1.5),
+        border: Border.all(color: Colors.black, width: 1.5),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -477,7 +483,14 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                         ),
                       ),
                       onPressed: () {
-                        // บันทึก Logic นำทางไปหน้าดีเทลโดยผูกไอดี UID (docId) ไปใช้งานต่อได้ตรงนี้ครับ
+                        // เพิ่มคำสั่ง Navigator เพื่อเปิดหน้าใหม่ตรงนี้ครับ
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                CaretakerProfilePage(caretakerId: data['id']),
+                          ),
+                        );
                       },
                       child: const Text(
                         'ดูรายละเอียด',
