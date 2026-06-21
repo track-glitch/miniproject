@@ -5,10 +5,14 @@ import 'package:miniproject/views/relative/search_caretaker_profile_page.dart';
 import 'views/login_page.dart';
 import 'views/admin/list_caretaker_page.dart';
 
+import 'firebase_options.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   runApp(const MyApp());
 }

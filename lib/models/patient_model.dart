@@ -10,6 +10,7 @@ class PatientModel {
   String? mobility;
   double? latitude;
   double? longitude;
+  String? address;
 
   PatientModel({
     this.patientId,
@@ -23,6 +24,7 @@ class PatientModel {
     this.mobility,
     this.latitude,
     this.longitude,
+      this.address,
   });
 
   factory PatientModel.fromJson(Map<String, dynamic> json) {
@@ -38,6 +40,7 @@ class PatientModel {
           : null,
       disease: json['disease'],
       mobility: json['mobility'],
+      address: json['address'],
       latitude: json['latitude']?.toDouble(),
       longitude: json['longitude']?.toDouble(),
     );
@@ -56,6 +59,7 @@ class PatientModel {
       'mobility': mobility,
       'latitude': latitude,
       'longitude': longitude,
+      'address': address,
     };
   }
 }

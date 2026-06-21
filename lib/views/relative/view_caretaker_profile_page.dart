@@ -1,16 +1,24 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:miniproject/models/patient_model.dart';
+import 'package:miniproject/models/relative_model.dart';
+import 'package:miniproject/views/login_page.dart';
+import 'package:miniproject/views/relative/edit_relative_info_page.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'dart:convert';
 import 'package:firebase_database/firebase_database.dart';
 
 class CaretakerProfilePage extends StatefulWidget {
   final String caretakerId;
+  final String? loggedUid;
 
-  const CaretakerProfilePage({super.key, required this.caretakerId});
+  const CaretakerProfilePage({super.key, required this.caretakerId, this.loggedUid});
 
   @override
   State<CaretakerProfilePage> createState() => _CaretakerProfilePageState();
 }
+
+
 
 class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   Map<String, dynamic>? caretakerData;
@@ -53,6 +61,66 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   void initState() {
     super.initState();
     loadCaretaker();
+  }
+
+  // 🎯 ฟังก์ชันสำหรับเปิดแจ้งเตือนกรณีที่ยังไม่ได้เข้าสู่ระบบ
+  void _showLoginRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: primaryColor, width: 1.5),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.lock_person_outlined, size: 75, color: primaryColor),
+                const SizedBox(height: 20),
+                Text(
+                  'กรุณาเข้าสู่ระบบก่อนใช้งาน',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'คุณต้องลงชื่อเข้าใช้งานในระบบก่อน จึงจะสามารถกดส่งคำขอเรียกใช้บริการผู้ดูแลคนนี้ได้',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.black),
+                ),
+                const SizedBox(height: 25),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(23)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context); // ปิด Dialog
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (context) => const LoginPage()),
+                        (route) => false,
+                      );
+                    },
+                    child: const Text(
+                      'ไปหน้าเข้าสู่ระบบ',
+                      style: TextStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> loadCaretaker() async {
@@ -136,6 +204,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
         },
       ),
       // แถบเมนูด้านล่าง
+      // แถบเมนูด้านล่าง (แก้ไขเพิ่มเติมเฉพาะส่วน onTap)
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: primaryColor,
@@ -147,6 +216,95 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
           fontSize: 12,
         ),
         unselectedLabelStyle: const TextStyle(fontSize: 12),
+        
+        // 🎯 1. เพิ่มฟังก์ชัน onTap ดักเงื่อนไขที่ตรงนี้
+        onTap: (index) async {
+          if (index == 3) { // เมื่อกดเมนู "ญาติ" (Index ลำดับที่ 3)
+            // เช็คสิทธิ์ด้วยค่า loggedUid ตัวจริงก่อน
+            String? uid = widget.loggedUid;
+
+            if (uid == null) {
+              final currentUser = FirebaseAuth.instance.currentUser;
+              uid = currentUser?.uid;
+            }
+
+            // 💥 ถ้าไม่ได้ล็อกอิน (ค่า uid เป็น null) บังคับเด้ง Dialog เตือนทันที
+            if (uid == null) {
+              _showLoginRequiredDialog();
+              return;
+            }
+
+            // 🚀 ถ้าล็อกอินผ่านแล้ว ให้ดึงข้อมูลและเปิดหน้าแก้ไขประวัติ (ดึงโค้ดดักของเดิมมาทำงาน)
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => const Center(child: CircularProgressIndicator()),
+            );
+
+            try {
+              final snapshot = await FirebaseDatabase.instance.ref('Login/$uid').get();
+              if (context.mounted) Navigator.pop(context); // ปิด Loading
+
+              if (snapshot.exists && snapshot.value is Map) {
+                final userData = Map<String, dynamic>.from(snapshot.value as Map);
+                RelativeModel relative;
+                Map<String, dynamic> relativeMap = {};
+                
+                if (userData.containsKey('Relative')) {
+                  relativeMap = Map<String, dynamic>.from(userData['Relative'] as Map);
+                  relative = RelativeModel(
+                    relativeId: relativeMap['relativeId'] ?? '',
+                    firstname: relativeMap['firstname'] ?? '',
+                    lastname: relativeMap['lastname'] ?? '',
+                    phonenumber: relativeMap['phonenumber'] ?? '',
+                    relationship: relativeMap['relationship'] ?? '',
+                    email: relativeMap['email'] ?? '',
+                  );
+                } else {
+                  relative = RelativeModel(relativeId: '', firstname: '', lastname: '', phonenumber: '', relationship: '', email: '');
+                }
+
+                PatientModel patient;
+                if (relativeMap.containsKey('Patient')) {
+                  final pData = Map<String, dynamic>.from(relativeMap['Patient'] as Map);
+                  patient = PatientModel(
+                    patientId: pData['patientId'] ?? '',
+                    patientphoto: pData['patientphoto'] ?? '',
+                    firstname: pData['firstname'] ?? '',
+                    lastname: pData['lastname'] ?? '',
+                    phonenumber: pData['phonenumber'] ?? '',
+                    gender: pData['gender'] ?? '',
+                    birthdate: pData['birthdate'] != null ? DateTime.tryParse(pData['birthdate'].toString()) : null,
+                    disease: pData['disease'] ?? '',
+                    mobility: pData['mobility'] ?? '',
+                  );
+                } else {
+                  patient = PatientModel(patientId: '', patientphoto: '', firstname: '', lastname: '', phonenumber: '', gender: '');
+                }
+
+                if (context.mounted) {
+                  // นำทางไปหน้าแก้ไขข้อมูล
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                          builder: (context) => EditRelativeInfoPage(currentPatient: patient, currentRelative: relative, loggedUid: uid!,), //
+                    ),
+                  );
+                }
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ไม่พบข้อมูลประวัติในระบบ')));
+                }
+              }
+            } catch (e) {
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('เกิดข้อผิดพลาด: $e'), backgroundColor: Colors.red));
+              }
+            }
+          }
+        },
+        
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'บ้าน'),
           BottomNavigationBarItem(
@@ -735,22 +893,44 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
 
   // 7. ปุ่มขอใช้บริการ
   Widget _buildRequestButton() {
-    return SizedBox(
-      width: 200,
-      height: 45,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          elevation: 2,
-        ),
-        onPressed: () {},
-        child: const Text(
-          'ขอใช้บริการ',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: SizedBox(
+        height: 48,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          onPressed: () {
+            // 🎯 เริ่มต้นระบบเช็กสิทธิ์ล็อกอินโดยเช็กจากค่า loggedUid ตัวจริงก่อน
+            String? uid = widget.loggedUid;
+
+            if (uid == null) {
+              final currentUser = FirebaseAuth.instance.currentUser;
+              uid = currentUser?.uid;
+            }
+
+            // 🎯 หากยังไม่ได้ล็อกอิน (ค่า uid เป็น null) บังคับแสดงหน้าต่างแจ้งเตือนทันที
+            if (uid == null) {
+              _showLoginRequiredDialog();
+              return;
+            }
+
+            // --- ส่วนของเงื่อนไขการส่งคำขอแบบปกติเมื่อล็อกอินถูกต้องแล้ว (โค้ดเดิมของคุณ) ---
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('กำลังดำเนินการส่งคำขอใช้บริการ...'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          },
+          child: const Text(
+            'ขอใช้บริการ',
+            style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
       ),
