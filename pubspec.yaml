@@ -46,8 +46,6 @@ dependencies:
   http: ^1.6.0
   geolocator: ^14.0.3      # สำหรับแสดง OpenStreetMap             # สำหรับยิง API Longdo
   carousel_slider: ^5.0.0
-  geolocator: ^14.0.3
-  table_calendar: ^3.0.9
 
 
 dev_dependencies:
