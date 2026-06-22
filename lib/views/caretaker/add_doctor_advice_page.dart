@@ -11,6 +11,10 @@ class AddDoctorAdvicePage extends StatefulWidget {
 class _MyWidgetState extends State<AddDoctorAdvicePage> {
   AdminService adminService = AdminService();
 
+  void addRelative() {
+    adminService.addRelative();
+  }
+
   void addRequest() {
     adminService.addRequest();
   }
@@ -23,9 +27,29 @@ class _MyWidgetState extends State<AddDoctorAdvicePage> {
         // 2. ใส่แถบด้านบนไว้ข้างใน Scaffold
         title: Text('หน้าแรก'),
       ),
-      body: Center(
-        // 3. ส่วนเนื้อหาตรงกลางหน้าจอ
-        child: TextButton(onPressed: addRequest, child: Text('กล้วย')),
+      body: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: addRelative,
+                  child: Text('AddRelative'),
+                ),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: addRequest,
+                  child: Text('AddRequest'),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

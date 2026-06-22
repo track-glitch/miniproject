@@ -33,6 +33,8 @@ dependencies:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
+  table_calendar: ^3.1.2  # ตัวสร้างปฏิทิน
+  intl: ^0.19.0           # ตัวจัดการวันที่และภาษาไทย
   cupertino_icons: ^1.0.8
   firebase_core: ^4.10.0
   firebase_auth: ^6.5.2
@@ -42,7 +44,8 @@ dependencies:
   flutter_map: ^8.3.0
   latlong2: ^0.9.1
   http: ^1.6.0
-  geolocator: ^14.0.3
+  geolocator: ^14.0.3      # สำหรับแสดง OpenStreetMap             # สำหรับยิง API Longdo
+  carousel_slider: ^5.0.0
 
 
 dev_dependencies:

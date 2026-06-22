@@ -152,6 +152,7 @@ class AdminService {
       requeststatus: "Pending",
       latitude: 18.2881,
       longitude: 99.4921,
+      caretakerId: 'E7TZ3fTabuY8jEgzH81wDAE5LSS2',
       review: null,
       doctoradvice: null,
       report: null,
@@ -178,6 +179,7 @@ class AdminService {
       requeststatus: "Accepted",
       latitude: 18.2900,
       longitude: 99.5000,
+      caretakerId: 'E7TZ3fTabuY8jEgzH81wDAE5LSS2',
       review: null,
       doctoradvice: null,
       report: null,
@@ -208,6 +210,7 @@ class AdminService {
       requeststatus: "Completed",
       latitude: 18.2800,
       longitude: 99.4800,
+      caretakerId: 'E7TZ3fTabuY8jEgzH81wDAE5LSS2',
       review: ReviewModel(
         reviewId: "REV-001",
         ratingscore: "5",
@@ -252,6 +255,7 @@ class AdminService {
       requeststatus: "Completed",
       latitude: 18.2881,
       longitude: 99.4921,
+      caretakerId: 'E7TZ3fTabuY8jEgzH81wDAE5LSS2',
       review: ReviewModel(
         reviewId: "REV-002",
         ratingscore: "4",
@@ -282,20 +286,28 @@ class AdminService {
 
     String? requestId = _dbRef
         .child('Login')
-        .child('E7TZ3fTabuY8jEgzH81wDAE5LSS2')
+        .child('-OvPuEuRLVe0Iib5TZrC')
         .child('Request')
         .push()
         .key;
     final snapshot = _dbRef
         .child('Login')
-        .child('E7TZ3fTabuY8jEgzH81wDAE5LSS2')
+        .child('-OvPuEuRLVe0Iib5TZrC')
+        .child('Relative')
         .child('Request')
         .child(requestId!);
-    snapshot.set(req1.toJson());
+    snapshot.set(req3.toJson());
   }
 
-  Future<void> addPaitient() async {
-    String patientId = _dbRef.child('Login').push().key!;
+  Future<void> addRelative() async {
+    String loginId = _dbRef.child('Login').push().key!;
+    String patientId = _dbRef.child('Login').child('Patient').push().key!;
+
+    LoginModel login1 = LoginModel(
+      username: 'itsci',
+      password: 'itsme12345678',
+      usertype: 'Relative',
+    );
 
     DateTime patient2BirthDate = DateTime.parse(
       "2014-08-20T00:00:00.000",
@@ -317,7 +329,7 @@ class AdminService {
     );
 
     RelativeModel relative2 = RelativeModel(
-      relativeId: "REL-002",
+      relativeId: loginId,
       firstname: "มารตี",
       lastname: "พัฒนา",
       email: "maratee.pat@email.com",
@@ -330,6 +342,12 @@ class AdminService {
           [], // 🌟 นำ req4 (สถานะ Completed มีรีพอร์ต) จากตัวอย่างที่แล้วมาใส่ใน List
     );
 
-    final snapshot = await _dbRef.child('Login').child(patientId).child('Patient').set(patient2);
+    await _dbRef.child('Login').child(loginId).set(login1.toJson());
+
+    await _dbRef
+        .child('Login')
+        .child(loginId)
+        .child('Relative')
+        .set(relative2.toJson());
   }
 }

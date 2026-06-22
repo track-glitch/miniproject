@@ -6,6 +6,7 @@ import 'relative/relative_home_page.dart';
 import 'admin/list_caretaker_page.dart';
 import 'caretaker/caretaker_home_page.dart';
 import 'waiting_approval_page.dart';
+import 'caretaker/edit_profile_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -115,7 +116,7 @@ class _LoginPageState extends State<LoginPage> {
         }
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => CaretakerHomePage()),
+          MaterialPageRoute(builder: (context) => EditProfilePage(uid: uid)),
         );
         print("ล็อกอินสำเร็จ! ไปหน้าผู้ดูแล");
       } else if (usertype == 'admin') {

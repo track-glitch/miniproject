@@ -314,7 +314,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     try {
       final response = await http.get(
         url,
-        headers: {'User-Agent': 'CaretakerAppFlutter'},
+        headers: {'User-Agent': 'CaretakerAppFlutter (naphat.con@gmail.com)'},
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -574,7 +574,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
       }
 
       CaretakerModel caretakerData = CaretakerModel(
-        caretakerId: "",
+        caretakerId: _citizenIdCtrl.text.trim(),
         profilephoto: _profilePhotoBase64!,
         firstname: _firstNameCtrl.text.trim(),
         lastname: _lastNameCtrl.text.trim(),

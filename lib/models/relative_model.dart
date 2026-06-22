@@ -12,9 +12,9 @@ class RelativeModel {
   String? relationship;
 
   // ความสัมพันธ์
-  LoginModel? login;                  // 1 : 1
-  PatientModel? patient;              // 1 : 1
-  List<RequestModel>? requests;       // 1 : 1..n
+  LoginModel? login; // 1 : 1
+  PatientModel? patient; // 1 : 1
+  List<RequestModel>? requests; // 1 : 1..n
 
   RelativeModel({
     this.relativeId,
@@ -39,12 +39,13 @@ class RelativeModel {
       lineId: json['lineId'],
       relationship: json['relationship'],
       login: json['login'] != null ? LoginModel.fromJson(json['login']) : null,
-      patient:
-          json['patient'] != null ? PatientModel.fromJson(json['patient']) : null,
+      patient: json['patient'] != null
+          ? PatientModel.fromJson(json['patient'])
+          : null,
       requests: json['requests'] != null
           ? (json['requests'] as List)
-              .map((e) => RequestModel.fromJson(e))
-              .toList()
+                .map((e) => RequestModel.fromJson(e))
+                .toList()
           : null,
     );
   }
@@ -59,8 +60,8 @@ class RelativeModel {
       'lineId': lineId,
       'relationship': relationship,
       'login': login?.toJson(),
-      'patient': patient?.toJson(),
-      'requests': requests?.map((e) => e.toJson()).toList(),
+      'Patient': patient?.toJson(),
+      'Request': requests?.map((e) => e.toJson()).toList(),
     };
   }
 }

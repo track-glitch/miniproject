@@ -17,6 +17,7 @@ class RequestModel {
   String? requeststatus;
   double? latitude;
   double? longitude;
+  String? caretakerId;
 
   // ความสัมพันธ์
   ReviewModel? review; // 1 : 1
@@ -38,6 +39,7 @@ class RequestModel {
     this.latitude,
     this.longitude,
     this.review,
+    this.caretakerId,
     this.doctoradvice,
     this.report,
     this.notifications,
@@ -63,6 +65,7 @@ class RequestModel {
       requeststatus: json['requeststatus'],
       latitude: json['latitude']?.toDouble(),
       longitude: json['longitude']?.toDouble(),
+      caretakerId: json['caretakerId'],
       review: json['review'] != null
           ? ReviewModel.fromJson(json['review'])
           : null,
@@ -96,10 +99,11 @@ class RequestModel {
       'requeststatus': requeststatus,
       'latitude': latitude,
       'longitude': longitude,
-      'review': review?.toJson(),
-      'doctoradvice': doctoradvice?.toJson(),
-      'report': report?.toJson(),
-      'notifications': notifications?.map((e) => e.toJson()).toList(),
+      'caretakerId': caretakerId,
+      'Review': review?.toJson(),
+      'DoctorAdvice': doctoradvice?.toJson(),
+      'Report': report?.toJson(),
+      'Notification': notifications?.map((e) => e.toJson()).toList(),
     };
   }
 }
