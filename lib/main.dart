@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:miniproject/views/caretaker/add_doctor_advice_page.dart';
-import 'package:miniproject/views/caretaker/test_page.dart';
 import 'views/login_page.dart';
 import 'views/admin/list_caretaker_page.dart';
+
+import 'firebase_options.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'views/caretaker/edit_profile_page.dart';
 import 'views/caretaker/test_page.dart';
@@ -11,7 +12,7 @@ import 'views/caretaker/test_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await initializeDateFormatting('th_TH');
   runApp(const MyApp());
@@ -29,7 +30,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       //  แก้ไขจาก relative/search_caretaker_profile_page() เป็นชื่อคลาส Widget จริง
-      home: const LoginPage(),
+      home: const AddDoctorAdvicePage(),
     );
   }
 }
