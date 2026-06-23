@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       //  แก้ไขจาก relative/search_caretaker_profile_page() เป็นชื่อคลาส Widget จริง
-      home: const AddDoctorAdvicePage(),
+      home: const LoginPage(),
     );
   }
 }

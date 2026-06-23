@@ -5,6 +5,9 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:latlong2/latlong.dart';
 import '../../widgets/location_picker_widget.dart';
 import '../../services/caretaker_service.dart';
+import '../../widgets/custom_header_nav.dart';
+import '../../widgets/custom_bottom_nav.dart';
+import '../caretaker/list_relative_request_page.dart';
 
 class EditProfilePage extends StatefulWidget {
   final String uid;
@@ -21,10 +24,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
   // สถานะและพิกัด
   bool isServiceOn = false;
   LatLng selectedLocation = const LatLng(18.2881, 99.4921);
-
+  int _selectedIndex = 2;
   // ข้อมูลที่ดึงมา
   String profileImageUrl = '';
   String citizenId = '';
+  String vehicleType = '';
+  String vehicleColor = '';
   String vehicleBrand = '';
   String vehicleModel = '';
   String vehiclePlate = '';
@@ -70,6 +75,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
         // สมมติการดึงข้อมูลรถ (ปรับตามโครงสร้าง DB จริงของคุณ)
         if (data['Vehicle'] != null) {
+          vehicleType = data['Vehicle']['vehicletype'] ?? '';
+          vehicleColor = data['Vehicle']['color'] ?? '';
           vehicleBrand = data['Vehicle']['brand'] ?? '';
           vehicleModel = data['Vehicle']['model'] ?? '';
           vehiclePlate = data['Vehicle']['licenseplate'] ?? '';
@@ -127,6 +134,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
     ).showSnackBar(SnackBar(content: Text('อัปเดตสถานะเป็น $statusStr แล้ว')));
   }
 
+  void _onBottomNavTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    // โค้ดสำหรับการเปลี่ยนหน้า (ปรับเปลี่ยนตามชื่อหน้าของคุณ)
+    if (index == 1) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const ListRelativeRequestPage(),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -135,13 +157,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4EDFB),
-      appBar: AppBar(
-        title: const Text(
-          'แก้ไขข้อมูลผู้ดูแล',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color(0xFFA052BE),
-        iconTheme: const IconThemeData(color: Colors.white),
+      appBar: const CustomHeader(
+        title: 'แก้ไขข้อมูลผู้ดูแล',
+        showBackButton: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -248,7 +266,28 @@ class _EditProfilePageState extends State<EditProfilePage> {
             ]),
 
             // 🌟 3. ข้อมูลรถและ Carousel แบบมีจุดแอนิเมชัน
-            _buildCard('ยานพาหนะที่ใช้ (ติดต่อแอดมินเพื่อแก้ไข)', [
+            _buildCard('ยานพาหนะที่ใช้', [
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildTextField(
+                      'ประเภท',
+                      '',
+                      initialValue: vehicleType,
+                      isReadOnly: true,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildTextField(
+                      'สี',
+                      '',
+                      initialValue: vehicleColor,
+                      isReadOnly: true,
+                    ),
+                  ),
+                ],
+              ),
               Row(
                 children: [
                   Expanded(
@@ -277,13 +316,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 isReadOnly: true,
               ),
               const SizedBox(height: 10),
-
-              const Text(
-                'ภาพถ่ายยานพาหนะ',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text(
+                    'ภาพถ่ายยานพาหนะ',
+                    style: TextStyle(fontSize: 12, color: Colors.black),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
 
+              const SizedBox(height: 10),
               // Carousel ไม่เลื่อนอัตโนมัติ
               CarouselSlider(
                 options: CarouselOptions(
@@ -360,6 +403,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
             const SizedBox(height: 30),
           ],
         ),
+      ),
+      bottomNavigationBar: CustomBottomNavBar(
+        currentIndex: _selectedIndex,
+        onTap: _onBottomNavTapped,
       ),
     );
   }

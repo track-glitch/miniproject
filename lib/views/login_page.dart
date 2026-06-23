@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:miniproject/views/admin/list_caretaker_page.dart';
 import 'package:miniproject/views/relative_register_page.dart'; //
 import '../services/auth_service.dart'; //
 import 'relative/relative_home_page.dart'; //
@@ -107,16 +108,12 @@ class _LoginPageState extends State<LoginPage> {
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => CaretakerHomePage()),
+          MaterialPageRoute(builder: (context) => EditProfilePage(uid: uid)),
         );
       } else if (usertype == 'admin') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => const Scaffold(
-              body: Center(child: Text('หน้าจอสำหรับ Admin (กำลังพัฒนา)')),
-            ),
-          ),
+          MaterialPageRoute(builder: (context) => ListCaretakerPage(uid: uid)),
         );
       }
     } else {

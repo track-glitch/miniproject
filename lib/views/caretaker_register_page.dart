@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:geolocator/geolocator.dart';
+
+import '../widgets/location_picker_widget.dart';
 import '../services/auth_service.dart';
 import '../models/caretaker_model.dart';
 import '../models/vehicle_model.dart';
@@ -29,12 +28,14 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
 
   bool _isObscure = true;
   bool _isLoading = false;
+  // 🌟 เพิ่มตัวแปรเก็บข้อความ Error ใต้ปุ่ม
+  String? _submitErrorMessage;
+
   final _selectedTab = "ผู้ดูแล";
   String _selectedGender = "";
 
-  LatLng _selectedLocation = const LatLng(13.7563, 100.5018);
+  LatLng _selectedLocation = const LatLng(18.2881, 99.4921);
   bool _hasPinned = false;
-  bool _isLoadingLocation = false;
 
   File? _profileImageFile;
   File? _licenseImageFile;
@@ -42,21 +43,18 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   File? _firstAidImageFile;
   final List<File> _vehicleImageFiles = [];
 
-  // เก็บเป็น Base64 ตามที่ต้องการ
   String? _profilePhotoBase64;
   String? _licensePhotoBase64;
   String? _insurancePhotoBase64;
   String? _firstAidPhotoBase64;
   List<String> _vehiclePhotoBase64List = [];
 
-  // ชื่อไฟล์รูปภาพ
   String? _profilePhotoName;
   String? _licenseCardPhotoName;
   String? _insurancePhotoName;
   String? _firstAidPhotoName;
   final List<String> _vehiclePhotoNames = [];
 
-  // Controllers Form
   final TextEditingController _usernameCtrl = TextEditingController();
   final TextEditingController _emailCtrl = TextEditingController();
   final TextEditingController _passwordCtrl = TextEditingController();
@@ -64,7 +62,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   final TextEditingController _firstNameCtrl = TextEditingController();
   final TextEditingController _lastNameCtrl = TextEditingController();
   final TextEditingController _birthDateCtrl = TextEditingController();
-  final TextEditingController _genderCtrl = TextEditingController();
   final TextEditingController _aboutMeCtrl = TextEditingController();
   final TextEditingController _equipmentCtrl = TextEditingController();
   final TextEditingController _phoneCtrl = TextEditingController();
@@ -83,7 +80,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
 
   @override
   void dispose() {
-    // 🧹 เคลียร์ Controllers ทั้งหมดเพื่อคืนพื้นที่หน่วยความจำ
     _usernameCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
@@ -91,54 +87,16 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
     _birthDateCtrl.dispose();
-    _genderCtrl.dispose();
     _aboutMeCtrl.dispose();
     _equipmentCtrl.dispose();
     _phoneCtrl.dispose();
     _addressCtrl.dispose();
-
     _vehicleTypeCtrl.dispose();
     _brandCtrl.dispose();
     _modelCtrl.dispose();
     _colorCtrl.dispose();
     _licensePlateCtrl.dispose();
-
     super.dispose();
-  }
-
-  Future<bool> _requestLocationPermission() async {
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.deniedForever) {
-        _showErrorSnackBar('กรุณาอนุญาติการเข้าถึงตำแหน่งจากการตั้งค่า');
-        await Geolocator.openLocationSettings();
-        return false;
-      }
-    } else if (permission == LocationPermission.deniedForever) {
-      _showErrorSnackBar('กรุณาอนุญาติการเข้าถึงตำแหน่งจากการตั้งค่า');
-      await Geolocator.openLocationSettings();
-      return false;
-    }
-    return permission == LocationPermission.whileInUse ||
-        permission == LocationPermission.always;
-  }
-
-  Future<LatLng?> _getCurrentLocation() async {
-    try {
-      bool hasPermission = await _requestLocationPermission();
-      if (!hasPermission) return null;
-
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
-      );
-      return LatLng(position.latitude, position.longitude);
-    } catch (e) {
-      print("Error getting current location: $e");
-      _showErrorSnackBar('ไม่สามารถดึงตำแหน่งปัจจุบันได้');
-      return null;
-    }
   }
 
   Future<void> _selectBirthDate() async {
@@ -156,11 +114,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     }
   }
 
-  // -----------------------------------------------------------------
-  // 🌟 ส่วนที่แก้ไขใหม่: เพิ่มการเลือก Camera/Gallery และ Preview รูป
-  // -----------------------------------------------------------------
-
-  // 1. ฟังก์ชันแสดง Action Sheet ให้เลือกว่าจะถ่ายรูปหรือเลือกจากไฟล์
   void _showImageSourceActionSheet(String type) {
     showModalBottomSheet(
       context: context,
@@ -194,7 +147,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
-  // 2. ฟังก์ชันแสดง Popup รูปภาพขยายใหญ่กลางหน้าจอ
   void _showImagePreview(File imageFile) {
     showDialog(
       context: context,
@@ -206,7 +158,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
             alignment: Alignment.center,
             children: [
               InteractiveViewer(
-                // ทำให้ซูมรูปได้
                 panEnabled: false,
                 boundaryMargin: const EdgeInsets.all(20),
                 minScale: 0.5,
@@ -228,7 +179,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
-  // 3. ฟังก์ชันสำหรับลบรูปภาพที่เลือกไว้
   void _removeImage(String type) {
     setState(() {
       if (type == 'profile') {
@@ -251,7 +201,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     });
   }
 
-  // ปรับปรุง _pickImageReal ให้รับ ImageSource ด้วย
   Future<void> _pickImageReal(String type) async {
     final XFile? pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -260,14 +209,11 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
 
     if (pickedFile != null) {
       File file = File(pickedFile.path);
-
       int fileSizeInBytes = await file.length();
       double fileSizeInMB = fileSizeInBytes / (1024 * 1024);
 
       if (fileSizeInMB > 20) {
-        _showErrorSnackBar(
-          'ขนาดไฟล์ต้องไม่เกิน 20MB (ไฟล์ของคุณขนาด: ${fileSizeInMB.toStringAsFixed(2)} MB)',
-        );
+        _showErrorSnackBar('ขนาดไฟล์ต้องไม่เกิน 20MB');
         return;
       }
 
@@ -303,136 +249,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         }
       });
     }
-  }
-  // -----------------------------------------------------------------
-
-  Future<void> _getAddressFromLatLng(LatLng location) async {
-    final url = Uri.parse(
-      'https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.latitude}&lon=${location.longitude}&accept-language=th',
-    );
-
-    try {
-      final response = await http.get(
-        url,
-        headers: {'User-Agent': 'CaretakerAppFlutter (naphat.con@gmail.com)'},
-      );
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final address = data['address'];
-
-        if (address != null) {
-          String subdistrict =
-              address['subdistrict'] ??
-              address['village'] ??
-              address['suburb'] ??
-              '';
-          String district =
-              address['district'] ?? address['city_district'] ?? '';
-          String province = address['state'] ?? address['province'] ?? '';
-          String postcode = address['postcode'] ?? '';
-
-          setState(() {
-            _selectedLocation = location;
-            _hasPinned = true;
-            _addressCtrl.text =
-                "$subdistrict $district $province รหัสไปรษณีย์ $postcode";
-          });
-        }
-      }
-    } catch (e) {
-      print("Error Reverse Geocoding: $e");
-    }
-  }
-
-  void _showMapModal() async {
-    setState(() => _isLoadingLocation = true);
-    LatLng? currentLocation = await _getCurrentLocation();
-    setState(() => _isLoadingLocation = false);
-
-    LatLng initialLocation = currentLocation ?? _selectedLocation;
-
-    if (!mounted) return;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        LatLng tempLocation = initialLocation;
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.75,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  const Text(
-                    'คลิกบนแผนที่เพื่อย้ายตำแหน่งหมุด',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 10),
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: FlutterMap(
-                        options: MapOptions(
-                          initialCenter: tempLocation,
-                          initialZoom: 16.5,
-                          onTap: (tapPosition, point) {
-                            setModalState(() => tempLocation = point);
-                          },
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate:
-                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.example.miniproject',
-                          ),
-                          MarkerLayer(
-                            markers: [
-                              Marker(
-                                point: tempLocation,
-                                width: 40,
-                                height: 40,
-                                child: const Icon(
-                                  Icons.location_on,
-                                  color: Colors.red,
-                                  size: 40,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 45,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _getAddressFromLatLng(tempLocation);
-                      },
-                      child: const Text(
-                        'ยืนยันตำแหน่งนี้',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
   }
 
   bool get _hasAnyData {
@@ -501,25 +317,25 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     }
   }
 
+  // 🌟 ฟังก์ชันจัดการปุ่มสมัครสมาชิกฉบับปรับปรุง (ไม่มี Snackbar)
   void _handleRegisterSubmit() async {
-    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _submitErrorMessage = null; // รีเซ็ตข้อความเก่า
+    });
 
-    if (_selectedGender.isEmpty) {
-      _showErrorSnackBar('กรุณาเลือกเพศ');
-      return;
-    }
+    // ให้ฟอร์มตรวจสอบตัวเอง (Inline Validation) ฟิลด์ที่ตกหล่นจะขึ้นกรอบแดงอัตโนมัติ
+    bool isFormValid = _formKey.currentState!.validate();
 
-    // 🌟 ส่วนที่แก้ไขใหม่: เพิ่มการ Validate เช็ครูปภาพให้ครบตามที่ UI ระบุว่าบังคับ
-    if (_profilePhotoName == null) {
-      _showErrorSnackBar('กรุณาอัปโหลดรูปโปรไฟล์ของคุณ');
-      return;
-    }
-    if (_vehiclePhotoBase64List.isEmpty) {
-      _showErrorSnackBar('กรุณาอัปโหลดภาพยานพาหนะอย่างน้อย 1 รูป');
-      return;
-    }
-    if (_licenseCardPhotoName == null) {
-      _showErrorSnackBar('กรุณาอัปโหลดรูปถ่ายใบอนุญาตขับขี่');
+    // เช็คข้อมูลที่ไม่อยู่ในฟอร์ม หรือข้อมูลรูปภาพบังคับ
+    if (!isFormValid ||
+        _addressCtrl.text.trim().isEmpty ||
+        _selectedGender.isEmpty ||
+        _profilePhotoName == null ||
+        _vehiclePhotoBase64List.isEmpty ||
+        _licenseCardPhotoName == null) {
+      setState(() {
+        _submitErrorMessage = 'กรุณากรอกข้อมูลและอัปโหลดเอกสารสำคัญให้ครบถ้วน';
+      });
       return;
     }
 
@@ -527,7 +343,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
 
     try {
       List<DocumentModel> documentList = [];
-
       documentList.add(
         DocumentModel(
           documentId: "DOC-LICENSE-${DateTime.now().millisecondsSinceEpoch}",
@@ -625,17 +440,22 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
           (route) => false,
         );
       } else {
-        _showErrorSnackBar(
-          'การสมัครสมาชิกล้มเหลว หรือชื่อผู้ใช้นี้ถูกใช้งานแล้ว',
-        );
+        setState(() {
+          _submitErrorMessage =
+              'การสมัครสมาชิกล้มเหลว หรือชื่อผู้ใช้นี้ถูกใช้งานแล้ว';
+        });
       }
     } catch (e) {
-      _showErrorSnackBar('เกิดข้อผิดพลาด: $e');
+      setState(() {
+        _submitErrorMessage =
+            'เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง';
+      });
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
+  // เก็บ Snackbar ไว้เตือนเรื่องขนาดรูปภาพเท่านั้น
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
@@ -664,7 +484,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
           child: Column(
             children: [
               _buildTopToggleTab(),
-
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
@@ -685,22 +504,14 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             hint: 'ชื่อผู้ใช้ (Username)',
                             controller: _usernameCtrl,
                             validator: (val) {
-                              if (val == null || val.trim().isEmpty) {
+                              if (val == null || val.trim().isEmpty)
                                 return 'กรุณากรอกชื่อผู้ใช้';
-                              }
-                              if (val.contains(' ')) {
+                              if (val.contains(' '))
                                 return 'ต้องไม่มีเว้นวรรคหรือช่องว่าง';
-                              }
-                              if (val.length < 4 || val.length > 20) {
+                              if (val.length < 4 || val.length > 20)
                                 return 'ความยาวต้องอยู่ระหว่าง 4-20 ตัวอักษร';
-                              }
-                              if (!RegExp(r'^[a-zA-Z0-9_.-]+$').hasMatch(val)) {
+                              if (!RegExp(r'^[a-zA-Z0-9_.-]+$').hasMatch(val))
                                 return 'ใช้อักษรภาษาอังกฤษ ตัวเลข และ (_, -, .) เท่านั้น';
-                              }
-                              if (RegExp(r'^[_.-]').hasMatch(val) ||
-                                  RegExp(r'[_.-]$').hasMatch(val)) {
-                                return 'ห้ามขึ้นต้นหรือลงท้ายด้วยอักขระพิเศษ';
-                              }
                               return null;
                             },
                           ),
@@ -710,20 +521,12 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             controller: _passwordCtrl,
                             isPassword: true,
                             validator: (val) {
-                              if (val == null || val.trim().isEmpty) {
+                              if (val == null || val.trim().isEmpty)
                                 return 'กรุณากรอกรหัสผ่าน';
-                              }
-                              if (val.contains(' ')) {
+                              if (val.contains(' '))
                                 return 'ต้องไม่มีเว้นวรรคหรือช่องว่าง';
-                              }
-                              if (val.length < 8 || val.length > 16) {
+                              if (val.length < 8 || val.length > 16)
                                 return 'ความยาวต้องอยู่ระหว่าง 8-16 ตัวอักษร';
-                              }
-                              if (!RegExp(
-                                r'^[a-zA-Z0-9!#_.\s@]+$',
-                              ).hasMatch(val)) {
-                                return 'อนุญาตเฉพาะอักษร อังกฤษ เลข และ [!#_. @] เท่านั้น';
-                              }
                               return null;
                             },
                           ),
@@ -732,14 +535,12 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             hint: 'อีเมล',
                             controller: _emailCtrl,
                             validator: (val) {
-                              if (val == null || val.trim().isEmpty) {
+                              if (val == null || val.trim().isEmpty)
                                 return 'กรุณากรอกอีเมล';
-                              }
                               if (!RegExp(
                                 r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-                              ).hasMatch(val)) {
+                              ).hasMatch(val))
                                 return 'รูปแบบอีเมลไม่ถูกต้อง';
-                              }
                               return null;
                             },
                           ),
@@ -759,20 +560,16 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             keyboardType: TextInputType.number,
                             maxLength: 13,
                             validator: (val) {
-                              if (val == null || val.trim().isEmpty) {
+                              if (val == null || val.trim().isEmpty)
                                 return 'กรุณากรอกเลขบัตรประชาชน';
-                              }
-                              if (val.contains(' ')) {
-                                return 'ต้องไม่มีเว้นวรรคหรือช่องว่าง';
-                              }
                               if (val.length != 13 ||
-                                  !RegExp(r'^[0-9]+$').hasMatch(val)) {
-                                return 'ต้องเป็นตัวเลขความยาว 13 หลัก';
-                              }
+                                  !RegExp(r'^[0-9]+$').hasMatch(val))
+                                return 'ต้องเป็นตัวเลข 13 หลัก';
                               return null;
                             },
                           ),
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 child: Column(
@@ -814,6 +611,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             ],
                           ),
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 child: Column(
@@ -823,71 +621,135 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                                       'วันเกิด',
                                       isRequired: true,
                                     ),
-                                    TextFormField(
-                                      controller: _birthDateCtrl,
-                                      readOnly: true,
-                                      onTap: _selectBirthDate,
-                                      decoration: InputDecoration(
-                                        hintText: 'วว/ดด/ปปปป',
-                                        hintStyle: const TextStyle(
-                                          fontSize: 13,
-                                          color: Colors.grey,
-                                        ),
-                                        filled: true,
-                                        fillColor: Colors.white,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 10,
-                                            ),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          borderSide: BorderSide(
-                                            color: greyBorder,
-                                          ),
-                                        ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          borderSide: BorderSide(
-                                            color: greyBorder,
-                                          ),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          borderSide: BorderSide(
-                                            color: primaryColor,
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        suffixIcon: Icon(
-                                          Icons.calendar_today,
-                                          size: 18,
-                                          color: primaryColor,
-                                        ),
-                                        errorStyle: const TextStyle(
-                                          color: Colors.red,
-                                          fontSize: 11,
-                                        ),
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 12,
                                       ),
-                                      validator: (val) => val!.isEmpty
-                                          ? 'กรุณาระบุวันเกิด'
-                                          : null,
+                                      child: TextFormField(
+                                        controller: _birthDateCtrl,
+                                        readOnly: true,
+                                        onTap: _selectBirthDate,
+                                        decoration: InputDecoration(
+                                          hintText: 'วว/ดด/ปปปป',
+                                          hintStyle: const TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.grey,
+                                          ),
+                                          filled: true,
+                                          fillColor: Colors.white,
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 10,
+                                              ),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            borderSide: BorderSide(
+                                              color: greyBorder,
+                                            ),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            borderSide: BorderSide(
+                                              color: greyBorder,
+                                            ),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            borderSide: BorderSide(
+                                              color: primaryColor,
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          suffixIcon: Icon(
+                                            Icons.calendar_today,
+                                            size: 18,
+                                            color: primaryColor,
+                                          ),
+                                          errorStyle: const TextStyle(
+                                            color: Colors.red,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                        validator: (val) => val!.isEmpty
+                                            ? 'กรุณาระบุวันเกิด'
+                                            : null,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
                             ],
                           ),
-                          SizedBox(height: 10),
                           _buildLabelField('เพศ', isRequired: true),
-                          _buildGenderDropdown(),
-                          SizedBox(height: 10),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: DropdownButtonFormField<String>(
+                              initialValue: _selectedGender.isEmpty
+                                  ? null
+                                  : _selectedGender,
+                              decoration: InputDecoration(
+                                hintText: 'เลือกเพศ',
+                                hintStyle: const TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey,
+                                ),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: greyBorder),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: greyBorder),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: primaryColor,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                errorStyle: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 11,
+                                ),
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'ชาย',
+                                  child: Text(
+                                    'ชาย',
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'หญิง',
+                                  child: Text(
+                                    'หญิง',
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                              ],
+                              onChanged: (value) =>
+                                  setState(() => _selectedGender = value ?? ''),
+                              validator: (value) =>
+                                  (value == null || value.isEmpty)
+                                  ? 'กรุณาเลือกเพศ'
+                                  : null,
+                            ),
+                          ),
                           _buildLabelField('เบอร์โทรศัพท์', isRequired: true),
                           _buildInputField(
                             hint: 'เบอร์โทรศัพท์',
@@ -898,8 +760,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                           ),
                           _buildLabelField('เกี่ยวกับฉัน', isRequired: true),
                           _buildInputField(
-                            hint:
-                                'อธิบายอะไรเกี่ยวกับตัวคุณหน่อย เช่น ประสบการณ์การดูแลผู้สูงอายุ หรือทักษะพิเศษที่มี',
+                            hint: 'อธิบายอะไรเกี่ยวกับตัวคุณหน่อย',
                             controller: _aboutMeCtrl,
                             maxLines: 4,
                             maxLength: 500,
@@ -915,9 +776,8 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             maxLines: 4,
                             maxLength: 500,
                             alignLabelWithHint: true,
-                            validator: (val) => val!.isEmpty
-                                ? 'กรุณากรอกข้อมูลอุปกรณ์ที่มี'
-                                : null,
+                            validator: (val) =>
+                                val!.isEmpty ? 'กรุณากรอกข้อมูลอุปกรณ์' : null,
                           ),
                         ],
                       ),
@@ -925,45 +785,16 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                       _buildSectionContainer(
                         title: 'ข้อมูลที่อยู่',
                         children: [
-                          _buildInputField(
-                            hint: 'รายละเอียดที่อยู่...',
-                            controller: _addressCtrl,
-                            maxLines: 4,
-                            maxLength: 500,
-                            validator: (val) => val!.isEmpty
-                                ? 'กรุณากรอกรายละเอียดที่อยู่ หรือกดปักหมุดแผนที่ด้านล่าง'
-                                : null,
-                          ),
-                          InkWell(
-                            onTap: _showMapModal,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: primaryColor,
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    'เลือกปักหมุดที่อยู่บนแผนที่',
-                                    style: TextStyle(
-                                      color: primaryColor,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Icon(Icons.map, color: primaryColor),
-                                ],
-                              ),
-                            ),
+                          LocationPickerWidget(
+                            initialLocation: _selectedLocation,
+                            initialAddress: _addressCtrl.text,
+                            onLocationChanged: (newLocation, newAddress) {
+                              setState(() {
+                                _selectedLocation = newLocation;
+                                _addressCtrl.text = newAddress;
+                                _hasPinned = true;
+                              });
+                            },
                           ),
                         ],
                       ),
@@ -972,74 +803,75 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                         title: 'ข้อมูลยานพาหนะ',
                         children: [
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
-                                child: _buildLabelField(
-                                  'ประเภท',
-                                  isRequired: true,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildLabelField(
+                                      'ประเภท',
+                                      isRequired: true,
+                                    ),
+                                    _buildInputField(
+                                      hint: 'รถยนต์',
+                                      controller: _vehicleTypeCtrl,
+                                      validator: (val) =>
+                                          val!.isEmpty ? 'กรุณาระบุ' : null,
+                                    ),
+                                  ],
                                 ),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
-                                child: _buildLabelField(
-                                  'ยี่ห้อ',
-                                  isRequired: true,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildLabelField(
+                                      'ยี่ห้อ',
+                                      isRequired: true,
+                                    ),
+                                    _buildInputField(
+                                      hint: 'ยี่ห้อ',
+                                      controller: _brandCtrl,
+                                      validator: (val) =>
+                                          val!.isEmpty ? 'กรุณาระบุ' : null,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
-                                child: _buildInputField(
-                                  hint: 'ประเภท (เช่น รถยนต์)',
-                                  controller: _vehicleTypeCtrl,
-                                  validator: (val) =>
-                                      val!.isEmpty ? 'กรุณาระบุ' : null,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildLabelField('รุ่น', isRequired: true),
+                                    _buildInputField(
+                                      hint: 'รุ่น',
+                                      controller: _modelCtrl,
+                                      validator: (val) =>
+                                          val!.isEmpty ? 'กรุณาระบุ' : null,
+                                    ),
+                                  ],
                                 ),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
-                                child: _buildInputField(
-                                  hint: 'ยี่ห้อ',
-                                  controller: _brandCtrl,
-                                  validator: (val) =>
-                                      val!.isEmpty ? 'กรุณาระบุ' : null,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildLabelField(
-                                  'รุ่น',
-                                  isRequired: true,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: _buildLabelField('สี', isRequired: true),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildInputField(
-                                  hint: 'รุ่น',
-                                  controller: _modelCtrl,
-                                  validator: (val) =>
-                                      val!.isEmpty ? 'กรุณาระบุ' : null,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: _buildInputField(
-                                  hint: 'สี',
-                                  controller: _colorCtrl,
-                                  validator: (val) =>
-                                      val!.isEmpty ? 'กรุณาระบุ' : null,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildLabelField('สี', isRequired: true),
+                                    _buildInputField(
+                                      hint: 'สี',
+                                      controller: _colorCtrl,
+                                      validator: (val) =>
+                                          val!.isEmpty ? 'กรุณาระบุ' : null,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -1052,19 +884,19 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                                 val!.isEmpty ? 'กรุณากรอกทะเบียนรถ' : null,
                           ),
                           const SizedBox(height: 3),
-                          Text.rich(
+                          const Text.rich(
                             TextSpan(
                               children: [
                                 TextSpan(
                                   text:
                                       'ภาพถ่ายภายในและภายนอกยานพาหนะสูงสุด 4 รูป',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 13,
                                     color: Colors.black,
                                   ),
                                 ),
-                                const TextSpan(
+                                TextSpan(
                                   text: ' *',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
@@ -1074,15 +906,12 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                                 ),
                               ],
                             ),
-                            softWrap: true,
                           ),
                           const SizedBox(height: 8),
                           Row(
                             children: [
                               InkWell(
-                                onTap: () => _pickImageReal(
-                                  'vehicle',
-                                ), // 🌟 เปลี่ยนมาเรียก Action Sheet
+                                onTap: () => _pickImageReal('vehicle'),
                                 child: Container(
                                   width: 60,
                                   height: 60,
@@ -1113,15 +942,12 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                                             padding: const EdgeInsets.only(
                                               right: 8.0,
                                             ),
-                                            // 🌟 เพิ่มฟังก์ชันกดที่รูปรถเพื่อดูรูปแบบเต็มๆ และกดกากบาทลบได้
                                             child: Stack(
                                               alignment: Alignment.topRight,
                                               children: [
                                                 GestureDetector(
                                                   onTap: () =>
-                                                      _showImagePreview(
-                                                        file,
-                                                      ), // กดเพื่อพรีวิว
+                                                      _showImagePreview(file),
                                                   child: ClipRRect(
                                                     borderRadius:
                                                         BorderRadius.circular(
@@ -1193,8 +1019,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             _insuranceImageFile,
                             _insurancePhotoName,
                             'insurance',
-                            isRequired:
-                                true, // 🌟 ลบดาวบังคับออกตามที่คุณเคยระบุไว้
                           ),
                           const Divider(),
                           _buildUploadDocRow(
@@ -1202,13 +1026,48 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             _firstAidImageFile,
                             _firstAidPhotoName,
                             'firstaid',
-                            isRequired:
-                                true, // 🌟 ลบดาวบังคับออกตามที่คุณเคยระบุไว้
                           ),
                         ],
                       ),
 
                       const SizedBox(height: 20),
+
+                      // 🌟 แสดงข้อความแจ้งเตือนรวมใต้ฟอร์ม (ถ้ามี)
+                      if (_submitErrorMessage != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFEBEE),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.error_outline,
+                                  color: Color(0xFFF44336),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    _submitErrorMessage!,
+                                    style: const TextStyle(
+                                      color: Color(0xFFF44336),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
 
                       SizedBox(
                         width: double.infinity,
@@ -1222,8 +1081,13 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                           ),
                           onPressed: _isLoading ? null : _handleRegisterSubmit,
                           child: _isLoading
-                              ? const CircularProgressIndicator(
-                                  color: Colors.white,
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
                                 )
                               : const Text(
                                   'สมัครสมาชิก',
@@ -1266,6 +1130,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
+  // --- Helper Widgets ต่างๆ คงเดิม แค่จัดระเบียบให้เรียบร้อย ---
   Widget _buildTopToggleTab() {
     return Center(
       child: Container(
@@ -1339,7 +1204,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
-  // 🌟 ปรับปรุง: การอัปโหลดรูปโปรไฟล์
   Widget _buildProfileUploadWidget() {
     return Column(
       children: [
@@ -1348,13 +1212,10 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
           children: [
             GestureDetector(
               onTap: () {
-                if (_profileImageFile == null) {
-                  _pickImageReal('profile'); // ถ้ารูปว่าง ให้เปิดตัวเลือก
-                } else {
-                  _showImagePreview(
-                    _profileImageFile!,
-                  ); // ถ้ามีรูปแล้ว ให้เปิดพรีวิวเต็มจอ
-                }
+                if (_profileImageFile == null)
+                  _pickImageReal('profile');
+                else
+                  _showImagePreview(_profileImageFile!);
               },
               child: CircleAvatar(
                 radius: 43,
@@ -1371,7 +1232,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                 ),
               ),
             ),
-            // ปุ่มแก้ไขรูป (Camera Icon)
             InkWell(
               onTap: () => _showImageSourceActionSheet('profile'),
               child: Container(
@@ -1387,7 +1247,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                 ),
               ),
             ),
-            // ปุ่มกากบาทลบรูป (จะโชว์ก็ต่อเมื่อมีรูปถูกเลือกแล้ว)
             if (_profileImageFile != null)
               Positioned(
                 top: 0,
@@ -1415,14 +1274,13 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'อัปโหลดรูปโปรไฟล์',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            const Text(' *', style: TextStyle(color: Colors.red)),
+            Text(' *', style: TextStyle(color: Colors.red)),
           ],
         ),
-
         if (_profilePhotoName != null)
           Text(
             _profilePhotoName!,
@@ -1487,38 +1345,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
-  Widget _buildGenderDropdown() {
-    return DropdownButtonFormField<String>(
-      initialValue: _selectedGender.isEmpty ? null : _selectedGender,
-      decoration: InputDecoration(
-        hintText: 'เลือกเพศ',
-        hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 12,
-        ),
-      ),
-      items: const [
-        DropdownMenuItem(value: 'ชาย', child: Text('ชาย')),
-        DropdownMenuItem(value: 'หญิง', child: Text('หญิง')),
-      ],
-      onChanged: (value) {
-        setState(() {
-          _selectedGender = value ?? '';
-        });
-      },
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'กรุณาเลือกเพศ';
-        }
-        return null;
-      },
-    );
-  }
-
   Widget _buildInputField({
     required String hint,
     TextEditingController? controller,
@@ -1579,7 +1405,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
-  // 🌟 ปรับปรุง: การอัปโหลดเอกสาร
   Widget _buildUploadDocRow(
     String title,
     File? imageFile,
@@ -1591,9 +1416,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
       contentPadding: EdgeInsets.zero,
       leading: GestureDetector(
         onTap: () {
-          if (imageFile != null) {
-            _showImagePreview(imageFile); // กดที่รูปเล็กๆ เพื่อดูรูปเต็มได้
-          }
+          if (imageFile != null) _showImagePreview(imageFile);
         },
         child: imageFile != null
             ? ClipRRect(
@@ -1643,18 +1466,14 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ปุ่มลบ จะโชว์เมื่อมีรูปแล้ว
           if (imageFile != null)
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.red),
               onPressed: () => _removeImage(type),
             ),
-          // ปุ่มเลือกรูป/เปลี่ยนรูป
           IconButton(
             icon: Icon(
-              fileName != null
-                  ? Icons.edit
-                  : Icons.cloud_upload, // เปลี่ยนไอคอนให้เหมาะสม
+              fileName != null ? Icons.edit : Icons.cloud_upload,
               color: primaryColor,
             ),
             onPressed: () => _pickImageReal(type),
