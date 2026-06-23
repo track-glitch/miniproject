@@ -4,6 +4,7 @@ import 'package:miniproject/models/patient_model.dart';
 import 'package:miniproject/models/relative_model.dart';
 import 'package:miniproject/views/login_page.dart';
 import 'package:miniproject/views/relative/edit_relative_info_page.dart';
+import 'package:miniproject/views/relative/request_caretaker_service_page.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'dart:convert';
 import 'package:firebase_database/firebase_database.dart';
@@ -12,13 +13,15 @@ class CaretakerProfilePage extends StatefulWidget {
   final String caretakerId;
   final String? loggedUid;
 
-  const CaretakerProfilePage({super.key, required this.caretakerId, this.loggedUid});
+  const CaretakerProfilePage({
+    super.key,
+    required this.caretakerId,
+    this.loggedUid,
+  });
 
   @override
   State<CaretakerProfilePage> createState() => _CaretakerProfilePageState();
 }
-
-
 
 class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   Map<String, dynamic>? caretakerData;
@@ -69,7 +72,9 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
       context: context,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
             decoration: BoxDecoration(
@@ -84,7 +89,11 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                 const SizedBox(height: 20),
                 Text(
                   'กรุณาเข้าสู่ระบบก่อนใช้งาน',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 const Text(
@@ -99,19 +108,27 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(23)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(23),
+                      ),
                     ),
                     onPressed: () {
                       Navigator.pop(context); // ปิด Dialog
-                      Navigator.pushAndRemoveUntil(
+                      Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const LoginPage()),
-                        (route) => false,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              LoginPage(caretakerId: widget.caretakerId),
+                        ),
                       );
                     },
                     child: const Text(
                       'ไปหน้าเข้าสู่ระบบ',
-                      style: TextStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -216,10 +233,11 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
           fontSize: 12,
         ),
         unselectedLabelStyle: const TextStyle(fontSize: 12),
-        
+
         // 🎯 1. เพิ่มฟังก์ชัน onTap ดักเงื่อนไขที่ตรงนี้
         onTap: (index) async {
-          if (index == 3) { // เมื่อกดเมนู "ญาติ" (Index ลำดับที่ 3)
+          if (index == 3) {
+            // เมื่อกดเมนู "ญาติ" (Index ลำดับที่ 3)
             // เช็คสิทธิ์ด้วยค่า loggedUid ตัวจริงก่อน
             String? uid = widget.loggedUid;
 
@@ -238,20 +256,27 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             showDialog(
               context: context,
               barrierDismissible: false,
-              builder: (context) => const Center(child: CircularProgressIndicator()),
+              builder: (context) =>
+                  const Center(child: CircularProgressIndicator()),
             );
 
             try {
-              final snapshot = await FirebaseDatabase.instance.ref('Login/$uid').get();
+              final snapshot = await FirebaseDatabase.instance
+                  .ref('Login/$uid')
+                  .get();
               if (context.mounted) Navigator.pop(context); // ปิด Loading
 
               if (snapshot.exists && snapshot.value is Map) {
-                final userData = Map<String, dynamic>.from(snapshot.value as Map);
+                final userData = Map<String, dynamic>.from(
+                  snapshot.value as Map,
+                );
                 RelativeModel relative;
                 Map<String, dynamic> relativeMap = {};
-                
+
                 if (userData.containsKey('Relative')) {
-                  relativeMap = Map<String, dynamic>.from(userData['Relative'] as Map);
+                  relativeMap = Map<String, dynamic>.from(
+                    userData['Relative'] as Map,
+                  );
                   relative = RelativeModel(
                     relativeId: relativeMap['relativeId'] ?? '',
                     firstname: relativeMap['firstname'] ?? '',
@@ -261,12 +286,21 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                     email: relativeMap['email'] ?? '',
                   );
                 } else {
-                  relative = RelativeModel(relativeId: '', firstname: '', lastname: '', phonenumber: '', relationship: '', email: '');
+                  relative = RelativeModel(
+                    relativeId: '',
+                    firstname: '',
+                    lastname: '',
+                    phonenumber: '',
+                    relationship: '',
+                    email: '',
+                  );
                 }
 
                 PatientModel patient;
                 if (relativeMap.containsKey('Patient')) {
-                  final pData = Map<String, dynamic>.from(relativeMap['Patient'] as Map);
+                  final pData = Map<String, dynamic>.from(
+                    relativeMap['Patient'] as Map,
+                  );
                   patient = PatientModel(
                     patientId: pData['patientId'] ?? '',
                     patientphoto: pData['patientphoto'] ?? '',
@@ -274,12 +308,21 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                     lastname: pData['lastname'] ?? '',
                     phonenumber: pData['phonenumber'] ?? '',
                     gender: pData['gender'] ?? '',
-                    birthdate: pData['birthdate'] != null ? DateTime.tryParse(pData['birthdate'].toString()) : null,
+                    birthdate: pData['birthdate'] != null
+                        ? DateTime.tryParse(pData['birthdate'].toString())
+                        : null,
                     disease: pData['disease'] ?? '',
                     mobility: pData['mobility'] ?? '',
                   );
                 } else {
-                  patient = PatientModel(patientId: '', patientphoto: '', firstname: '', lastname: '', phonenumber: '', gender: '');
+                  patient = PatientModel(
+                    patientId: '',
+                    patientphoto: '',
+                    firstname: '',
+                    lastname: '',
+                    phonenumber: '',
+                    gender: '',
+                  );
                 }
 
                 if (context.mounted) {
@@ -287,24 +330,35 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                          builder: (context) => EditRelativeInfoPage(currentPatient: patient, currentRelative: relative, loggedUid: uid!,), //
+                      builder: (context) => EditRelativeInfoPage(
+                        currentPatient: patient,
+                        currentRelative: relative,
+                        loggedUid: uid!,
+                      ), //
                     ),
                   );
                 }
               } else {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ไม่พบข้อมูลประวัติในระบบ')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('ไม่พบข้อมูลประวัติในระบบ')),
+                  );
                 }
               }
             } catch (e) {
               if (context.mounted) {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('เกิดข้อผิดพลาด: $e'), backgroundColor: Colors.red));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('เกิดข้อผิดพลาด: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
               }
             }
           }
         },
-        
+
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'บ้าน'),
           BottomNavigationBarItem(
@@ -906,7 +960,9 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             ),
           ),
           onPressed: () {
-            // 🎯 เริ่มต้นระบบเช็กสิทธิ์ล็อกอินโดยเช็กจากค่า loggedUid ตัวจริงก่อน
+            print("widget.loggedUid = ${widget.loggedUid}");
+            print("currentUser = ${FirebaseAuth.instance.currentUser?.uid}");
+
             String? uid = widget.loggedUid;
 
             if (uid == null) {
@@ -914,23 +970,31 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
               uid = currentUser?.uid;
             }
 
-            // 🎯 หากยังไม่ได้ล็อกอิน (ค่า uid เป็น null) บังคับแสดงหน้าต่างแจ้งเตือนทันที
+            // ยังไม่ได้ล็อกอิน
             if (uid == null) {
               _showLoginRequiredDialog();
               return;
             }
 
-            // --- ส่วนของเงื่อนไขการส่งคำขอแบบปกติเมื่อล็อกอินถูกต้องแล้ว (โค้ดเดิมของคุณ) ---
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('กำลังดำเนินการส่งคำขอใช้บริการ...'),
-                backgroundColor: Colors.green,
+            // ล็อกอินแล้ว เปิดหน้าส่งคำขอ
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ServiceRequestPage(
+                  caretakerData: caretakerData!,
+                  caretakerId: widget.caretakerId,
+                  loggedUid: uid,
+                ),
               ),
             );
           },
           child: const Text(
             'ขอใช้บริการ',
-            style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),

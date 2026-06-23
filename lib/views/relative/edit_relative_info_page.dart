@@ -306,6 +306,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           'lastname': _patLastNameController.text.trim(),
           'phonenumber': _patPhoneController.text.trim(),
           'gender': _patGenderController.text.trim(),
+          'birthdate': _patBirthDateController.text.trim(),
           'disease': _patDiseaseController.text.trim(),
           'patientphoto': _profilePhotoBase64 ?? '',
           'address': _patAddressController.text.trim(),
