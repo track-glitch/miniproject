@@ -319,7 +319,11 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
         // 🌟 2. ช่องข้อความรายละเอียดที่อยู่
         const Text(
           'รายละเอียดที่อยู่',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 4),
         TextFormField(

@@ -8,6 +8,7 @@ import '../../services/caretaker_service.dart';
 import '../../widgets/custom_header_nav.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import '../caretaker/list_relative_request_page.dart';
+import '../login_page.dart';
 
 class EditProfilePage extends StatefulWidget {
   final String uid;
@@ -48,6 +49,37 @@ class _EditProfilePageState extends State<EditProfilePage> {
   void initState() {
     super.initState();
     _loadProfileData(); // 🌟 ดึงข้อมูลจาก Firebase ทันทีที่เปิดหน้า
+  }
+
+  void _showLogoutConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'ออกจากระบบ',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+        ),
+        content: const Text('คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+
+              Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const LoginPage()), (route) => false);
+            },
+            child: const Text(
+              'ออกจากระบบ',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadProfileData() async {
@@ -398,6 +430,35 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+              ),
+            ),
+            const SizedBox(height: 30),
+            // 🌟 เพิ่มปุ่มออกจากระบบตรงนี้
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(
+                    color: Colors.red,
+                    width: 1.5,
+                  ), // ขอบสีแดง
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
+                icon: const Icon(Icons.logout, color: Colors.red),
+                label: const Text(
+                  'ออกจากระบบ',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onPressed: () {
+                  _showLogoutConfirmation(); // เรียกใช้ Popup ยืนยันการออก
+                },
               ),
             ),
             const SizedBox(height: 30),

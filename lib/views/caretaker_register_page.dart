@@ -28,6 +28,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
 
   bool _isObscure = true;
   bool _isLoading = false;
+  bool _isPickingImage = false;
   // 🌟 เพิ่มตัวแปรเก็บข้อความ Error ใต้ปุ่ม
   String? _submitErrorMessage;
 
@@ -202,52 +203,61 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   }
 
   Future<void> _pickImageReal(String type) async {
-    final XFile? pickedFile = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-    );
+    if (_isPickingImage) return; // 🌟 กันกดเบิ้ล
 
-    if (pickedFile != null) {
-      File file = File(pickedFile.path);
-      int fileSizeInBytes = await file.length();
-      double fileSizeInMB = fileSizeInBytes / (1024 * 1024);
+    setState(() => _isPickingImage = true);
 
-      if (fileSizeInMB > 20) {
-        _showErrorSnackBar('ขนาดไฟล์ต้องไม่เกิน 20MB');
-        return;
-      }
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
 
-      String fileName = pickedFile.name;
-      List<int> imageBytes = await file.readAsBytes();
-      String base64String = base64Encode(imageBytes);
-
-      setState(() {
-        if (type == 'profile') {
-          _profileImageFile = file;
-          _profilePhotoName = fileName;
-          _profilePhotoBase64 = base64String;
-        } else if (type == 'license') {
-          _licenseImageFile = file;
-          _licenseCardPhotoName = fileName;
-          _licensePhotoBase64 = base64String;
-        } else if (type == 'insurance') {
-          _insuranceImageFile = file;
-          _insurancePhotoName = fileName;
-          _insurancePhotoBase64 = base64String;
-        } else if (type == 'firstaid') {
-          _firstAidImageFile = file;
-          _firstAidPhotoName = fileName;
-          _firstAidPhotoBase64 = base64String;
-        } else if (type == 'vehicle') {
-          if (_vehicleImageFiles.length < 4) {
-            _vehicleImageFiles.add(file);
-            _vehiclePhotoNames.add(fileName);
-            _vehiclePhotoBase64List.add(base64String);
-          } else {
-            _showErrorSnackBar('อัปโหลดรูปยานพาหนะได้สูงสุด 4 รูป');
-          }
+      if (pickedFile != null) {
+        File file = File(pickedFile.path);
+        int fileSizeInBytes = await file.length();
+        double fileSizeInMB = fileSizeInBytes / (1024 * 1024);
+        if (fileSizeInMB > 20) {
+          _showErrorSnackBar('ขนาดไฟล์ต้องไม่เกิน 20MB');
+          return;
         }
-      });
+
+        String fileName = pickedFile.name;
+        List<int> imageBytes = await file.readAsBytes();
+        String base64String = base64Encode(imageBytes);
+
+        setState(() {
+          if (type == 'profile') {
+            _profileImageFile = file;
+            _profilePhotoName = fileName;
+            _profilePhotoBase64 = base64String;
+          } else if (type == 'license') {
+            _licenseImageFile = file;
+            _licenseCardPhotoName = fileName;
+            _licensePhotoBase64 = base64String;
+          } else if (type == 'insurance') {
+            _insuranceImageFile = file;
+            _insurancePhotoName = fileName;
+            _insurancePhotoBase64 = base64String;
+          } else if (type == 'firstaid') {
+            _firstAidImageFile = file;
+            _firstAidPhotoName = fileName;
+            _firstAidPhotoBase64 = base64String;
+          } else if (type == 'vehicle') {
+            if (_vehicleImageFiles.length < 4) {
+              _vehicleImageFiles.add(file);
+              _vehiclePhotoNames.add(fileName);
+              _vehiclePhotoBase64List.add(base64String);
+            } else {
+              _showErrorSnackBar('อัปโหลดรูปยานพาหนะได้สูงสุด 4 รูป');
+            }
+          }
+        });
+      }
+    } catch (e) {
+      print("Image Picker Error: $e");
+    } finally {
+      setState(() => _isPickingImage = false); // 
     }
   }
 
@@ -1019,6 +1029,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             _insuranceImageFile,
                             _insurancePhotoName,
                             'insurance',
+                            isRequired: true,
                           ),
                           const Divider(),
                           _buildUploadDocRow(
@@ -1026,6 +1037,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                             _firstAidImageFile,
                             _firstAidPhotoName,
                             'firstaid',
+                            isRequired: true,
                           ),
                         ],
                       ),

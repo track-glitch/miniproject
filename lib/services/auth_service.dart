@@ -86,7 +86,6 @@ class AuthService {
 
       // บันทึกรายละเอียดผู้ดูแล
       Map<String, dynamic> caretakerMap = caretaker.toJson(); //
-      caretakerMap['caretakerId'] = uid; //
       await _dbRef
           .child('Login')
           .child(uid)
@@ -136,11 +135,12 @@ class AuthService {
         Map<dynamic, dynamic> users =
             event.snapshot.value as Map<dynamic, dynamic>; //
         String uid = users.keys.first.toString(); //
-        Map<dynamic, dynamic> userData = Map<dynamic, dynamic>.from(users[uid] as Map); //
+        Map<dynamic, dynamic> userData = Map<dynamic, dynamic>.from(
+          users[uid] as Map,
+        ); //
 
         // 2. เช็กว่ารหัสผ่านใน Realtime Database ตรงกันไหม
         if (userData['password'] == password) {
-          
           // 🎯 แก้ไขจุดสำคัญ: สั่งเข้าสู่ระบบแบบ Anonymous แทนเพื่อผูก Token จำสถานะผู้ใช้ในเครื่อง
           // โดยไม่ใช้วิธีเดิมที่ส่งผลให้เกิด Error [firebase_auth/invalid-credential]
           if (_auth.currentUser == null) {
@@ -148,7 +148,9 @@ class AuthService {
           }
 
           // 3. ส่งข้อมูลกลับไปตามเงื่อนไขประเภทผู้ใช้
-          if (userData['usertype'] == 'caretaker' && userData['Caretaker'] != null) { //
+          if (userData['usertype'] == 'caretaker' &&
+              userData['Caretaker'] != null) {
+            //
             String status = userData['Caretaker']['accountstatus'] ?? ''; //
             String reason = userData['Caretaker']['admincomment'] ?? ''; //
 
@@ -160,7 +162,7 @@ class AuthService {
               'admincomment': reason,
             }; //
           }
-          
+
           return {
             'success': true,
             'uid': uid,
@@ -174,11 +176,15 @@ class AuthService {
       }
     } catch (e) {
       print("Login Error: $e"); //
-      return {'success': false, 'message': 'เกิดข้อผิดพลาดในการเชื่อมต่อ: $e'}; //
+      return {
+        'success': false,
+        'message': 'เกิดข้อผิดพลาดในการเชื่อมต่อ: $e',
+      }; //
     }
   }
 
-  Future<User?> loginWithEmail(String email, String password) async { //
+  Future<User?> loginWithEmail(String email, String password) async {
+    //
     try {
       UserCredential result = await _auth.signInWithEmailAndPassword(
         email: email,
@@ -192,12 +198,15 @@ class AuthService {
   }
 
   // 🎯 ดึงตำแหน่งสิทธิ์ของผู้ใช้งาน (Role)
-  Future<String?> getUserRole(dynamic uid) async { //
+  Future<String?> getUserRole(dynamic uid) async {
+    //
     try {
       final snapshot = await _dbRef.child('Login/$uid').get(); //
-      if (snapshot.exists && snapshot.value is Map) { //
+      if (snapshot.exists && snapshot.value is Map) {
+        //
         final userData = Map<String, dynamic>.from(snapshot.value as Map); //
-        return userData['usertype']?.toString(); // คืนค่า 'relative', 'caretaker', 'admin'
+        return userData['usertype']
+            ?.toString(); // คืนค่า 'relative', 'caretaker', 'admin'
       }
       return null; //
     } catch (e) {
@@ -207,29 +216,40 @@ class AuthService {
   }
 
   // 🎯 ดึงสถานะการอนุมัติบัญชี (accountstatus) จากระบบฐานข้อมูลจริงของคุณ
-  Future<String?> getUserStatus(dynamic uid) async { //
+  Future<String?> getUserStatus(dynamic uid) async {
+    //
     try {
       final snapshot = await _dbRef.child('Login/$uid').get(); //
-      if (snapshot.exists && snapshot.value is Map) { //
+      if (snapshot.exists && snapshot.value is Map) {
+        //
         final userData = Map<String, dynamic>.from(snapshot.value as Map); //
-        
+
         // เช็คที่คีย์ระดับรากหลักก่อน
         if (userData.containsKey('accountstatus')) {
           return userData['accountstatus']?.toString(); //
         }
 
         // เช็คในโหนดชั้นในของ Relative
-        if (userData.containsKey('Relative') && userData['Relative'] != null) { //
-          final relativeData = Map<String, dynamic>.from(userData['Relative'] as Map); //
-          if (relativeData.containsKey('accountstatus')) { //
+        if (userData.containsKey('Relative') && userData['Relative'] != null) {
+          //
+          final relativeData = Map<String, dynamic>.from(
+            userData['Relative'] as Map,
+          ); //
+          if (relativeData.containsKey('accountstatus')) {
+            //
             return relativeData['accountstatus']?.toString(); //
           }
         }
-        
+
         // เช็คในโหนดชั้นในของ Caretaker
-        if (userData.containsKey('Caretaker') && userData['Caretaker'] != null) { //
-          final caretakerData = Map<String, dynamic>.from(userData['Caretaker'] as Map); //
-          if (caretakerData.containsKey('accountstatus')) { //
+        if (userData.containsKey('Caretaker') &&
+            userData['Caretaker'] != null) {
+          //
+          final caretakerData = Map<String, dynamic>.from(
+            userData['Caretaker'] as Map,
+          ); //
+          if (caretakerData.containsKey('accountstatus')) {
+            //
             return caretakerData['accountstatus']?.toString();
           }
         }

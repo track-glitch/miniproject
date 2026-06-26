@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'login_page.dart';
 
 class WaitingApprovalPage extends StatelessWidget {
   const WaitingApprovalPage({super.key});
@@ -125,7 +126,13 @@ class WaitingApprovalPage extends StatelessWidget {
                   TextButton(
                     onPressed: () {
                       // เด้งออกจากหน้านี้กลับไปหน้าแรกสุดของแอป (หน้า Login)
-                      Navigator.of(context).popUntil((route) => route.isFirst);
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginPage(),
+                        ),
+                        (route) => false,
+                      );
                     },
                     child: Text(
                       'เข้าสู่ระบบ',

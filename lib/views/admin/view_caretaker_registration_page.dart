@@ -270,7 +270,6 @@ class _ViewCaretakerRegistrationPageState
               );
               if (mounted) {
                 Navigator.pop(context);
-                Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('บันทึกการไม่อนุมัติสำเร็จ')),
                 );

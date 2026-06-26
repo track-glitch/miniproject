@@ -93,46 +93,70 @@ class AdminService {
     }
   }
 
+  Future<String?> _findUidByCaretakerId(String caretakerId) async {
+    DatabaseEvent event = await _dbRef
+        .child('Login')
+        .orderByChild('Caretaker/caretakerId')
+        .equalTo(caretakerId)
+        .once();
+
+    if (event.snapshot.exists) {
+      Map<dynamic, dynamic> users =
+          event.snapshot.value as Map<dynamic, dynamic>;
+      return users.keys.first.toString(); // ได้ UID รหัสยาวๆ กลับไป
+    }
+    return null;
+  }
+
   Future<String> getAdminName(String uid) async {
     try {
-      // 1. ดึงข้อมูล
       final snapshot = await _dbRef.child('Login').child(uid).get();
-
-      // 2. เช็กก่อนว่ามีข้อมูลจริงๆ ไหม
       if (snapshot.exists && snapshot.value != null) {
         Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
-
-        // 3. ป้องกันกรณีไม่มี key 'username' ให้ส่งค่า default กลับไปแทน
         return data['username']?.toString() ?? 'unknow';
       } else {
-        return 'ไม่พบผู้ใช้ในระบบ'; // กรณีหา uid ไม่เจอ
+        return 'ไม่พบผู้ใช้ในระบบ';
       }
     } catch (e) {
-      // 4. ดักจับ Error เผื่อเน็ตหลุด หรือดึงข้อมูลพลาด
-      print("Error getting admin name: $e");
       return 'เกิดข้อผิดพลาด';
     }
   }
 
+  // =======================================================
+  // 🌟 3. ฟังก์ชันอัปเดตสถานะ (ดัดแปลงให้หา UID ก่อนอัปเดต)
+  // =======================================================
   Future<void> approveCaretaker(String caretakerId) async {
-    await _dbRef.child('Login').child(caretakerId).child('Caretaker').update({
-      'accountstatus': 'Approved',
-    });
+    String? uid = await _findUidByCaretakerId(
+      caretakerId,
+    ); // 🔎 ให้ลูกมือไปหา UID ให้
+    if (uid != null) {
+      await _dbRef.child('Login').child(uid).child('Caretaker').update({
+        'accountstatus': 'Approved',
+      });
+    }
   }
 
   Future<void> suspendCaretaker(String caretakerId) async {
-    await _dbRef.child('Login').child(caretakerId).child('Caretaker').update({
-      'accountstatus':
-          'Suspended', // หรืออาจจะใช้ 'Rejected' ตามโครงสร้าง DB ของคุณ
-    });
+    String? uid = await _findUidByCaretakerId(
+      caretakerId,
+    ); // 🔎 ให้ลูกมือไปหา UID ให้
+    if (uid != null) {
+      await _dbRef.child('Login').child(uid).child('Caretaker').update({
+        'accountstatus': 'Suspended',
+      });
+    }
   }
 
-  // ไม่อนุมัติผู้ดูแล (เปลี่ยนเป็น Failed และเก็บเหตุผล)
   Future<void> rejectCaretaker(String caretakerId, String reason) async {
-    await _dbRef.child('Login').child(caretakerId).child('Caretaker').update({
-      'accountstatus': 'Rejected',
-      'admincomment': reason, // เก็บหมายเหตุว่าทำไมถึงไม่อนุมัติ
-    });
+    String? uid = await _findUidByCaretakerId(
+      caretakerId,
+    ); // 🔎 ให้ลูกมือไปหา UID ให้
+    if (uid != null) {
+      await _dbRef.child('Login').child(uid).child('Caretaker').update({
+        'accountstatus': 'Rejected',
+        'admincomment': reason,
+      });
+    }
   }
 
   Future<void> addRequest() async {
