@@ -263,25 +263,23 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
 
   // 🌟 ฟังก์ชันจัดการการสมัคร (รูปแบบเดียวกับ Caretaker)
   void _handleRegister() async {
-    setState(() {
-      _submitErrorMessage = null;
-    });
-
-    bool isFormValid = _formKey.currentState!.validate();
-
-    if (!isFormValid ||
-        _patAddressController.text.trim().isEmpty ||
-        _selectedPatGender.isEmpty ||
-        _profilePhotoBase64 == null) {
-      setState(() {
-        _submitErrorMessage = 'กรุณากรอกข้อมูลและอัปโหลดรูปภาพให้ครบถ้วน';
-      });
+    // 1. ตรวจสอบข้อมูลเบื้องต้น
+    if (!_formKey.currentState!.validate()) return;
+    
+    // ตรวจสอบรูปโปรไฟล์และที่อยู่ก่อนบันทึก
+    if (_profilePhotoBase64 == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('กรุณาเลือกรูปโปรไฟล์ผู้ป่วย')));
+      return;
+    }
+    if (_patAddressController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('กรุณาระบุที่อยู่หรือปักหมุดบนแผนที่')));
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
+      // 2. เตรียมข้อมูล Relative (ญาติ) - ดึงค่าล่าสุดจาก Controller
       RelativeModel relativeData = RelativeModel(
         relativeId: "",
         firstname: _relFirstNameController.text.trim(),
@@ -292,6 +290,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         relationship: _relRelationController.text.trim(),
       );
 
+      // 3. เตรียมข้อมูล Patient (ผู้ป่วย) - ดึงค่าล่าสุดจาก Controller ทั้งหมด
       PatientModel patientData = PatientModel(
         patientId: _patIdCardController.text.trim(),
         patientphoto: _profilePhotoBase64!,
@@ -300,42 +299,33 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         phonenumber: _patPhoneController.text.trim(),
         gender: _selectedPatGender,
         birthdate: _patBirthDate,
-        disease: _patDiseaseController.text.trim(),
-        mobility: _patMobilityController.text.trim(),
+        disease: _patDiseaseController.text.trim(), // เพิ่มเติม
+        mobility: _patMobilityController.text.trim(), // เพิ่มเติม
         latitude: _hasPinned ? _selectedLocation.latitude : 0.0,
         longitude: _hasPinned ? _selectedLocation.longitude : 0.0,
-        address: _patAddressController.text.trim(),
+        address: _patAddressController.text.trim(), // 🎯 ตัวการสำคัญ
       );
 
+      // 4. ส่งข้อมูลเข้า AuthService
       UserCredential? userCredential = await _authService.registerRelative(
         username: _patUsernameController.text.trim(),
         password: _patPasswordController.text.trim(),
         usertype: 'relative',
         relative: relativeData,
-        patient: patientData,
+        patient: patientData, // ส่ง object ที่เพิ่งสร้างใหม่นี้ไป
       );
 
       if (userCredential != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('สมัครสมาชิกสำเร็จและบันทึกข้อมูลเรียบร้อย!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('สมัครสมาชิกสำเร็จ!')));
         Navigator.pop(context);
       } else {
-        setState(() {
-          _submitErrorMessage =
-              'การสมัครสมาชิกล้มเหลว หรือชื่อผู้ใช้นี้ถูกใช้งานแล้ว';
-        });
+        setState(() => _submitErrorMessage = 'สมัครสมาชิกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง');
       }
     } catch (e) {
-      setState(() {
-        _submitErrorMessage =
-            'เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง';
-      });
+      setState(() => _submitErrorMessage = 'เกิดข้อผิดพลาด: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

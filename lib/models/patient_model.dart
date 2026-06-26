@@ -24,7 +24,7 @@ class PatientModel {
     this.mobility,
     this.latitude,
     this.longitude,
-      this.address,
+    this.address,
   });
 
   factory PatientModel.fromJson(Map<String, dynamic> json) {
