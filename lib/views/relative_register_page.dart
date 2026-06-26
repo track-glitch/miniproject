@@ -54,12 +54,14 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
   final TextEditingController _patPhoneController = TextEditingController();
   final TextEditingController _patLineIdController = TextEditingController();
   final TextEditingController _patAddressController = TextEditingController();
-
+  final TextEditingController _relEmailController = TextEditingController();
   final TextEditingController _relFirstNameController = TextEditingController();
   final TextEditingController _relLastNameController = TextEditingController();
   final TextEditingController _relPhoneController = TextEditingController();
   final TextEditingController _relLineIdController = TextEditingController();
   final TextEditingController _relRelationController = TextEditingController();
+  final TextEditingController _patDiseaseController = TextEditingController();
+  final TextEditingController _patMobilityController = TextEditingController();
 
   @override
   void dispose() {
@@ -72,11 +74,14 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     _patPhoneController.dispose();
     _patLineIdController.dispose();
     _patAddressController.dispose();
+    _relEmailController.dispose();
     _relFirstNameController.dispose();
     _relLastNameController.dispose();
     _relPhoneController.dispose();
     _relLineIdController.dispose();
     _relRelationController.dispose();
+    _patDiseaseController.dispose();
+    _patMobilityController.dispose();
     super.dispose();
   }
 
@@ -90,11 +95,15 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
           _patPhoneController,
           _patLineIdController,
           _patAddressController,
+          _patDiseaseController,
+          _relEmailController,
           _relFirstNameController,
           _relLastNameController,
           _relPhoneController,
           _relLineIdController,
           _relRelationController,
+          _patDiseaseController,
+          _patMobilityController,
         ].any((c) => c.text.trim().isNotEmpty) ||
         _selectedPatGender.isNotEmpty ||
         _patBirthDate != null ||
@@ -277,7 +286,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         relativeId: "",
         firstname: _relFirstNameController.text.trim(),
         lastname: _relLastNameController.text.trim(),
-        email: "",
+        email: _relEmailController.text.trim(),
         phonenumber: _relPhoneController.text.trim(),
         lineId: _relLineIdController.text.trim(),
         relationship: _relRelationController.text.trim(),
@@ -291,10 +300,11 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         phonenumber: _patPhoneController.text.trim(),
         gender: _selectedPatGender,
         birthdate: _patBirthDate,
-        disease: "",
-        mobility: "",
+        disease: _patDiseaseController.text.trim(),
+        mobility: _patMobilityController.text.trim(),
         latitude: _hasPinned ? _selectedLocation.latitude : 0.0,
         longitude: _hasPinned ? _selectedLocation.longitude : 0.0,
+        address: _patAddressController.text.trim(),
       );
 
       UserCredential? userCredential = await _authService.registerRelative(
@@ -364,7 +374,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                       const SizedBox(height: 20),
 
                       _buildSectionContainer(
-                        title: 'ข้อมูลผู้ป่วย (บัญชีเข้าสู่ระบบ)',
+                        title: 'บัญชีเข้าสู่ระบบ',
                         children: [
                           _buildLabelField('ชื่อผู้ใช้', isRequired: true),
                           _buildInputField(
@@ -394,6 +404,22 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                                 return 'ต้องไม่มีเว้นวรรคหรือช่องว่าง';
                               if (val.length < 8 || val.length > 16)
                                 return 'ความยาวต้องอยู่ระหว่าง 8-16 ตัวอักษร';
+                              return null;
+                            },
+                          ),
+                          _buildLabelField('อีเมล', isRequired: true),
+                          _buildInputField(
+                            hint: 'เช่น example@gmail.com',
+                            controller: _relEmailController,
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (val) {
+                              if (val == null || val.trim().isEmpty) {
+                                return 'กรุณากรอกอีเมล';
+                              }
+                              // ตรวจสอบรูปแบบอีเมลคร่าวๆ
+                              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(val)) {
+                                return 'รูปแบบอีเมลไม่ถูกต้อง';
+                              }
                               return null;
                             },
                           ),
@@ -604,6 +630,20 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                                   : null,
                             ),
                           ),
+                          
+                          _buildLabelField('โรคประจำตัว'),
+                          _buildInputField(
+                            hint: 'เช่น เบาหวาน, ความดันโลหิตสูง (ถ้าไม่มีให้เว้นว่าง)',
+                            controller: _patDiseaseController,
+                          ),
+
+                          _buildLabelField('ความคล่องตัวในการเคลื่อนไหว', isRequired: true),
+                          _buildInputField(
+                            hint: 'เช่น เดินได้ปกติ, ใช้ไม้เท้า, นั่งวีลแชร์, ผู้ป่วยติดเตียง',
+                            controller: _patMobilityController,
+                            validator: (val) => val!.isEmpty ? 'กรุณาระบุความคล่องตัว' : null,
+                          ),
+
                           _buildLabelField('เบอร์โทรศัพท์', isRequired: true),
                           _buildInputField(
                             hint: 'เบอร์โทรศัพท์',
@@ -996,13 +1036,13 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
             Text(' *', style: TextStyle(color: Colors.red)),
           ],
         ),
-        if (_profilePhotoName != null)
-          Text(
-            _profilePhotoName!,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Colors.grey,
-              overflow: TextOverflow.ellipsis,
+        if (_profileImageFile != null)
+          const Text(
+            'อัปโหลดรูปภาพแล้ว', // เปลี่ยนเป็นข้อความที่เป็นมิตรกับผู้ใช้
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.green,
+              fontWeight: FontWeight.bold,
             ),
           ),
       ],

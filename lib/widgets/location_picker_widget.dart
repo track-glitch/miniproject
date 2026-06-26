@@ -25,6 +25,8 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
   late MapController mapController;
   late LatLng currentLocation;
 
+  final TextEditingController _addressController = TextEditingController();
+
   TextEditingController addressController = TextEditingController();
 
   // 🌟 1. ใส่ API Key ของ Longdo สำหรับระบบค้นหา (SmartSearch) และดึงที่อยู่ภาษาไทย
@@ -40,6 +42,15 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
     mapController = MapController();
     currentLocation = widget.initialLocation;
     addressController.text = widget.initialAddress;
+    _addressController.text = widget.initialAddress ?? ''; 
+  }
+
+  @override
+  void didUpdateWidget(covariant LocationPickerWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialAddress != oldWidget.initialAddress && widget.initialAddress.isNotEmpty) {
+      _addressController.text = widget.initialAddress;
+    }
   }
 
   // หาตำแหน่งปัจจุบันและปักหมุด
