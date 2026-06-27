@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_map/flutter_map.dart'; 
@@ -31,7 +30,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
 
   final _formKey = GlobalKey<FormState>();
 
-  DateTime? _selectedDate;
+  DateTime _selectedDate = DateTime.now();
   TimeOfDay? _selectedTime;
 
   final TextEditingController _detailController = TextEditingController();
@@ -46,16 +45,9 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   LatLng _selectedLocation = const LatLng(13.7563, 100.5018);
   bool _hasPinned = false;
 
-  final List<int> freeDays = [
-    5, 6, 8, 9, 11, 12, 14, 15, 16, 18, 19, 21, 22, 23, 25, 26, 28, 29, 30,
-  ];
-
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showDatePickerDialog();
-    });
   }
 
   // --- ระบบแผนที่ ---
@@ -94,7 +86,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
           setState(() {
             _selectedLocation = location;
             _hasPinned = true;
-            _locationOption = 2; // สลับมาเลือกโหมดระบุเองอัตโนมัติ
+            _locationOption = 2;
             _customLocationController.text = "$subdistrict $district $province";
           });
         }
@@ -176,109 +168,26 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
     );
   }
 
-  // 🗓️ --- ปฏิทิน --- (แก้ปัญหาล้นจอแล้ว)
-  void _showDatePickerDialog() {
-    DateTime focusedDay = DateTime.now();
-    DateTime tempSelectedDate = DateTime.now();
-
-    showDialog(
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
       context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              // 🎯 ใช้ SingleChildScrollView ป้องกันเนื้อหาล้นแนวตั้ง
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('เลือกวันที่นัดหมาย', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context))
-                        ],
-                      ),
-                      TableCalendar(
-                        firstDay: DateTime.now(),
-                        lastDay: DateTime.utc(2030, 12, 31),
-                        focusedDay: focusedDay,
-                        selectedDayPredicate: (day) => isSameDay(tempSelectedDate, day),
-                        onDaySelected: (selectedDay, fDay) {
-                          setStateDialog(() {
-                            tempSelectedDate = selectedDay;
-                            focusedDay = fDay;
-                          });
-                        },
-                        calendarBuilders: CalendarBuilders(
-                          defaultBuilder: (context, day, focusedDay) {
-                            Color textColor = freeDays.contains(day.day) ? Colors.green.shade600 : Colors.red.shade500;
-                            return Center(child: Text('${day.day}', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)));
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      // 🎯 ใช้ Wrap แทน Row ป้องกันเนื้อหาล้นแนวนอน
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 12.0, 
-                        runSpacing: 8.0, 
-                        children: [
-                          _buildLegendItem(Colors.green, 'ว่าง', isOutline: true),
-                          _buildLegendItem(Colors.red, 'เต็ม', isOutline: true),
-                          _buildLegendItem(primaryColor, 'วันนี้', isOutline: false),
-                          _buildLegendItem(Colors.grey, 'เลือกนัดหมาย', isOutline: true),
-                        ],
-                      ),
-                      const SizedBox(height: 15),
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text('**กรุณาเลือกวันนัดก่อน 1 วัน**', style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(backgroundColor: primaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                              onPressed: () {
-                                setState(() => _selectedDate = tempSelectedDate);
-                                Navigator.pop(context);
-                              },
-                              child: const Text('ถัดไป', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                              onPressed: () {
-                                Navigator.pop(context);
-                                Navigator.pop(context); 
-                              },
-                              child: const Text('ยกเลิก', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }
-        );
-      },
+      initialDate: _selectedDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.utc(2030, 12, 31),
     );
+    if (picked != null && picked != _selectedDate) {
+      setState(() => _selectedDate = picked);
+    }
   }
 
   Future<void> _selectTime(BuildContext context) async {
-    final TimeOfDay? picked = await showTimePicker(context: context, initialTime: TimeOfDay.now());
-    if (picked != null && picked != _selectedTime) setState(() => _selectedTime = picked);
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (picked != null && picked != _selectedTime) {
+      setState(() => _selectedTime = picked);
+    }
   }
 
   String _formatThaiDate(DateTime date) {
@@ -297,225 +206,238 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
         title: const Text('ส่งคำขอบริการ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
       ),
-      body: _selectedDate == null
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                  child: Column(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // วันที่นัด
+                const Text('วันที่นัดหมาย', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () => _selectDate(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade400),
+                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.white,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(_formatThaiDate(_selectedDate), style: const TextStyle(fontSize: 14)),
+                        const Icon(Icons.calendar_today, color: Colors.black87),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // การ์ดผู้ดูแล
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade400)),
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // วันที่นัด
-                      Center(
-                        child: Text('วันที่นัด : ${_formatThaiDate(_selectedDate!)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: Colors.grey.shade300,
+                        backgroundImage: widget.caretakerData['profilephoto'] != null && widget.caretakerData['profilephoto'].toString().isNotEmpty
+                            ? MemoryImage(base64Decode(widget.caretakerData['profilephoto'].toString().replaceAll('\n', '').trim()))
+                            : null,
+                        child: widget.caretakerData['profilephoto'] == null || widget.caretakerData['profilephoto'].toString().isEmpty
+                            ? const Icon(Icons.person, color: Colors.white, size: 35)
+                            : null,
                       ),
-                      const SizedBox(height: 16),
-
-                      // การ์ดผู้ดูแล
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade400)),
-                        child: Row(
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            CircleAvatar(
-                              radius: 28,
-                              backgroundColor: Colors.grey.shade300,
-                              backgroundImage: widget.caretakerData['profilephoto'] != null && widget.caretakerData['profilephoto'].toString().isNotEmpty
-                                  ? MemoryImage(base64Decode(widget.caretakerData['profilephoto'].toString().replaceAll('\n', '').trim()))
-                                  : null,
-                              child: widget.caretakerData['profilephoto'] == null || widget.caretakerData['profilephoto'].toString().isEmpty
-                                  ? const Icon(Icons.person, color: Colors.white, size: 35)
-                                  : null,
+                            const Text('ผู้ดูแล', style: TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.bold)),
+                            Text(
+                              'นาย ${widget.caretakerData['firstname'] ?? ''} ${widget.caretakerData['lastname'] ?? ''}'.trim(),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('ผู้ดูแล', style: TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.bold)),
-                                  Text(
-                                    'นาย ${widget.caretakerData['firstname'] ?? ''} ${widget.caretakerData['lastname'] ?? ''}'.trim(),
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                  ),
-                                  Row(
-                                    children: [
-                                      Row(children: List.generate(5, (index) => const Icon(Icons.star, color: Colors.orange, size: 14))),
-                                      const SizedBox(width: 4),
-                                      const Text('4.9 - 87 รีวิว', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.phone, size: 14, color: Colors.black54),
-                                      const SizedBox(width: 4),
-                                      Text('เบอร์โทร ${widget.caretakerData['phonenumber'] ?? '-'}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                            Row(
+                              children: [
+                                Row(children: List.generate(5, (index) => const Icon(Icons.star, color: Colors.orange, size: 14))),
+                                const SizedBox(width: 4),
+                                const Text('4.9 - 87 รีวิว', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(Icons.phone, size: 14, color: Colors.black54),
+                                const SizedBox(width: 4),
+                                Text('เบอร์โทร ${widget.caretakerData['phonenumber'] ?? '-'}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                              ],
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 20),
-
-                      const Text('ระบุรายละเอียดคำขอ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _detailController,
-                        maxLines: 3,
-                        decoration: _inputDecoration(''),
-                        validator: (value) => value!.isEmpty ? 'กรุณาระบุรายละเอียด' : null,
-                      ),
-                      const SizedBox(height: 16),
-
-                      const Text('ระบุสถานที่จุดรับ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      RadioListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('ใช้ที่อยู่ปัจจุบันตามที่ระบุในโปรไฟล์', style: TextStyle(fontSize: 13)),
-                        value: 1,
-                        groupValue: _locationOption,
-                        activeColor: primaryColor,
-                        onChanged: (val) => setState(() => _locationOption = val as int),
-                      ),
-                      RadioListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('สถานที่จุดรับ', style: TextStyle(fontSize: 13)),
-                        value: 2,
-                        groupValue: _locationOption,
-                        activeColor: primaryColor,
-                        onChanged: (val) => setState(() => _locationOption = val as int),
-                      ),
-                      
-                      TextFormField(
-                        controller: _customLocationController,
-                        enabled: _locationOption == 2,
-                        decoration: _inputDecoration('บ้านเลขที่ ถนน ตำบล อำเภอ').copyWith(
-                          fillColor: _locationOption == 1 ? Colors.grey.shade100 : Colors.white,
-                        ),
-                        validator: (value) => _locationOption == 2 && value!.isEmpty ? 'กรุณาระบุสถานที่จุดรับ' : null,
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      const Text('ปักหมุดบนแผนที่', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      const SizedBox(height: 8),
-                      
-                      // ปุ่มเลือกแผนที่ 
-                      InkWell(
-                        onTap: _showMapModal,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border.all(color: Colors.grey.shade400),
-                            borderRadius: BorderRadius.circular(25), // ขอบมนแคปซูล
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(_hasPinned ? 'แก้ไขจุดส่งบนแผนที่' : 'เลือกจุดส่งบนแผนที่', style: const TextStyle(color: Colors.black87, fontSize: 14)),
-                              const Icon(Icons.map_outlined, color: Colors.green, size: 28),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      const Text('ระบุโรงพยาบาล', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _hospitalController,
-                        decoration: _inputDecoration('ชื่อโรงพยาบาล'),
-                        validator: (value) => value!.isEmpty ? 'กรุณาระบุโรงพยาบาล' : null,
-                      ),
-                      const SizedBox(height: 16),
-
-                      const Text('ระบุแผนกในโรงพยาบาล', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _departmentController,
-                        decoration: _inputDecoration('ชื่อแผนก'),
-                        validator: (value) => value!.isEmpty ? 'กรุณาระบุแผนก' : null,
-                      ),
-                      const SizedBox(height: 16),
-
-                      const Text('ระบุเวลานัดหมาย', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: () => _selectTime(context),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade400), borderRadius: BorderRadius.circular(8), color: Colors.white),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(_selectedTime == null ? '--:-- --' : _selectedTime!.format(context), style: TextStyle(color: _selectedTime == null ? Colors.grey : Colors.black, fontSize: 14)),
-                              const Icon(Icons.access_time, color: Colors.black87),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 30),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(backgroundColor: primaryColor, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                              onPressed: () async {
-                                if (_formKey.currentState!.validate() && _selectedTime != null) {
-                                  String uid = widget.loggedUid ?? FirebaseAuth.instance.currentUser!.uid;
-                                  DatabaseReference requestRef = FirebaseDatabase.instance.ref().child("Login").child(uid).child("Relative").child("Request").push();
-                                  String requestId = requestRef.key!;
-                                  
-                                  DateTime appointmentDateTime = DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day, _selectedTime!.hour, _selectedTime!.minute);
-
-                                  await requestRef.set({
-                                    "requestId": requestId,
-                                    "caretakerId": widget.caretakerId,
-                                    "requestdetail": _detailController.text.trim(),
-                                    "pickuplocation": _locationOption == 1 ? "ที่อยู่จากโปรไฟล์ผู้ป่วย" : _customLocationController.text.trim(),
-                                    "dropofflocation": _hospitalController.text.trim(),
-                                    "hospitalname": _hospitalController.text.trim(),
-                                    "departmentname": _departmentController.text.trim(),
-                                    "appointmentdate": _selectedDate!.toIso8601String(),
-                                    "appointmenttime": appointmentDateTime.toIso8601String(),
-                                    "requestdate": DateTime.now().toIso8601String(),
-                                    "requeststatus": "Pending",
-                                  });
-
-                                  if (!mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("ส่งคำขอสำเร็จ"), backgroundColor: Colors.green));
-                                  Navigator.pop(context);
-                                } else if (_selectedTime == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("กรุณาระบุเวลานัดหมาย"), backgroundColor: Colors.red));
-                                }
-                              },
-                              child: const Text('ยืนยัน', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('ยกเลิก', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                            ),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),
-              ),
+                const SizedBox(height: 20),
+
+                const Text('ระบุรายละเอียดคำขอ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _detailController,
+                  maxLines: 3,
+                  decoration: _inputDecoration(''),
+                  validator: (value) => value!.isEmpty ? 'กรุณาระบุรายละเอียด' : null,
+                ),
+                const SizedBox(height: 16),
+
+                const Text('ระบุสถานที่จุดรับ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                RadioListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('ใช้ที่อยู่ปัจจุบันตามที่ระบุในโปรไฟล์', style: TextStyle(fontSize: 13)),
+                  value: 1,
+                  groupValue: _locationOption,
+                  activeColor: primaryColor,
+                  onChanged: (val) => setState(() => _locationOption = val as int),
+                ),
+                RadioListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('สถานที่จุดรับ', style: TextStyle(fontSize: 13)),
+                  value: 2,
+                  groupValue: _locationOption,
+                  activeColor: primaryColor,
+                  onChanged: (val) => setState(() => _locationOption = val as int),
+                ),
+                
+                TextFormField(
+                  controller: _customLocationController,
+                  enabled: _locationOption == 2,
+                  decoration: _inputDecoration('บ้านเลขที่ ถนน ตำบล อำเภอ').copyWith(
+                    fillColor: _locationOption == 1 ? Colors.grey.shade100 : Colors.white,
+                  ),
+                  validator: (value) => _locationOption == 2 && value!.isEmpty ? 'กรุณาระบุสถานที่จุดรับ' : null,
+                ),
+                
+                const SizedBox(height: 16),
+                const Text('ปักหมุดบนแผนที่', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 8),
+                
+                InkWell(
+                  onTap: _showMapModal,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: Colors.grey.shade400),
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(_hasPinned ? 'แก้ไขจุดส่งบนแผนที่' : 'เลือกจุดส่งบนแผนที่', style: const TextStyle(color: Colors.black87, fontSize: 14)),
+                        const Icon(Icons.map_outlined, color: Colors.green, size: 28),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                const Text('ระบุโรงพยาบาล', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _hospitalController,
+                  decoration: _inputDecoration('ชื่อโรงพยาบาล'),
+                  validator: (value) => value!.isEmpty ? 'กรุณาระบุโรงพยาบาล' : null,
+                ),
+                const SizedBox(height: 16),
+
+                const Text('ระบุแผนกในโรงพยาบาล', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _departmentController,
+                  decoration: _inputDecoration('ชื่อแผนก'),
+                  validator: (value) => value!.isEmpty ? 'กรุณาระบุแผนก' : null,
+                ),
+                const SizedBox(height: 16),
+
+                const Text('ระบุเวลานัดหมาย', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () => _selectTime(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade400), borderRadius: BorderRadius.circular(8), color: Colors.white),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(_selectedTime == null ? '--:-- --' : _selectedTime!.format(context), style: TextStyle(color: _selectedTime == null ? Colors.grey : Colors.black, fontSize: 14)),
+                        const Icon(Icons.access_time, color: Colors.black87),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 30),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: primaryColor, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                        onPressed: () async {
+                          if (_formKey.currentState!.validate() && _selectedTime != null) {
+                            String uid = widget.loggedUid ?? FirebaseAuth.instance.currentUser!.uid;
+                            DatabaseReference requestRef = FirebaseDatabase.instance.ref().child("Login").child(uid).child("Relative").child("Request").push();
+                            String requestId = requestRef.key!;
+                            
+                            DateTime appointmentDateTime = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, _selectedTime!.hour, _selectedTime!.minute);
+
+                            await requestRef.set({
+                              "requestId": requestId,
+                              "caretakerId": widget.caretakerId,
+                              "requestdetail": _detailController.text.trim(),
+                              "pickuplocation": _locationOption == 1 ? "ที่อยู่จากโปรไฟล์ผู้ป่วย" : _customLocationController.text.trim(),
+                              "dropofflocation": _hospitalController.text.trim(),
+                              "hospitalname": _hospitalController.text.trim(),
+                              "departmentname": _departmentController.text.trim(),
+                              "appointmentdate": _selectedDate.toIso8601String(),
+                              "appointmenttime": appointmentDateTime.toIso8601String(),
+                              "requestdate": DateTime.now().toIso8601String(),
+                              "requeststatus": "Pending",
+                            });
+
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("ส่งคำขอสำเร็จ"), backgroundColor: Colors.green));
+                            Navigator.pop(context);
+                          } else if (_selectedTime == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("กรุณาระบุเวลานัดหมาย"), backgroundColor: Colors.red));
+                          }
+                        },
+                        child: const Text('ยืนยัน', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.grey, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('ยกเลิก', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-      // --- เพิ่มแถบเมนูด้านล่างให้เหมือนรูป ---
+          ),
+        ),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 1,
         type: BottomNavigationBarType.fixed,
@@ -531,25 +453,6 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'ญาติ'),
         ],
       ),
-    );
-  }
-
-  Widget _buildLegendItem(Color color, String label, {required bool isOutline}) {
-    return Row(
-      mainAxisSize: MainAxisSize.min, // เพิ่มบรรทัดนี้ป้องกันการกินพื้นที่เยอะเกินไป
-      children: [
-        Container(
-          width: 14,
-          height: 14,
-          decoration: BoxDecoration(
-            color: isOutline ? Colors.white : color.withOpacity(0.6),
-            border: Border.all(color: isOutline ? color : Colors.transparent, width: 1.5),
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-      ],
     );
   }
 

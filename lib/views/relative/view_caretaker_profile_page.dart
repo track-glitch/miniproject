@@ -5,7 +5,6 @@ import 'package:miniproject/models/relative_model.dart';
 import 'package:miniproject/views/login_page.dart';
 import 'package:miniproject/views/relative/edit_relative_info_page.dart';
 import 'package:miniproject/views/relative/request_caretaker_service_page.dart';
-import 'package:table_calendar/table_calendar.dart';
 import 'dart:convert';
 import 'package:firebase_database/firebase_database.dart';
 
@@ -32,33 +31,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   final Color borderColor = const Color(
     0xFF757575,
   ); // สีขอบการ์ด (เทาเข้มเกือบดำ)
-
-  // สถานะปฏิทิน (ตั้งค่าให้ตรงกับในรูปจำลอง)
-  DateTime _focusedDay = DateTime(2024, 3, 4); // เริ่มต้นที่ มี.ค. 2024
-
-  // จำลองข้อมูลวันที่ ว่าง (Green) และ เต็ม (Red)
-  final List<int> freeDays = [
-    5,
-    6,
-    8,
-    9,
-    11,
-    12,
-    14,
-    15,
-    16,
-    18,
-    19,
-    21,
-    22,
-    23,
-    25,
-    26,
-    28,
-    29,
-    30,
-  ];
-  final List<int> busyDays = [7, 10, 13, 17, 20, 24, 27, 31];
 
   @override
   void initState() {
@@ -205,8 +177,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                       _buildAddressInfo(),
                       const SizedBox(height: 12),
                       _buildVehicleInfo(),
-                      const SizedBox(height: 12),
-                      _buildCalendar(),
                       const SizedBox(height: 12),
                       _buildReviews(),
                       const SizedBox(height: 20),
@@ -763,137 +733,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
       decoration: BoxDecoration(
         color: isActive ? Colors.black87 : Colors.grey.shade400,
         shape: BoxShape.circle,
-      ),
-    );
-  }
-
-  // 5. ปฏิทิน
-  Widget _buildCalendar() {
-    return _buildCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'ตารางว่าง',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              Row(
-                children: const [
-                  Icon(Icons.chevron_left, size: 20, color: Colors.black54),
-                  SizedBox(width: 8),
-                  Text(
-                    'มี.ค. 2024',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                  SizedBox(width: 8),
-                  Icon(Icons.chevron_right, size: 20, color: Colors.black54),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          TableCalendar(
-            firstDay: DateTime.utc(2020, 1, 1),
-            lastDay: DateTime.utc(2030, 12, 31),
-            focusedDay: _focusedDay,
-            startingDayOfWeek: StartingDayOfWeek.sunday,
-            headerVisible: false,
-            daysOfWeekHeight: 30,
-            calendarBuilders: CalendarBuilders(
-              dowBuilder: (context, day) {
-                final weekdayNames = {
-                  1: 'จ',
-                  2: 'อ',
-                  3: 'พ',
-                  4: 'พฤ',
-                  5: 'ศ',
-                  6: 'ส',
-                  7: 'อา',
-                };
-                return Center(
-                  child: Text(
-                    weekdayNames[day.weekday]!,
-                    style: const TextStyle(
-                      color: Colors.black54,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                );
-              },
-              defaultBuilder: (context, day, focusedDay) {
-                Color textColor = Colors.black87;
-                if (freeDays.contains(day.day)) {
-                  textColor = Colors.green.shade600;
-                } else if (busyDays.contains(day.day)) {
-                  textColor = Colors.red.shade500;
-                }
-                return Center(
-                  child: Text(
-                    '${day.day}',
-                    style: TextStyle(
-                      color: textColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                );
-              },
-              todayBuilder: (context, day, focusedDay) {
-                return Container(
-                  margin: const EdgeInsets.all(6.0),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  child: Text(
-                    '${day.day}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                );
-              },
-              outsideBuilder: (context, day, focusedDay) {
-                return Container(
-                  margin: const EdgeInsets.all(6.0),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  child: Text(
-                    '${day.day}',
-                    style: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 10),
-          const Divider(thickness: 1),
-          const SizedBox(height: 5),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              _buildLegendItem(Colors.green, 'ว่าง', isOutline: true),
-              const SizedBox(width: 16),
-              _buildLegendItem(Colors.red, 'เต็ม', isOutline: true),
-              const SizedBox(width: 16),
-              _buildLegendItem(primaryColor, 'วันนี้', isOutline: false),
-            ],
-          ),
-        ],
       ),
     );
   }
