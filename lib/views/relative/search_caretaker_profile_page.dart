@@ -324,6 +324,23 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                     return name.contains(searchQuery) || address.contains(searchQuery); 
                   }).toList();
 
+                  // จัดเรียงให้คนที่ "พร้อมให้บริการ" ขึ้นก่อน
+                  filteredList.sort((a, b) {
+                    // ใช้ .trim() เพื่อตัดช่องว่างที่อาจติดมากับข้อความ
+                    String statusA = (a['servicestatus']?.toString() ?? '').trim();
+                    String statusB = (b['servicestatus']?.toString() ?? '').trim();
+
+                    bool isAvailableA = (statusA.toLowerCase() == 'online' || statusA == 'พร้อมให้บริการ');
+                    bool isAvailableB = (statusB.toLowerCase() == 'online' || statusB == 'พร้อมให้บริการ');
+
+                    if (isAvailableA && !isAvailableB) {
+                      return -1; // a พร้อมให้บริการ ให้อยู่บน
+                    } else if (!isAvailableA && isAvailableB) {
+                      return 1;  // b พร้อมให้บริการ ให้อยู่บน
+                    }
+                    return 0;    // สถานะเหมือนกัน ไม่ต้องสลับตำแหน่ง
+                  });
+
                   if (filteredList.isEmpty) {
                     return const Center(child: Text('ไม่พบผลลัพธ์การค้นหา')); 
                   }
@@ -489,10 +506,17 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
       if (carDetail.isEmpty) carDetail = 'ไม่ระบุ'; 
     }
 
-    String status = data['servicestatus'] ?? 'Offline'; 
-    bool isAvailable = (status.toLowerCase() == 'online' || status == 'พร้อมให้บริการ'); 
+    // 1. ดึงข้อมูลสถานะดิบจากฐานข้อมูล
+    String rawStatus = (data['servicestatus']?.toString() ?? 'ไม่พร้อมให้บริการ').trim(); 
+    
+    // 2. เช็คเงื่อนไขว่าพร้อมให้บริการหรือไม่ (เผื่อระบบเก็บเป็น online หรือคำอื่นๆ)
+    bool isAvailable = (rawStatus.toLowerCase() == 'online' || rawStatus == 'พร้อมให้บริการ'); 
+    
+    // 3. กำหนดข้อความภาษาไทยที่จะแสดงผลตายตัว
+    String displayStatus = isAvailable ? 'พร้อมให้บริการ' : 'ไม่พร้อมให้บริการ';
+    
     double rating = data['rating'] != null ? (data['rating'] as num).toDouble() : 0.0; 
-    int comments = data['comments'] ?? 0; 
+    int comments = data['comments'] ?? 0;  
 
     return Container(
       width: double.infinity, 
@@ -531,15 +555,39 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                       ), 
                     ),
                     const SizedBox(width: 5), 
+                    // 4. ส่วนของ Tag สถานะที่ปรับปรุงดีไซน์ใหม่
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), 
                       decoration: BoxDecoration(
-                        color: isAvailable ? const Color(0xFF2ECC71).withOpacity(0.6) : const Color(0xFFF39C12).withOpacity(0.6), 
-                        borderRadius: BorderRadius.circular(10), 
+                        // ปรับสีพื้นหลังให้อ่อนลงเพื่อให้ตัวหนังสืออ่านง่าย
+                        color: isAvailable ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE), 
+                        borderRadius: BorderRadius.circular(12), 
+                        // เพิ่มขอบ (Border) สีเดียวกับตัวหนังสือ
+                        border: Border.all(
+                          color: isAvailable ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
+                          width: 1,
+                        )
                       ),
-                      child: Text(
-                        isAvailable ? 'พร้อมให้บริการ' : 'ไม่พร้อมให้บริการ',
-                        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.black87),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // เพิ่มไอคอนวงกลมติ๊กถูก / กากบาท
+                          Icon(
+                            isAvailable ? Icons.check_circle : Icons.cancel,
+                            color: isAvailable ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
+                            size: 12,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            displayStatus, // แสดงผลเป็นภาษาไทยเสมอ
+                            style: TextStyle(
+                              fontSize: 10, 
+                              fontWeight: FontWeight.bold, 
+                              // สีตัวหนังสือปรับให้เข้มขึ้นเพื่อให้ตัดกับสีพื้นหลัง
+                              color: isAvailable ? const Color(0xFF2E7D32) : const Color(0xFFC62828),
+                            ),
+                          ),
+                        ],
                       ), 
                     ),
                   ],
