@@ -34,10 +34,10 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   // 🌟 บังคับให้หน้าจอโหลดจนกว่าจะดึงที่อยู่เดิมเสร็จ
   bool _isLoading = true;
 
-  final Color primaryColor = const Color(0xFF9B59B6);
-  final Color darkPurple = const Color(0xFF7D3C98);
+  final Color primaryColor = const Color(0xFF8763E6);
+  final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
   final Color lightPurple = const Color(0xFFF3E5F5);
-  final Color bgColor = const Color(0xFFFAFAFA);
+  final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
   final Color greyBorder = const Color(0xFFE1BEE7);
 
   LatLng _selectedLocation = const LatLng(13.7563, 100.5018);

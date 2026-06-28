@@ -24,11 +24,11 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
   // พื้นหลังอ่อนๆ, ช่องค้นหา และตัวอักษรหัวข้อ เพื่อให้โทนสีออกมา "เบา สะอาด
   // และนุ่มนวล" แบบเดียวกับภาพ แทนม่วงสดจัดแบบเดิม
   final Color primaryColor = const Color(0xFF8763E6);   // ม่วงหลัก (จากปุ่ม Login/Get Started ในภาพ)
-  final Color darkPurple   = const Color(0xFF5B3FA6);   // ม่วงเข้ม สำหรับ AppBar/BottomNav/เงา
+  final Color darkPurple   = const Color.fromARGB(255, 153, 116, 255);   // ม่วงเข้ม สำหรับ AppBar/BottomNav/เงา
   final Color lightPurple  = const Color(0xFFECE2FE);   // ม่วงอ่อนมาก (จากช่องค้นหาในภาพ)
   final Color accentTeal   = const Color(0xFF0F766E);   // Teal เข้มขึ้นเล็กน้อย
   final Color accentPink   = const Color(0xFFBE185D);   // Pink accent
-  final Color bgColor      = const Color(0xFFEFE5FC);   // พื้นหลัง — ม่วงอ่อน "เห็นชัด" ว่าเป็นม่วง ไม่จางจนกลายเป็นขาว
+  final Color bgColor      = const Color.fromARGB(255, 225, 202, 255);   // พื้นหลัง — ม่วงอ่อน "เห็นชัด" ว่าเป็นม่วง ไม่จางจนกลายเป็นขาว
   final Color greyBorder   = const Color(0xFFD3C2F0);   // ขอบ card — เข้มขึ้นพอให้แยกจากพื้นหลังได้ชัด
 
   // ── 🎨 สีที่เพิ่มเข้ามาเพื่อ "คุมโทน" ทั้งหน้าให้เป็นชุดเดียวกัน ─────────
@@ -210,19 +210,7 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Text(
-              'ขอใช้บริการ',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-          ],
-        ),
+        
         centerTitle: false,
         actions: [
           if (_userName.isNotEmpty)
