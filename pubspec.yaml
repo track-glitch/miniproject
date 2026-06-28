@@ -65,17 +65,30 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
 
-  # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
+
   uses-material-design: true
 
-  # To add assets to your application, add an assets section, like this:
+  
+
   assets:
     - assets/logo.png
     - assets/images/Profile/
     - assets/images/Vehicle/
     - assets/images/Document/
+
+  fonts:
+    - family: Kanit
+      fonts:
+        - asset: assets/fonts/Kanit-Regular.ttf
+        - asset: assets/fonts/Kanit-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Kanit-Italic.ttf
+          style: italic
+        - asset: assets/fonts/Kanit-BoldItalic.ttf
+          weight: 700
+          style: italic
+        
+       
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

@@ -28,6 +28,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF9B59B6)),
         useMaterial3: true,
+        fontFamily: 'Kanit',
       ),
       //  แก้ไขจาก relative/search_caretaker_profile_page() เป็นชื่อคลาส Widget จริง
       home: const LoginPage(),
