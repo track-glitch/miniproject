@@ -3,20 +3,22 @@ import 'package:miniproject/models/review_model.dart';
 import 'package:miniproject/models/report_model.dart';
 import 'package:miniproject/models/notification_model.dart';
 import 'package:miniproject/models/doctor_advice_model.dart';
+import 'package:miniproject/models/location_model.dart'; // 🌟 Import LocationModel เข้ามา
 
 class RequestModel {
   String? requestId;
   String? requestdetail;
-  String? pickuplocation;
-  String? dropofflocation;
+
+  // 🌟 เปลี่ยนมาใช้ LocationModel แทน String และ double แบบเดิม
+  LocationModel? pickuplocation;
+  LocationModel? dropofflocation;
+
   String? hospitalname;
   String? departmentname;
   DateTime? appointmentdate;
   DateTime? appointmenttime;
   DateTime? requestdate;
   String? requeststatus;
-  double? latitude;
-  double? longitude;
   String? caretakerId;
 
   // ความสัมพันธ์
@@ -36,10 +38,8 @@ class RequestModel {
     this.appointmenttime,
     this.requestdate,
     this.requeststatus,
-    this.latitude,
-    this.longitude,
-    this.review,
     this.caretakerId,
+    this.review,
     this.doctoradvice,
     this.report,
     this.notifications,
@@ -49,8 +49,19 @@ class RequestModel {
     return RequestModel(
       requestId: json['requestId'],
       requestdetail: json['requestdetail'],
-      pickuplocation: json['pickuplocation'],
-      dropofflocation: json['dropofflocation'],
+
+      // 🌟 ดึงข้อมูล JSON ซ้อน JSON มาแปลงเป็น LocationModel
+      pickuplocation: json['pickuplocation'] != null
+          ? LocationModel.fromJson(
+              Map<String, dynamic>.from(json['pickuplocation']),
+            )
+          : null,
+      dropofflocation: json['dropofflocation'] != null
+          ? LocationModel.fromJson(
+              Map<String, dynamic>.from(json['dropofflocation']),
+            )
+          : null,
+
       hospitalname: json['hospitalname'],
       departmentname: json['departmentname'],
       appointmentdate: json['appointmentdate'] != null
@@ -63,42 +74,44 @@ class RequestModel {
           ? DateTime.parse(json['requestdate'])
           : null,
       requeststatus: json['requeststatus'],
-      latitude: json['latitude']?.toDouble(),
-      longitude: json['longitude']?.toDouble(),
       caretakerId: json['caretakerId'],
       review: json['review'] != null
-          ? ReviewModel.fromJson(json['review'])
+          ? ReviewModel.fromJson(Map<String, dynamic>.from(json['review']))
           : null,
       doctoradvice: json['doctoradvice'] != null
-          ? DoctorAdviceModel.fromJson(json['doctoradvice'])
+          ? DoctorAdviceModel.fromJson(
+              Map<String, dynamic>.from(json['doctoradvice']),
+            )
           : null,
       report: json['report'] != null
-          ? ReportModel.fromJson(json['report'])
+          ? ReportModel.fromJson(Map<String, dynamic>.from(json['report']))
           : null,
       notifications: json['notifications'] != null
           ? (json['notifications'] as List)
-                .map((e) => NotificationModel.fromJson(e))
+                .map(
+                  (e) =>
+                      NotificationModel.fromJson(Map<String, dynamic>.from(e)),
+                )
                 .toList()
           : null,
     );
   }
 
   Map<String, dynamic> toJson() {
-    RequestModel requestModel = new RequestModel();
-
     return {
       'requestId': requestId,
       'requestdetail': requestdetail,
-      'pickuplocation': pickuplocation,
-      'dropofflocation': dropofflocation,
+
+      // 🌟 สั่งให้ LocationModel แปลงตัวเองเป็น JSON
+      'pickuplocation': pickuplocation?.toJson(),
+      'dropofflocation': dropofflocation?.toJson(),
+
       'hospitalname': hospitalname,
       'departmentname': departmentname,
       'appointmentdate': appointmentdate?.toIso8601String(),
       'appointmenttime': appointmenttime?.toIso8601String(),
       'requestdate': requestdate?.toIso8601String(),
       'requeststatus': requeststatus,
-      'latitude': latitude,
-      'longitude': longitude,
       'caretakerId': caretakerId,
       'Review': review?.toJson(),
       'DoctorAdvice': doctoradvice?.toJson(),

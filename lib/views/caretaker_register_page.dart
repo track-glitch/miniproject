@@ -4,7 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import '../models/location_model.dart';
 import '../widgets/location_picker_widget.dart';
 import '../services/auth_service.dart';
 import '../models/caretaker_model.dart';
@@ -257,7 +257,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     } catch (e) {
       print("Image Picker Error: $e");
     } finally {
-      setState(() => _isPickingImage = false); // 
+      setState(() => _isPickingImage = false); //
     }
   }
 
@@ -409,12 +409,14 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         email: _emailCtrl.text.trim(),
         aboutme: _aboutMeCtrl.text.trim(),
         equipmentdetails: _equipmentCtrl.text.trim(),
-        address: _addressCtrl.text.trim(),
         admincomment: "",
         servicestatus: "Offline",
         accountstatus: "Pending",
-        latitude: _hasPinned ? _selectedLocation.latitude : 0.0,
-        longitude: _hasPinned ? _selectedLocation.longitude : 0.0,
+        location: LocationModel(
+          address: _addressCtrl.text.trim(),
+          latitude: _selectedLocation.latitude,
+          longitude: _selectedLocation.longitude,
+        ),
       );
 
       VehicleModel vehicleData = VehicleModel(

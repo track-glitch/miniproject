@@ -443,7 +443,7 @@ class _ViewCaretakerRegistrationPageState
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          widget.caretaker.address ?? '-',
+                          widget.caretaker.location?.address ?? '',
                           style: const TextStyle(fontSize: 16, height: 1.5),
                         ),
                       ],

@@ -11,10 +11,6 @@ class AddDoctorAdvicePage extends StatefulWidget {
 class _MyWidgetState extends State<AddDoctorAdvicePage> {
   AdminService adminService = AdminService();
 
-  void addRelative() {
-    adminService.addRelative();
-  }
-
   void addRequest() {
     adminService.addRequest();
   }
@@ -29,16 +25,6 @@ class _MyWidgetState extends State<AddDoctorAdvicePage> {
       ),
       body: Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: addRelative,
-                  child: Text('AddRelative'),
-                ),
-              ),
-            ],
-          ),
           Row(
             children: [
               Expanded(

@@ -11,6 +11,7 @@ import '../services/auth_service.dart';
 import '../models/relative_model.dart';
 import '../models/patient_model.dart';
 import 'caretaker_register_page.dart';
+import '../models/location_model.dart';
 
 class RelativeRegisterPage extends StatefulWidget {
   const RelativeRegisterPage({super.key});
@@ -293,8 +294,11 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         birthdate: _patBirthDate,
         disease: "",
         mobility: "",
-        latitude: _hasPinned ? _selectedLocation.latitude : 0.0,
-        longitude: _hasPinned ? _selectedLocation.longitude : 0.0,
+        location: LocationModel(
+          address: _patAddressController.text.trim(),
+          latitude: _hasPinned ? _selectedLocation.latitude : 0.0,
+          longitude: _hasPinned ? _selectedLocation.longitude : 0.0,
+        ),
       );
 
       UserCredential? userCredential = await _authService.registerRelative(

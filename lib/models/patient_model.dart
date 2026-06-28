@@ -1,3 +1,5 @@
+import 'package:miniproject/models/location_model.dart'; // 🌟 อย่าลืม Import LocationModel
+
 class PatientModel {
   String? patientId;
   String? patientphoto;
@@ -8,9 +10,8 @@ class PatientModel {
   DateTime? birthdate;
   String? disease;
   String? mobility;
-  double? latitude;
-  double? longitude;
-  String? address;
+
+  LocationModel? location; // 🌟 แทนที่ address, latitude, longitude แบบเก่า
 
   PatientModel({
     this.patientId,
@@ -22,9 +23,7 @@ class PatientModel {
     this.birthdate,
     this.disease,
     this.mobility,
-    this.latitude,
-    this.longitude,
-      this.address,
+    this.location, // 🌟
   });
 
   factory PatientModel.fromJson(Map<String, dynamic> json) {
@@ -40,9 +39,11 @@ class PatientModel {
           : null,
       disease: json['disease'],
       mobility: json['mobility'],
-      address: json['address'],
-      latitude: json['latitude']?.toDouble(),
-      longitude: json['longitude']?.toDouble(),
+
+      // 🌟 ดึงข้อมูลจาก JSON แปลงเป็น Object LocationModel
+      location: json['location'] != null
+          ? LocationModel.fromJson(Map<String, dynamic>.from(json['location']))
+          : null,
     );
   }
 
@@ -57,9 +58,8 @@ class PatientModel {
       'birthdate': birthdate?.toIso8601String(),
       'disease': disease,
       'mobility': mobility,
-      'latitude': latitude,
-      'longitude': longitude,
-      'address': address,
+
+      'location': location?.toJson(), // 🌟 แปลง Location กลับเป็น JSON
     };
   }
 }

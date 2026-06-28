@@ -2,6 +2,7 @@ import 'package:miniproject/models/login_model.dart';
 import 'package:miniproject/models/vehicle_model.dart';
 import 'package:miniproject/models/document_model.dart';
 import 'package:miniproject/models/request_model.dart';
+import 'package:miniproject/models/location_model.dart'; // 🌟 Import เข้ามา
 
 class CaretakerModel {
   String? caretakerId;
@@ -14,18 +15,17 @@ class CaretakerModel {
   String? email;
   String? aboutme;
   String? equipmentdetails;
-  String? address;
   String? admincomment;
   String? servicestatus;
   String? accountstatus;
-  double? latitude;
-  double? longitude;
+
+  LocationModel? location; // 🌟 แทนที่ address, latitude, longitude แบบเก่า
 
   // ความสัมพันธ์
-  LoginModel? login;                   // 1 : 1
-  VehicleModel? vehicle;               // 1 : 1
-  List<DocumentModel>? documents;      // 1 : 1..n
-  List<RequestModel>? requests;        // 1 : 1..n
+  LoginModel? login;
+  VehicleModel? vehicle;
+  List<DocumentModel>? documents;
+  List<RequestModel>? requests;
 
   CaretakerModel({
     this.caretakerId,
@@ -38,12 +38,10 @@ class CaretakerModel {
     this.email,
     this.aboutme,
     this.equipmentdetails,
-    this.address,
     this.admincomment,
     this.servicestatus,
     this.accountstatus,
-    this.latitude,
-    this.longitude,
+    this.location, // 🌟
     this.login,
     this.vehicle,
     this.documents,
@@ -64,24 +62,32 @@ class CaretakerModel {
       email: json['email'],
       aboutme: json['aboutme'],
       equipmentdetails: json['equipmentdetails'],
-      address: json['address'],
       admincomment: json['admincomment'],
       servicestatus: json['servicestatus'],
       accountstatus: json['accountstatus'],
-      latitude: json['latitude']?.toDouble(),
-      longitude: json['longitude']?.toDouble(),
-      login: json['login'] != null ? LoginModel.fromJson(json['login']) : null,
-      vehicle:
-          json['vehicle'] != null ? VehicleModel.fromJson(json['vehicle']) : null,
+
+      // 🌟 ดึงข้อมูลจาก JSON แปลงเป็น Object LocationModel
+      location: json['location'] != null
+          ? LocationModel.fromJson(Map<String, dynamic>.from(json['location']))
+          : null,
+
+      login: json['login'] != null
+          ? LoginModel.fromJson(Map<String, dynamic>.from(json['login']))
+          : null,
+      vehicle: json['vehicle'] != null
+          ? VehicleModel.fromJson(Map<String, dynamic>.from(json['vehicle']))
+          : null,
       documents: json['documents'] != null
           ? (json['documents'] as List)
-              .map((e) => DocumentModel.fromJson(e))
-              .toList()
+                .map(
+                  (e) => DocumentModel.fromJson(Map<String, dynamic>.from(e)),
+                )
+                .toList()
           : null,
       requests: json['requests'] != null
           ? (json['requests'] as List)
-              .map((e) => RequestModel.fromJson(e))
-              .toList()
+                .map((e) => RequestModel.fromJson(Map<String, dynamic>.from(e)))
+                .toList()
           : null,
     );
   }
@@ -98,12 +104,10 @@ class CaretakerModel {
       'email': email,
       'aboutme': aboutme,
       'equipmentdetails': equipmentdetails,
-      'address': address,
       'admincomment': admincomment,
       'servicestatus': servicestatus,
       'accountstatus': accountstatus,
-      'latitude': latitude,
-      'longitude': longitude,
+      'Location': location?.toJson(), // 🌟 แปลง Location กลับเป็น JSON
       'login': login?.toJson(),
       'vehicle': vehicle?.toJson(),
       'documents': documents?.map((e) => e.toJson()).toList(),

@@ -69,8 +69,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
-
-              Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const LoginPage()), (route) => false);
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginPage()),
+                (route) => false,
+              );
             },
             child: const Text(
               'ออกจากระบบ',
@@ -140,9 +143,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
       'phonenumber': phoneController.text,
       'aboutme': aboutmeController.text,
       'equipmentdetails': equipmentController.text,
-      'address': addressController.text,
-      'latitude': selectedLocation.latitude,
-      'longitude': selectedLocation.longitude,
+      'location': {
+        'address': addressController.text,
+        'latitude': selectedLocation.latitude,
+        'longitude': selectedLocation.longitude,
+      },
     };
     try {
       await _service.updateCaretakerProfile(widget.uid, updateData);
