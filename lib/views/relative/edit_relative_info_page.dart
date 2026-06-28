@@ -86,15 +86,15 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     _patGenderController.text = widget.currentPatient.gender ?? '';
     _patDiseaseController.text = widget.currentPatient.disease ?? '';
     _patMobilityController.text = widget.currentPatient.mobility ?? '';
-    _patAddressController.text = widget.currentPatient.address ?? '';
+    _patAddressController.text = widget.currentPatient.location?.address ?? '';
     _patLineIdController.text = widget.currentRelative.lineId ?? '';
 
-    if (widget.currentPatient.latitude != null &&
-        widget.currentPatient.longitude != null &&
-        widget.currentPatient.latitude != 0.0) {
+    if (widget.currentPatient.location?.latitude != null &&
+        widget.currentPatient.location?.longitude != null &&
+        widget.currentPatient.location?.latitude != 0.0) {
       _selectedLocation = LatLng(
-        widget.currentPatient.latitude!,
-        widget.currentPatient.longitude!,
+        widget.currentPatient.location!.latitude!,
+        widget.currentPatient.location!.longitude!,
       );
       _hasPinned = true;
     }
