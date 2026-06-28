@@ -176,13 +176,28 @@ class _LoginPageState extends State<LoginPage> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 20),
-                const Image(
-                  image: AssetImage('assets/logo.png'),
-                  width: 250,
-                  height: 250,
-                  fit: BoxFit.contain,
+                Column(
+                  children: [
+                    Image(
+                      image: const AssetImage(
+                        'assets/logo.png',
+                      ), // อย่าลืมเปลี่ยนไฟล์รูปในโฟลเดอร์ assets เป็นรูปใหม่ที่ไม่มีตัวหนังสือและวงกลมนะครับ
+                      width:
+                          MediaQuery.of(context).size.width *
+                          0.55, // ปรับขนาดรูปให้ยืดหยุ่นพอดีกับหน้าจอมือถือแต่ละรุ่น (ประมาณ 55% ของความกว้างจอ)
+                      fit: BoxFit.contain,
+                    ),
+                    const Text(
+                      'อาสาพาไปโรงหมอ',
+                      style: TextStyle(
+                        fontSize: 24, // ขนาดตัวอักษรเด่นชัดพอดีกับหน้าจอ
+                        fontWeight: FontWeight.bold,
+                        color: Color.fromARGB(255, 123, 69, 145),
+                      ), // ปรับสีตัวอักษรให้เข้มเข้ากับธีมตามภาพตัวอย่าง
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 1),
+                const SizedBox(height: 25),
 
                 Container(
                   padding: const EdgeInsets.all(20),

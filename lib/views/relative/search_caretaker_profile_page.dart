@@ -19,11 +19,25 @@ class CaretakerSearchPage extends StatefulWidget {
 class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
   final TextEditingController _searchController = TextEditingController();
 
-  final Color primaryColor = const Color(0xFF9B59B6);
-  final Color darkPurple = const Color(0xFF7D3C98);
-  final Color lightPurple = const Color(0xFFF3E5F5);
-  final Color bgColor = const Color(0xFFFAFAFA);
-  final Color greyBorder = const Color(0xFFE1BEE7);
+  // ── 🎨 ชุดสีหลักของธีม (รีโทนให้ใกล้เคียงภาพ Calmara ที่แนบมา) ──────────
+  // ค่าสีด้านล่างนี้สุ่มมาจากพิกเซลจริงในภาพอ้างอิง: ปุ่ม Login/Get Started,
+  // พื้นหลังอ่อนๆ, ช่องค้นหา และตัวอักษรหัวข้อ เพื่อให้โทนสีออกมา "เบา สะอาด
+  // และนุ่มนวล" แบบเดียวกับภาพ แทนม่วงสดจัดแบบเดิม
+  final Color primaryColor = const Color(0xFF8763E6);   // ม่วงหลัก (จากปุ่ม Login/Get Started ในภาพ)
+  final Color darkPurple   = const Color(0xFF5B3FA6);   // ม่วงเข้ม สำหรับ AppBar/BottomNav/เงา
+  final Color lightPurple  = const Color(0xFFECE2FE);   // ม่วงอ่อนมาก (จากช่องค้นหาในภาพ)
+  final Color accentTeal   = const Color(0xFF0F766E);   // Teal เข้มขึ้นเล็กน้อย
+  final Color accentPink   = const Color(0xFFBE185D);   // Pink accent
+  final Color bgColor      = const Color(0xFFEFE5FC);   // พื้นหลัง — ม่วงอ่อน "เห็นชัด" ว่าเป็นม่วง ไม่จางจนกลายเป็นขาว
+  final Color greyBorder   = const Color(0xFFD3C2F0);   // ขอบ card — เข้มขึ้นพอให้แยกจากพื้นหลังได้ชัด
+
+  // ── 🎨 สีที่เพิ่มเข้ามาเพื่อ "คุมโทน" ทั้งหน้าให้เป็นชุดเดียวกัน ─────────
+  // เดิมในหน้านี้มีสี hex ฝังตรง ๆ กระจายอยู่หลายที่ (เช่น 0xFF5B21B6, 0xFFDDD0F0,
+  // 0xFFC4B5FD ฯลฯ) ซึ่งใกล้เคียงกับชุดสีด้านบนแต่ไม่ใช่ตัวเดียวกัน ทำให้สีหลุดโทน
+  // จึงรวบเป็น 3 สีหลักนี้ แล้วไปแทนที่สีฝังทั้งหมดในไฟล์ให้ใช้ชุดสีเดียวกัน
+  final Color headingColor = const Color(0xFF241C2B);   // เข้มเกือบดำ (จากตัวอักษร "Calmara" ในภาพ) ดูคลีนกว่าม่วงจัด
+  final Color successColor = const Color(0xFF15803D);   // เขียว สำหรับสถานะ "พร้อมให้บริการ"
+  final Color dangerColor  = const Color(0xFFB91C1C);   // แดง สำหรับสถานะ "ไม่พร้อมให้บริการ"
 
   String _userName = '';
 
@@ -188,36 +202,60 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 239, 199, 255),
+      backgroundColor: bgColor, // ✅ ใช้สีจากชุดธีมแทนเลข hex ที่หลุดโทนเดิม
       appBar: AppBar(
-        title: const Text(
-          'ขอใช้บริการ',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        backgroundColor: primaryColor,
+        backgroundColor: darkPurple, // ✅ คุมโทนเดียวกับ bottomNavigationBar
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Text(
+              'ขอใช้บริการ',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+        centerTitle: false,
         actions: [
           if (_userName.isNotEmpty)
             Center(
               child: Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: Text(
-                  _userName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
+                padding: const EdgeInsets.only(right: 4.0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white38, width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.person, color: Colors.white, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        _userName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
           IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
+            icon: const Icon(Icons.logout_rounded, color: Colors.white),
             tooltip: 'ออกจากระบบ',
             onPressed: () async {
               bool? confirmLogout = await showDialog<bool>(
@@ -258,9 +296,7 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
 
               if (confirmLogout == true) {
                 await FirebaseAuth.instance.signOut();
-
                 if (context.mounted) {
-                  // 🎯 เปลี่ยนให้กลับไปที่หน้า CaretakerSearchPage แทนแบบไม่มี Uid
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(
@@ -272,73 +308,148 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
               }
             },
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
         ],
       ),
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 15),
-            Text(
-              'ค้นหาบัญชี',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.black.withOpacity(0.8),
+            // ── Header: ชื่อหน้า + ช่องค้นหา + ปุ่มใกล้ฉัน ───────────────
+            // ✅ ห่อด้วย Container ไล่เฉดสี (gradient) เพื่อให้ส่วนหัวดูมีมิติ
+            //    และคุมโทนเดียวกับชุดสีหลักของแอป (ไม่กระทบลอจิกใด ๆ ด้านล่าง)
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [lightPurple, bgColor],
+                ),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(28),
+                  bottomRight: Radius.circular(28),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryColor.withOpacity(0.10),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
+              child: Column(
                 children: [
-                  Expanded(
-                    child: Container(
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: Colors.black87, width: 1.2),
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: const InputDecoration(
-                          hintText:
-                              'ค้นหา ชื่อ-นามสกุล หรือ ที่อยู่ (อำเภอ จังหวัด)',
-                          hintStyle: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                          prefixIcon: Icon(
-                            Icons.search,
-                            color: Colors.black54,
-                            size: 20,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10),
-                        ),
-                      ),
+                  // ชื่อหน้า
+                  Text(
+                    'ค้นหาบัญชี',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: headingColor,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: _openFilterCalendar,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
+                  const SizedBox(height: 14),
+
+                  // ช่องค้นหา
+                  Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: greyBorder, width: 1.2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryColor.withOpacity(0.10),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 14),
+                        Icon(Icons.search_rounded, color: primaryColor, size: 22),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              hintText: 'ค้นหา ชื่อ-นามสกุล หรือ ที่อยู่ (อำเภอ จังหวัด)',
+                              hintStyle: TextStyle(
+                                fontSize: 12.5,
+                                color: Colors.grey.shade400,
+                              ),
+                              border: InputBorder.none,
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: _openFilterCalendar,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: Icon(Icons.tune_rounded, color: Colors.grey.shade500, size: 22),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // ปุ่มค้นหาใกล้ฉัน
+                  // ✅ ปรับให้สวยขึ้น: ไล่เฉดสี + เงา + ระยะกดนิ้วใหญ่ขึ้น + เอฟเฟกต์ ripple
+                  //    (ตัวฟังก์ชัน onTap ยังเป็น TODO เดิม ไม่แก้ไขลอจิกใด ๆ)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Material(
                       color: Colors.transparent,
-                      child: const Icon(
-                        Icons.tune,
-                        color: Colors.black,
-                        size: 26,
+                      borderRadius: BorderRadius.circular(22),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(22),
+                        onTap: () {
+                          // TODO: เชื่อมต่อ geolocator
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [primaryColor, darkPurple],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius: BorderRadius.circular(22),
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryColor.withOpacity(0.35),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.my_location_rounded, color: Colors.white, size: 16),
+                              SizedBox(width: 6),
+                              Text(
+                                'ค้นหาบริเวณใกล้ฉัน',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
 
+            // ── รายการ ────────────────────────────────────────────────────
             Expanded(
               child: StreamBuilder<DatabaseEvent>(
                 stream: FirebaseDatabase.instance.ref('Login').onValue,
@@ -363,14 +474,12 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                   final dynamic rootValue = snapshot.data!.snapshot.value;
                   List<Map<String, dynamic>> caretakersList = [];
 
-                  // ภายใน StreamBuilder ของ CaretakerSearchPage
                   if (rootValue is Map) {
                     rootValue.forEach((userUidKey, userNodeValue) {
                       if (userNodeValue is Map &&
                           userNodeValue.containsKey('Caretaker')) {
                         final caretakerRawData = userNodeValue['Caretaker'];
                         if (caretakerRawData != null) {
-                          // ใช้ Map<String, dynamic> เพื่อแปลงข้อมูลให้ชัวร์
                           final data = Map<String, dynamic>.from(
                             caretakerRawData as Map,
                           );
@@ -403,14 +512,9 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                         address.contains(searchQuery);
                   }).toList();
 
-                  // จัดเรียงให้คนที่ "พร้อมให้บริการ" ขึ้นก่อน
                   filteredList.sort((a, b) {
-                    // ใช้ .trim() เพื่อตัดช่องว่างที่อาจติดมากับข้อความ
-                    String statusA = (a['servicestatus']?.toString() ?? '')
-                        .trim();
-                    String statusB = (b['servicestatus']?.toString() ?? '')
-                        .trim();
-
+                    String statusA = (a['servicestatus']?.toString() ?? '').trim();
+                    String statusB = (b['servicestatus']?.toString() ?? '').trim();
                     bool isAvailableA =
                         (statusA.toLowerCase() == 'online' ||
                         statusA.toLowerCase() == 'on' ||
@@ -419,13 +523,9 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                         (statusB.toLowerCase() == 'online' ||
                         statusB.toLowerCase() == 'on' ||
                         statusB == 'พร้อมให้บริการ');
-
-                    if (isAvailableA && !isAvailableB) {
-                      return -1; // a พร้อมให้บริการ ให้อยู่บน
-                    } else if (!isAvailableA && isAvailableB) {
-                      return 1; // b พร้อมให้บริการ ให้อยู่บน
-                    }
-                    return 0; // สถานะเหมือนกัน ไม่ต้องสลับตำแหน่ง
+                    if (isAvailableA && !isAvailableB) return -1;
+                    else if (!isAvailableA && isAvailableB) return 1;
+                    return 0;
                   });
 
                   if (filteredList.isEmpty) {
@@ -433,7 +533,7 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                   }
 
                   return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: filteredList.length,
                     itemBuilder: (context, index) {
                       final data = filteredList[index];
@@ -448,28 +548,22 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
       ),
       bottomNavigationBar: Container(
         height: 65,
-        decoration: BoxDecoration(color: primaryColor),
+        decoration: BoxDecoration(
+          color: darkPurple, // ✅ คุมโทนเดียวกับ AppBar
+          boxShadow: [
+            BoxShadow(
+              color: darkPurple.withOpacity(0.27),
+              blurRadius: 12,
+              offset: const Offset(0, -3),
+            ),
+          ],
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildBottomNavItem(
-              Icons.home_outlined,
-              'บ้าน',
-              false,
-              onTap: () {},
-            ),
-            _buildBottomNavItem(
-              Icons.support_agent,
-              'ขอใช้บริการ',
-              true,
-              onTap: () {},
-            ),
-            _buildBottomNavItem(
-              Icons.notifications_none,
-              'แจ้งเตือน',
-              false,
-              onTap: () {},
-            ),
+            _buildBottomNavItem(Icons.home_outlined,    'บ้าน',         false, onTap: () {}),
+            _buildBottomNavItem(Icons.support_agent,    'ขอใช้บริการ',  true,  onTap: () {}),
+            _buildBottomNavItem(Icons.notifications_none,'แจ้งเตือน',   false, onTap: () {}),
             _buildBottomNavItem(
               Icons.person_outline,
               'ญาติ',
@@ -496,6 +590,7 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                   final snapshot = await FirebaseDatabase.instance
                       .ref('Login')
                       .get();
+
                   if (context.mounted) Navigator.pop(context);
 
                   String targetRelativeId = '';
@@ -541,22 +636,18 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                         targetUserData['Relative'] as Map,
                       );
                       relative = RelativeModel(
-                        relativeId:
-                            relativeMap['relativeId'] ?? targetRelativeId,
-                        firstname: relativeMap['firstname'] ?? '',
-                        lastname: relativeMap['lastname'] ?? '',
-                        phonenumber: relativeMap['phonenumber'] ?? '',
-                        relationship: relativeMap['relationship'] ?? '',
-                        email: relativeMap['email'] ?? '',
+                        relativeId:   relativeMap['relativeId'] ?? targetRelativeId,
+                        firstname:    relativeMap['firstname']   ?? '',
+                        lastname:     relativeMap['lastname']    ?? '',
+                        phonenumber:  relativeMap['phonenumber'] ?? '',
+                        relationship: relativeMap['relationship']?? '',
+                        email:        relativeMap['email']       ?? '',
                       );
                     } else {
                       relative = RelativeModel(
                         relativeId: targetRelativeId,
-                        firstname: '',
-                        lastname: '',
-                        phonenumber: '',
-                        relationship: '',
-                        email: '',
+                        firstname: '', lastname: '',
+                        phonenumber: '', relationship: '', email: '',
                       );
                     }
 
@@ -566,26 +657,23 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                         relativeMap['Patient'] as Map,
                       );
                       patient = PatientModel(
-                        patientId: pData['patientId'] ?? '',
+                        patientId:    pData['patientId']    ?? '',
                         patientphoto: pData['patientphoto'] ?? '',
-                        firstname: pData['firstname'] ?? '',
-                        lastname: pData['lastname'] ?? '',
-                        phonenumber: pData['phonenumber'] ?? '',
-                        gender: pData['gender'] ?? '',
-                        birthdate: pData['birthdate'] != null
+                        firstname:    pData['firstname']    ?? '',
+                        lastname:     pData['lastname']     ?? '',
+                        phonenumber:  pData['phonenumber']  ?? '',
+                        gender:       pData['gender']       ?? '',
+                        birthdate:    pData['birthdate'] != null
                             ? DateTime.tryParse(pData['birthdate'].toString())
                             : null,
-                        disease: pData['disease'] ?? '',
+                        disease:  pData['disease']  ?? '',
                         mobility: pData['mobility'] ?? '',
                       );
                     } else {
                       patient = PatientModel(
-                        patientId: '',
-                        patientphoto: '',
-                        firstname: '',
-                        lastname: '',
-                        phonenumber: '',
-                        gender: '',
+                        patientId: '', patientphoto: '',
+                        firstname: '', lastname: '',
+                        phonenumber: '', gender: '',
                       );
                     }
 
@@ -594,9 +682,9 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => EditRelativeInfoPage(
-                            currentPatient: patient,
+                            currentPatient:  patient,
                             currentRelative: relative,
-                            loggedUid: targetRelativeId,
+                            loggedUid:       targetRelativeId,
                           ),
                         ),
                       );
@@ -632,257 +720,255 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
   }
 
   Widget _buildCaretakerCard(Map<String, dynamic> data, String docId) {
+    // ── ข้อมูลพื้นฐาน ──────────────────────────────────────────────────────
     String firstname = data['firstname'] ?? 'ไม่ระบุ';
-    String lastname = data['lastname'] ?? '';
-    String fullName = "$firstname $lastname".trim();
-    String location = data['address'] ?? 'ไม่ระบุ';
-    String gender = data['gender'] ?? 'ไม่ระบุ';
+    String lastname  = data['lastname']  ?? '';
+    String fullName  = '$firstname $lastname'.trim();
+    String location  = data['address']  ?? 'ไม่ระบุ';
+    String gender    = data['gender']   ?? 'ไม่ระบุ';
 
     String carDetail = 'ไม่ระบุ';
     if (data['vehicle'] != null) {
-      final v = Map<String, dynamic>.from(data['vehicle'] as Map);
+      final v      = Map<String, dynamic>.from(data['vehicle'] as Map);
       String brand = v['brand'] ?? '';
       String model = v['model'] ?? '';
-      carDetail = "$brand $model".trim();
+      carDetail    = '$brand $model'.trim();
       if (carDetail.isEmpty) carDetail = 'ไม่ระบุ';
     }
 
-    // 1. ดึงข้อมูลสถานะดิบจากฐานข้อมูล
-    String rawStatus =
-        (data['servicestatus']?.toString() ?? 'ไม่พร้อมให้บริการ').trim();
-
-    // 2. เช็คเงื่อนไขว่าพร้อมให้บริการหรือไม่ (เผื่อระบบเก็บเป็น online หรือคำอื่นๆ)
-    bool isAvailable =
-        (rawStatus.toLowerCase() == 'online' || 
-        rawStatus.toLowerCase() == 'on' || 
-        rawStatus == 'พร้อมให้บริการ');
-
-    // 3. กำหนดข้อความภาษาไทยที่จะแสดงผลตายตัว
+    // ── สถานะ ───────────────────────────────────────────────────────────────
+    String rawStatus    = (data['servicestatus']?.toString() ?? 'ไม่พร้อมให้บริการ').trim();
+    bool   isAvailable  = rawStatus.toLowerCase() == 'online' ||
+                          rawStatus.toLowerCase() == 'on'     ||
+                          rawStatus == 'พร้อมให้บริการ';
     String displayStatus = isAvailable ? 'พร้อมให้บริการ' : 'ไม่พร้อมให้บริการ';
 
-    double rating = data['rating'] != null
-        ? (data['rating'] as num).toDouble()
-        : 0.0;
-    int comments = data['comments'] ?? 0;
+    // ── คะแนน ───────────────────────────────────────────────────────────────
+    double rating   = data['rating'] != null ? (data['rating'] as num).toDouble() : 0.0;
+    int    comments = data['comments'] ?? 0;
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: lightPurple.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.black, width: 1.5),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 25,
-            backgroundImage:
-                data['profilephoto'] != null &&
-                    data['profilephoto'].toString().isNotEmpty
-                ? MemoryImage(
-                    base64Decode(
-                      data['profilephoto']
-                          .toString()
-                          .replaceAll('\n', '')
-                          .trim(),
-                    ),
-                  )
-                : null,
-            child:
-                data['profilephoto'] == null ||
-                    data['profilephoto'].toString().isEmpty
-                ? const Icon(Icons.person)
-                : null,
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: greyBorder, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: darkPurple.withOpacity(0.16),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        fullName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: Colors.black87,
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── รูปโปรไฟล์ ──────────────────────────────────────────────
+            CircleAvatar(
+              radius: 30,
+              backgroundColor: lightPurple,
+              backgroundImage: data['profilephoto'] != null &&
+                      data['profilephoto'].toString().isNotEmpty
+                  ? MemoryImage(
+                      base64Decode(
+                        data['profilephoto'].toString().replaceAll('\n', '').trim(),
+                      ),
+                    )
+                  : null,
+              child: data['profilephoto'] == null ||
+                      data['profilephoto'].toString().isEmpty
+                  ? Icon(Icons.person, size: 28, color: primaryColor)
+                  : null,
+            ),
+            const SizedBox(width: 14),
+
+            // ── ข้อมูลด้านขวา ───────────────────────────────────────────
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ชื่อ + badge สถานะ
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          fullName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: headingColor,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(width: 5),
-                    // 4. ส่วนของ Tag สถานะที่ปรับปรุงดีไซน์ใหม่
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        // ปรับสีพื้นหลังให้อ่อนลงเพื่อให้ตัวหนังสืออ่านง่าย
-                        color: isAvailable
-                            ? const Color(0xFFE8F5E9)
-                            : const Color(0xFFFFEBEE),
-                        borderRadius: BorderRadius.circular(12),
-                        // เพิ่มขอบ (Border) สีเดียวกับตัวหนังสือ
-                        border: Border.all(
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
                           color: isAvailable
-                              ? const Color(0xFF4CAF50)
-                              : const Color(0xFFF44336),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // เพิ่มไอคอนวงกลมติ๊กถูก / กากบาท
-                          Icon(
-                            isAvailable ? Icons.check_circle : Icons.cancel,
+                              ? successColor.withOpacity(0.12)
+                              : dangerColor.withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
                             color: isAvailable
-                                ? const Color(0xFF4CAF50)
-                                : const Color(0xFFF44336),
-                            size: 12,
+                                ? successColor.withOpacity(0.5)
+                                : dangerColor.withOpacity(0.45),
+                            width: 1,
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            displayStatus, // แสดงผลเป็นภาษาไทยเสมอ
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              // สีตัวหนังสือปรับให้เข้มขึ้นเพื่อให้ตัดกับสีพื้นหลัง
-                              color: isAvailable
-                                  ? const Color(0xFF2E7D32)
-                                  : const Color(0xFFC62828),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isAvailable ? Icons.check_circle : Icons.cancel,
+                              size: 12,
+                              color: isAvailable ? successColor : dangerColor,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Text(
+                              displayStatus,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: isAvailable ? successColor : dangerColor,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(
-                      '$rating ',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Row(
-                      children: List.generate(5, (index) {
-                        return Icon(
-                          index < rating.floor()
-                              ? Icons.star
-                              : Icons.star_border,
-                          color: Colors.orange,
-                          size: 14,
-                        );
-                      }),
-                    ),
-                    Text(
-                      comments == 0
-                          ? '  ยังไม่มีรีวิว'
-                          : '  $comments คอมเมนต์',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.black54,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on,
-                      size: 14,
-                      color: Colors.black54,
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        'พื้นที่ให้บริการ: $location',
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+
+                  // ดาว + คอมเมนต์
+                  Row(
+                    children: [
+                      Text(
+                        '$rating ',
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.black87,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.directions_car,
-                      size: 14,
-                      color: Colors.black54,
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        'ยี่ห้อรถ: $carDetail',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.black87,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: SizedBox(
-                    height: 28,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CaretakerProfilePage(
-                              caretakerId: data['id'],
-                              loggedUid:
-                                  widget.loggedUid ??
-                                  FirebaseAuth.instance.currentUser?.uid,
-                            ),
-                          ),
-                        );
-                      },
-                      child: const Text(
-                        'ดูรายละเอียด',
-                        style: TextStyle(
-                          fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Color(0xFF555555),
+                        ),
+                      ),
+                      Row(
+                        children: List.generate(5, (i) {
+                          return Icon(
+                            i < rating.floor() ? Icons.star : Icons.star_border,
+                            color: const Color(0xFFFBBF24),
+                            size: 14,
+                          );
+                        }),
+                      ),
+                      Text(
+                        comments == 0 ? '  ยังไม่มีรีวิว' : '  $comments คอมเมนต์',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.black45,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+
+                  // ที่อยู่
+                  Row(
+                    children: [
+                      Icon(Icons.location_on, size: 13, color: primaryColor),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'พื้นที่ให้บริการ: $location',
+                          style: const TextStyle(fontSize: 12, color: Colors.black54),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+
+                  // รถ
+                  Row(
+                    children: [
+                      Icon(Icons.directions_car, size: 13, color: primaryColor),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'ยี่ห้อรถ: $carDetail',
+                          style: const TextStyle(fontSize: 12, color: Colors.black54),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  // ปุ่มดูรายละเอียด
+                  // ✅ ปรับเป็นปุ่มไล่เฉดสี (gradient) + เงา ให้เข้าธีมเดียวกับปุ่ม "ค้นหาบริเวณใกล้ฉัน"
+                  //    onPressed เดิมเปลี่ยนเป็น onTap แต่เนื้อโค้ดข้างใน (Navigator.push) เหมือนเดิมทุกบรรทัด
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CaretakerProfilePage(
+                                caretakerId: data['id'],
+                                loggedUid:   widget.loggedUid ??
+                                             FirebaseAuth.instance.currentUser?.uid,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          height: 34,
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [primaryColor, darkPurple],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryColor.withOpacity(0.30),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Text(
+                            'ดูรายละเอียด',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
