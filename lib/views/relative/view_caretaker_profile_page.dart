@@ -27,10 +27,11 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   Map<String, dynamic>? vehicleData;
   bool isLoading = true;
   final Color primaryColor = const Color(0xFF9B59B6);
-  final Color bgColor = const Color(0xFFF3E5F5); // สีพื้นหลังม่วงพาสเทลตามรูป
-  final Color borderColor = const Color(
-    0xFF757575,
-  ); // สีขอบการ์ด (เทาเข้มเกือบดำ)
+  final Color bgColor = const Color(0xFFF0E6FF); // ม่วงพาสเทลอ่อน
+  final Color cardColor = Colors.white;
+  final Color borderColor = const Color(0xFFDDD0F0); // ขอบม่วงอ่อน สบายตา
+  final Color accentPurple = const Color(0xFFB388FF); // ม่วงสด accent
+  final Color labelColor = const Color(0xFF7E57C2); // ม่วงกลาง สำหรับ label
 
   @override
   void initState() {
@@ -139,21 +140,32 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        backgroundColor: const Color(0xFFF0E6FF),
+        body: Center(
+          child: CircularProgressIndicator(color: const Color(0xFF9B59B6)),
+        ),
+      );
     }
     return Scaffold(
       backgroundColor: bgColor, // สีพื้นหลังม่วงพาสเทลเต็มจอ
       appBar: AppBar(
         backgroundColor: primaryColor,
-        elevation: 0,
+        elevation: 2,
+        shadowColor: const Color(0xFF7B1FA2).withOpacity(0.3),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'ข้อมูลผู้ดูแล',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            letterSpacing: 0.5,
+          ),
         ),
       ),
       // ย้าย SingleChildScrollView ออกมาครอบนอกสุด
@@ -161,7 +173,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
         builder: (context, constraints) {
           return SingleChildScrollView(
             child: Container(
-              color: Color.fromARGB(255, 239, 199, 255),
+              color: bgColor,
               child: SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -196,13 +208,13 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
         type: BottomNavigationBarType.fixed,
         backgroundColor: primaryColor,
         selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white70,
+        unselectedItemColor: Colors.white60,
         currentIndex: 1,
         selectedLabelStyle: const TextStyle(
           fontWeight: FontWeight.bold,
-          fontSize: 12,
+          fontSize: 11,
         ),
-        unselectedLabelStyle: const TextStyle(fontSize: 12),
+        unselectedLabelStyle: const TextStyle(fontSize: 11),
 
         // 🎯 1. เพิ่มฟังก์ชัน onTap ดักเงื่อนไขที่ตรงนี้
         onTap: (index) async {
@@ -352,11 +364,18 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   Widget _buildProfileHeader() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor, width: 1.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF9B59B6).withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -368,15 +387,20 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Colors.black12,
-                    width: 2,
-                  ), // คืนค่ากรอบเดิม
+                    color: const Color(0xFF9B59B6),
+                    width: 2.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF9B59B6).withOpacity(0.2),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    ),
+                  ],
                 ),
                 child: CircleAvatar(
                   radius: 40,
-                  backgroundColor: const Color(
-                    0xFFC8E6C9,
-                  ), // สีพื้นหลังเขียวพาสเทล
+                  backgroundColor: const Color(0xFFE8D5FF), // ม่วงพาสเทลอ่อน
                   backgroundImage:
                       caretakerData?['profilephoto'] != null &&
                           caretakerData!['profilephoto'].toString().isNotEmpty
@@ -409,7 +433,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                 ),
                 child: Icon(
                   Icons.check_circle,
-                  color: caretakerData?['servicestatus'] == 'Online'
+                  color: caretakerData?['servicestatus'] == 'online' || caretakerData?['servicestatus'] == 'on'
                       ? Colors.green
                       : Colors.grey, // สีเทาเมื่อออฟไลน์ตามรูป
                   size: 24,
@@ -422,11 +446,11 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
 
           // สถานะออนไลน์
           Text(
-            caretakerData?['servicestatus'] == 'Online'
+            caretakerData?['servicestatus'] == 'online' || caretakerData?['servicestatus'] == 'on'
                 ? 'พร้อมให้บริการ'
                 : 'ไม่พร้อมให้บริการ',
             style: TextStyle(
-              color: caretakerData?['servicestatus'] == 'Online'
+              color: caretakerData?['servicestatus'] == 'online' || caretakerData?['servicestatus'] == 'on'
                   ? Colors.green
                   : Colors.orange, // สีส้มตามรูป
               fontWeight: FontWeight.bold,
@@ -439,7 +463,11 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
           // ชื่อ-นามสกุล
           Text(
             '${caretakerData?['firstname'] ?? 'สมหมาย'} ${caretakerData?['lastname'] ?? 'จากมา'}',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              color: Color(0xFF4A148C),
+            ),
             textAlign: TextAlign.center,
           ),
 
@@ -449,9 +477,10 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
           Text(
             '${caretakerData?['caretakerId'] ?? '1520201258787'}',
             style: const TextStyle(
-              color: Colors.black87,
-              fontSize: 16,
+              color: Color(0xFF9E9E9E),
+              fontSize: 13,
               fontWeight: FontWeight.normal,
+              letterSpacing: 0.5,
             ),
           ),
         ],
@@ -493,11 +522,15 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
         children: [
           Row(
             children: const [
-              Icon(Icons.person_outline, size: 24, color: Colors.black87),
+              Icon(Icons.person_outline, size: 22, color: Color(0xFF9B59B6)),
               SizedBox(width: 8),
               Text(
                 'ข้อมูลส่วนตัว',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Color(0xFF4A148C),
+                ),
               ),
             ],
           ),
@@ -561,6 +594,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
+                        color: Color(0xFF4A148C),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -587,7 +621,11 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
         children: [
           const Text(
             'ยานพาหนะ',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: Color(0xFF4A148C),
+            ),
           ),
           const SizedBox(height: 12),
           Row(
@@ -728,10 +766,10 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   Widget _buildDot(bool isActive) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4),
-      width: isActive ? 8 : 6,
-      height: isActive ? 8 : 6,
+      width: isActive ? 10 : 7,
+      height: isActive ? 10 : 7,
       decoration: BoxDecoration(
-        color: isActive ? Colors.black87 : Colors.grey.shade400,
+        color: isActive ? const Color(0xFF9B59B6) : Colors.grey.shade300,
         shape: BoxShape.circle,
       ),
     );
@@ -749,7 +787,11 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
         children: [
           const Text(
             'รีวิวล่าสุด',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: Color(0xFF4A148C),
+            ),
           ),
           const SizedBox(height: 12),
           Row(
@@ -788,14 +830,17 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   Widget _buildRequestButton() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: SizedBox(
-        height: 48,
+        height: 52,
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryColor,
+            foregroundColor: Colors.white,
+            elevation: 4,
+            shadowColor: const Color(0xFF9B59B6).withOpacity(0.4),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(16),
             ),
           ),
           onPressed: () {
@@ -844,11 +889,18 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   Widget _buildCard({required Widget child}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor, width: 1.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF9B59B6).withOpacity(0.07),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: child,
     );
@@ -856,21 +908,25 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
 
   Widget _buildInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 5.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 100,
+            width: 110,
             child: Text(
               label,
-              style: const TextStyle(color: Colors.black87, fontSize: 15),
+              style: const TextStyle(
+                color: Color(0xFF9B59B6),
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontSize: 15, color: Colors.black87),
+              style: const TextStyle(fontSize: 14, color: Color(0xFF333333)),
             ),
           ),
         ],

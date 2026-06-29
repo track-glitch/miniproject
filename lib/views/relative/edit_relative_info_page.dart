@@ -34,11 +34,30 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   // 🌟 บังคับให้หน้าจอโหลดจนกว่าจะดึงที่อยู่เดิมเสร็จ
   bool _isLoading = true;
 
-  final Color primaryColor = const Color(0xFF8763E6);
-  final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
-  final Color lightPurple = const Color(0xFFF3E5F5);
-  final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
-  final Color greyBorder = const Color(0xFFE1BEE7);
+  // 🎨 Theme ใหม่ - อ้างอิงจากตัวอย่างหน้า "ค้นหาบัญชี" (โทนม่วงสบายตา การ์ดสีขาว)
+  final Color primaryColor = const Color(
+    0xFF7C5CFC,
+  ); // ม่วงหลัก ใช้กับปุ่ม/ไอคอนสำคัญ
+  final Color darkPurple = const Color(
+    0xFF6E5ABF,
+  ); // ม่วงเข้ม ใช้กับหัวข้อ/ตัวหนา
+  final Color lightPurple = const Color(
+    0xFFF3E5F5,
+  ); // คงไว้เผื่อมีการใช้งานที่อื่น
+  final Color bgColor = const Color.fromARGB(
+    255,
+    225,
+    202,
+    255,
+  ); // พื้นหลังม่วงอ่อนสบายตา
+  final Color greyBorder = const Color(0xFFB9A4F2); // เส้นขอบม่วงอ่อน
+
+  // สีเพิ่มเติมสำหรับ Gradient ของ AppBar และพื้นหลัง ให้ตรงกับภาพตัวอย่าง
+  final Color headerGradientStart = const Color(0xFF8E6FF0);
+  final Color headerGradientEnd = const Color(0xFF7C5CFC);
+  final Color bgGradientTop = const Color.fromARGB(255, 225, 202, 255);
+  final Color bgGradientBottom = const Color.fromARGB(255, 225, 202, 255);
+  final Color cardColor = Colors.white;
 
   LatLng _selectedLocation = const LatLng(13.7563, 100.5018);
   bool _hasPinned = false;
@@ -249,224 +268,254 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: bgGradientBottom,
       appBar: AppBar(
         title: const Text(
           'แก้ไขข้อมูลผู้ป่วย',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: primaryColor,
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(0)),
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [headerGradientStart, headerGradientEnd],
+            ),
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(0),
+            ),
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(),
-              ) // 🌟 แสดงโหลดดิ้งรอให้ดึงที่อยู่ให้เสร็จ
-            : SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 15,
-                ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      _buildProfileImageSection(),
-                      const SizedBox(height: 20),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [bgGradientTop, bgGradientBottom],
+            stops: const [0.0, 0.35],
+          ),
+        ),
+        child: SafeArea(
+          child: _isLoading
+              ? Center(
+                  child: CircularProgressIndicator(color: primaryColor),
+                ) // 🌟 แสดงโหลดดิ้งรอให้ดึงที่อยู่ให้เสร็จ
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 15,
+                  ),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        _buildProfileImageSection(),
+                        const SizedBox(height: 20),
 
-                      _buildSectionContainer(
-                        title: 'ข้อมูลผู้ป่วย',
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildInputField(
-                                  hint: 'ชื่อจริง',
-                                  controller: _patFirstNameController,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: _buildInputField(
-                                  hint: 'นามสกุล',
-                                  controller: _patLastNameController,
-                                ),
-                              ),
-                            ],
-                          ),
-                          _buildInputField(
-                            hint: 'หมายเลขบัตรประชาชน',
-                            controller: _patIdCardController,
-                            keyboardType: TextInputType.number,
-                          ),
-                          _buildInputField(
-                            hint: 'ไอดีไลน์ผู้ป่วย',
-                            controller: _patLineIdController,
-                          ),
-                          _buildInputField(
-                            hint: 'เบอร์โทรศัพท์ผู้ป่วย',
-                            controller: _patPhoneController,
-                            keyboardType: TextInputType.phone,
-                          ),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildInputField(
-                                  hint: 'เพศ',
-                                  controller: _patGenderController,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: _buildInputField(
-                                  hint: 'วันเกิด [DD/MM/YYYY]',
-                                  controller: _patBirthDateController,
-                                ),
-                              ),
-                            ],
-                          ),
-                          _buildInputField(
-                            hint: 'โรคประจำตัว',
-                            controller: _patDiseaseController,
-                          ),
-                          _buildInputField(
-                            hint: 'ความคล่องตัว (Mobility)',
-                            controller: _patMobilityController,
-                          ),
-                        ],
-                      ),
-
-                      // 🌟 2. ใช้งาน LocationPickerWidget เหมือนหน้า Register ทุกประการ
-                      _buildSectionContainer(
-                        title: 'ข้อมูลที่อยู่ผู้ป่วย',
-                        children: [
-                          LocationPickerWidget(
-                            initialLocation: _selectedLocation,
-                            initialAddress: _patAddressController
-                                .text, // ส่งที่อยู่ที่ดึงมาให้ Widget
-                            onLocationChanged: (newLocation, newAddress) {
-                              setState(() {
-                                _selectedLocation = newLocation;
-                                _patAddressController.text = newAddress;
-                                _hasPinned = true;
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-
-                      _buildSectionContainer(
-                        title: 'ข้อมูลติดต่อญาติ',
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildInputField(
-                                  hint: 'ชื่อจริงญาติ',
-                                  controller: _relFirstNameController,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: _buildInputField(
-                                  hint: 'นามสกุลญาติ',
-                                  controller: _relLastNameController,
-                                ),
-                              ),
-                            ],
-                          ),
-                          _buildInputField(
-                            hint: 'อีเมล (Email)',
-                            controller: _relEmailController,
-                            keyboardType: TextInputType.emailAddress,
-                          ),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildInputField(
-                                  hint: 'เบอร์โทรศัพท์ญาติ',
-                                  controller: _relPhoneController,
-                                  keyboardType: TextInputType.phone,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: _buildInputField(
-                                  hint: 'ไอดีไลน์ญาติ',
-                                  controller: _relLineIdController,
-                                ),
-                              ),
-                            ],
-                          ),
-                          _buildInputField(
-                            hint: 'ความสัมพันธ์กับผู้ป่วย',
-                            controller: _relRelationController,
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 15),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SizedBox(
-                              height: 48,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: primaryColor,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                        _buildSectionContainer(
+                          title: 'ข้อมูลผู้ป่วย',
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildInputField(
+                                    hint: 'ชื่อจริง',
+                                    controller: _patFirstNameController,
                                   ),
                                 ),
-                                onPressed: _handleSave,
-                                child: const Text(
-                                  'ตกลง',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _buildInputField(
+                                    hint: 'นามสกุล',
+                                    controller: _patLastNameController,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            _buildInputField(
+                              hint: 'หมายเลขบัตรประชาชน',
+                              controller: _patIdCardController,
+                              keyboardType: TextInputType.number,
+                            ),
+                            _buildInputField(
+                              hint: 'ไอดีไลน์ผู้ป่วย',
+                              controller: _patLineIdController,
+                            ),
+                            _buildInputField(
+                              hint: 'เบอร์โทรศัพท์ผู้ป่วย',
+                              controller: _patPhoneController,
+                              keyboardType: TextInputType.phone,
+                            ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildInputField(
+                                    hint: 'เพศ',
+                                    controller: _patGenderController,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _buildInputField(
+                                    hint: 'วันเกิด [DD/MM/YYYY]',
+                                    controller: _patBirthDateController,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            _buildInputField(
+                              hint: 'โรคประจำตัว',
+                              controller: _patDiseaseController,
+                            ),
+                            _buildInputField(
+                              hint: 'ความคล่องตัว (Mobility)',
+                              controller: _patMobilityController,
+                            ),
+                          ],
+                        ),
+
+                        // 🌟 2. ใช้งาน LocationPickerWidget เหมือนหน้า Register ทุกประการ
+                        _buildSectionContainer(
+                          title: 'ข้อมูลที่อยู่ผู้ป่วย',
+                          children: [
+                            LocationPickerWidget(
+                              initialLocation: _selectedLocation,
+                              initialAddress: _patAddressController
+                                  .text, // ส่งที่อยู่ที่ดึงมาให้ Widget
+                              onLocationChanged: (newLocation, newAddress) {
+                                setState(() {
+                                  _selectedLocation = newLocation;
+                                  _patAddressController.text = newAddress;
+                                  _hasPinned = true;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+
+                        _buildSectionContainer(
+                          title: 'ข้อมูลติดต่อญาติ',
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildInputField(
+                                    hint: 'ชื่อจริงญาติ',
+                                    controller: _relFirstNameController,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _buildInputField(
+                                    hint: 'นามสกุลญาติ',
+                                    controller: _relLastNameController,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            _buildInputField(
+                              hint: 'อีเมล (Email)',
+                              controller: _relEmailController,
+                              keyboardType: TextInputType.emailAddress,
+                            ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildInputField(
+                                    hint: 'เบอร์โทรศัพท์ญาติ',
+                                    controller: _relPhoneController,
+                                    keyboardType: TextInputType.phone,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _buildInputField(
+                                    hint: 'ไอดีไลน์ญาติ',
+                                    controller: _relLineIdController,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            _buildInputField(
+                              hint: 'ความสัมพันธ์กับผู้ป่วย',
+                              controller: _relRelationController,
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 15),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 50,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryColor,
+                                    elevation: 4,
+                                    shadowColor: primaryColor.withOpacity(0.5),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  onPressed: _handleSave,
+                                  child: const Text(
+                                    'ตกลง',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 15),
-                          Expanded(
-                            child: SizedBox(
-                              height: 48,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.grey,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                            const SizedBox(width: 15),
+                            Expanded(
+                              child: SizedBox(
+                                height: 50,
+                                child: OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    side: BorderSide(
+                                      color: primaryColor.withOpacity(0.5),
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
                                   ),
-                                ),
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text(
-                                  'ยกเลิก',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                                  onPressed: () => Navigator.pop(context),
+                                  child: Text(
+                                    'ยกเลิก',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: darkPurple,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 25),
-                    ],
+                          ],
+                        ),
+                        const SizedBox(height: 25),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+        ),
       ),
     );
   }
@@ -477,25 +526,44 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   }) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: lightPurple,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: primaryColor.withOpacity(0.4)),
+        color: cardColor,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withOpacity(0.10),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-              color: darkPurple,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 6,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: primaryColor,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: darkPurple,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           ...children,
         ],
       ),
@@ -525,25 +593,49 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         Stack(
           alignment: Alignment.bottomRight,
           children: [
-            CircleAvatar(
-              radius: 43,
-              backgroundColor: primaryColor,
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryColor.withOpacity(0.25),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
               child: CircleAvatar(
-                radius: 41,
-                backgroundColor: Colors.white,
-                backgroundImage: imageProvider,
-                child: imageProvider == null
-                    ? const Icon(Icons.person, size: 55, color: Colors.black)
-                    : null,
+                radius: 43,
+                backgroundColor: primaryColor,
+                child: CircleAvatar(
+                  radius: 41,
+                  backgroundColor: Colors.white,
+                  backgroundImage: imageProvider,
+                  child: imageProvider == null
+                      ? Icon(
+                          Icons.person,
+                          size: 55,
+                          color: primaryColor.withOpacity(0.6),
+                        )
+                      : null,
+                ),
               ),
             ),
             InkWell(
               onTap: _pickImage,
               child: Container(
-                padding: const EdgeInsets.all(5),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: primaryColor,
                   shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.4),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: const Icon(
                   Icons.camera_alt,
@@ -554,10 +646,14 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        const Text(
+        const SizedBox(height: 10),
+        Text(
           'รูปโปรไฟล์ผู้ป่วย',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+            color: darkPurple,
+          ),
         ),
       ],
     );
@@ -570,36 +666,45 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     TextInputType keyboardType = TextInputType.text,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 12),
       child: TextFormField(
         controller: controller,
         maxLines: maxLines,
         keyboardType: keyboardType,
+        style: TextStyle(fontSize: 14, color: darkPurple),
         validator: (v) => v!.isEmpty ? 'กรุณากรอกข้อมูล' : null,
         decoration: InputDecoration(
           labelText: hint,
           hintText: hint,
-          hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
-          labelStyle: const TextStyle(fontSize: 14, color: Color(0xFF7D3C98)),
+          hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+          labelStyle: TextStyle(fontSize: 13, color: Color(0xFF8D7AE6)),
           filled: true,
-          fillColor: Colors.white,
+          fillColor: const Color(0xFFFAF8FF),
           contentPadding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 10,
+            horizontal: 14,
+            vertical: 12,
           ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: greyBorder),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: greyBorder, width: 2.3),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: greyBorder),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: greyBorder, width: 2.3),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: primaryColor),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: primaryColor, width: 2.3),
           ),
-          errorStyle: const TextStyle(fontSize: 11, color: Colors.red),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.redAccent, width: 2.3),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.redAccent, width: 2.3),
+          ),
+          errorStyle: const TextStyle(fontSize: 11, color: Colors.redAccent),
         ),
       ),
     );
