@@ -27,7 +27,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   Map<String, dynamic>? vehicleData;
   bool isLoading = true;
   final Color primaryColor = const Color(0xFF9B59B6);
-  final Color bgColor = const Color(0xFFF0E6FF); // ม่วงพาสเทลอ่อน
+  final Color bgColor = const Color.fromARGB(255, 183, 157, 255); // ม่วงพาสเทลอ่อน
   final Color cardColor = Colors.white;
   final Color borderColor = const Color(0xFFDDD0F0); // ขอบม่วงอ่อน สบายตา
   final Color accentPurple = const Color(0xFFB388FF); // ม่วงสด accent
@@ -362,6 +362,10 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
 
   // 1. ส่วนหัวโปรไฟล์
   Widget _buildProfileHeader() {
+    String rawStatus = (caretakerData?['servicestatus']?.toString() ?? 'ไม่พร้อมให้บริการ').trim();
+    bool isAvailable = rawStatus.toLowerCase() == 'online' || 
+                       rawStatus.toLowerCase() == 'on' || 
+                       rawStatus == 'พร้อมให้บริการ';
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -387,12 +391,12 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: const Color(0xFF9B59B6),
+                    color: const Color(0xFF8763E6),
                     width: 2.5,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF9B59B6).withOpacity(0.2),
+                      color: const Color(0xFF8763E6).withOpacity(0.2),
                       blurRadius: 8,
                       spreadRadius: 1,
                     ),
@@ -433,9 +437,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                 ),
                 child: Icon(
                   Icons.check_circle,
-                  color: caretakerData?['servicestatus'] == 'online' || caretakerData?['servicestatus'] == 'on'
-                      ? Colors.green
-                      : Colors.grey, // สีเทาเมื่อออฟไลน์ตามรูป
+                  color: isAvailable ? Colors.green : Colors.grey,
                   size: 24,
                 ),
               ),
@@ -446,13 +448,9 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
 
           // สถานะออนไลน์
           Text(
-            caretakerData?['servicestatus'] == 'online' || caretakerData?['servicestatus'] == 'on'
-                ? 'พร้อมให้บริการ'
-                : 'ไม่พร้อมให้บริการ',
+            isAvailable ? 'พร้อมให้บริการ' : 'ไม่พร้อมให้บริการ',
             style: TextStyle(
-              color: caretakerData?['servicestatus'] == 'online' || caretakerData?['servicestatus'] == 'on'
-                  ? Colors.green
-                  : Colors.orange, // สีส้มตามรูป
+              color: isAvailable ? Colors.green : Colors.orange,
               fontWeight: FontWeight.bold,
               fontSize: 14,
             ),
@@ -466,7 +464,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 20,
-              color: Color(0xFF4A148C),
+              color: Color(0xFF8763E6),
             ),
             textAlign: TextAlign.center,
           ),
@@ -529,7 +527,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
-                  color: Color(0xFF4A148C),
+                  color: Color(0xFF8763E6),
                 ),
               ),
             ],
@@ -594,7 +592,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: Color(0xFF4A148C),
+                        color: Color(0xFF8763E6),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -624,7 +622,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
-              color: Color(0xFF4A148C),
+              color: Color(0xFF8763E6),
             ),
           ),
           const SizedBox(height: 12),
@@ -790,7 +788,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
-              color: Color(0xFF4A148C),
+              color: Color(0xFF8763E6),
             ),
           ),
           const SizedBox(height: 12),
