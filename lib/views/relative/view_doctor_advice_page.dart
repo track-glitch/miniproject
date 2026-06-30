@@ -1,10 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+// --- เปลี่ยน Path ให้ตรงกับโฟลเดอร์ในโปรเจกต์ของคุณ ---
+import 'package:miniproject/models/patient_model.dart';
+import 'package:miniproject/models/relative_model.dart';
+import 'package:miniproject/views/relative/edit_relative_info_page.dart';
+import 'package:miniproject/views/login_page.dart';
+import 'package:miniproject/views/relative/track_status_notification_page.dart';
 
 /// หน้าวันนัดหมายและคำแนะนำ (View Doctor Advice Page)
 /// ออกแบบตามภาพตัวอย่าง - ใช้ข้อมูลสมมุติ (Mock Data)
 /// ใช้โทนสีเดียวกับหน้า view_request_detail_page / search_caretaker_profile_page
 class ViewDoctorAdvicePage extends StatefulWidget {
-  const ViewDoctorAdvicePage({super.key});
+  final String? loggedUid; // เพิ่มเพื่อรับค่าผู้ใช้ที่ล็อกอินสำหรับแถบเมนูด้านล่าง
+
+  const ViewDoctorAdvicePage({super.key, this.loggedUid});
 
   @override
   State<ViewDoctorAdvicePage> createState() => _ViewDoctorAdvicePageState();
@@ -17,7 +28,70 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
   static const Color lightPink = Color(0xFFECE2FE); // ม่วงอ่อนมาก
   static const Color bgGray = Color.fromARGB(255, 225, 202, 255); // พื้นหลังม่วงอ่อน
 
+  // สีสำหรับเมนูด้านล่างและ Dialog ให้เหมือนหน้า Search
+  final Color bottomNavPurple = const Color.fromARGB(255, 153, 116, 255);
+  final Color searchPrimaryColor = const Color(0xFF8763E6);
+
   bool _confirmNextAppointment = true;
+
+  // ฟังก์ชันแจ้งเตือนให้เข้าสู่ระบบ (ยกมาจากหน้า Search)
+  void _showLoginRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: searchPrimaryColor, width: 1.5),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.lock_person_outlined, size: 75, color: bottomNavPurple),
+                const SizedBox(height: 20),
+                Text(
+                  'กรุณาเข้าสู่ระบบก่อนใช้งาน',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: bottomNavPurple),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'คุณต้องลงชื่อเข้าใช้งานในระบบก่อน จึงจะสามารถแก้ไขข้อมูลได้',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.black),
+                ),
+                const SizedBox(height: 25),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: searchPrimaryColor,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(23)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const LoginPage()),
+                      );
+                    },
+                    child: const Text(
+                      'ไปหน้าเข้าสู่ระบบ',
+                      style: TextStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,9 +118,198 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
                 ),
               ),
             ),
-            _buildBottomNav(),
           ],
         ),
+      ),
+      // ✅ นำ BottomNavigationBar รูปแบบหน้า Search มาใช้
+      bottomNavigationBar: Container(
+        height: 65,
+        decoration: BoxDecoration(
+          color: bottomNavPurple,
+          boxShadow: [
+            BoxShadow(
+              color: bottomNavPurple.withOpacity(0.27),
+              blurRadius: 12,
+              offset: const Offset(0, -3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildBottomNavItem(
+              Icons.home_outlined,
+              'บ้าน',
+              false, // เป็นหน้าซ้อนเข้ามา เลยไม่ต้องตั้งให้ Active
+              onTap: () {
+                // กลับไปหน้าแรกสุด
+                Navigator.popUntil(context, (route) => route.isFirst);
+              },
+            ),
+            _buildBottomNavItem(
+              Icons.support_agent,
+              'ขอใช้บริการ',
+              false,
+              onTap: () {
+                // กลับไปหน้าแรกสุด หรือ pop 
+                Navigator.popUntil(context, (route) => route.isFirst);
+              },
+            ),
+            _buildBottomNavItem(
+              Icons.notifications_none,
+              'แจ้งเตือน',
+              false,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => TrackStatusNotificationPage(loggedUid: widget.loggedUid)),
+                );
+              },
+            ),
+            _buildBottomNavItem(
+              Icons.person_outline,
+              'ญาติ',
+              false,
+              onTap: () async {
+                String currentUid = widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+
+                if (currentUid.isEmpty) {
+                  _showLoginRequiredDialog();
+                  return;
+                }
+
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const Center(child: CircularProgressIndicator()),
+                );
+
+                try {
+                  final snapshot = await FirebaseDatabase.instance.ref('Login').get();
+                  if (context.mounted) Navigator.pop(context);
+
+                  String targetRelativeId = '';
+                  Map<String, dynamic> targetUserData = {};
+                  bool isFound = false;
+
+                  if (snapshot.exists && snapshot.value is Map) {
+                    final allUsers = Map<String, dynamic>.from(snapshot.value as Map);
+
+                    for (var key in allUsers.keys) {
+                      if (key == currentUid) {
+                        targetRelativeId = key;
+                        targetUserData = Map<String, dynamic>.from(allUsers[key] as Map);
+                        isFound = true;
+                        break;
+                      }
+
+                      var childData = allUsers[key];
+                      if (childData is Map) {
+                        var relNode = childData['Relative'];
+                        if (childData['uid'] == currentUid || (relNode is Map && relNode['relativeId'] == currentUid)) {
+                          targetRelativeId = key;
+                          targetUserData = Map<String, dynamic>.from(childData);
+                          isFound = true;
+                          break;
+                        }
+                      }
+                    }
+                  }
+
+                  if (isFound && targetRelativeId.isNotEmpty) {
+                    RelativeModel relative;
+                    Map<String, dynamic> relativeMap = {};
+
+                    if (targetUserData.containsKey('Relative')) {
+                      relativeMap = Map<String, dynamic>.from(targetUserData['Relative'] as Map);
+                      relative = RelativeModel(
+                        relativeId: relativeMap['relativeId'] ?? targetRelativeId,
+                        firstname: relativeMap['firstname'] ?? '',
+                        lastname: relativeMap['lastname'] ?? '',
+                        phonenumber: relativeMap['phonenumber'] ?? '',
+                        relationship: relativeMap['relationship'] ?? '',
+                        email: relativeMap['email'] ?? '',
+                      );
+                    } else {
+                      relative = RelativeModel(
+                        relativeId: targetRelativeId, firstname: '', lastname: '', phonenumber: '', relationship: '', email: '',
+                      );
+                    }
+
+                    PatientModel patient;
+                    if (relativeMap.containsKey('Patient')) {
+                      final pData = Map<String, dynamic>.from(relativeMap['Patient'] as Map);
+                      patient = PatientModel(
+                        patientId: pData['patientId'] ?? '',
+                        patientphoto: pData['patientphoto'] ?? '',
+                        firstname: pData['firstname'] ?? '',
+                        lastname: pData['lastname'] ?? '',
+                        phonenumber: pData['phonenumber'] ?? '',
+                        gender: pData['gender'] ?? '',
+                        birthdate: pData['birthdate'] != null ? DateTime.tryParse(pData['birthdate'].toString()) : null,
+                        disease: pData['disease'] ?? '',
+                        mobility: pData['mobility'] ?? '',
+                      );
+                    } else {
+                      patient = PatientModel(
+                        patientId: '', patientphoto: '', firstname: '', lastname: '', phonenumber: '', gender: '',
+                      );
+                    }
+
+                    if (context.mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => EditRelativeInfoPage(
+                            currentPatient: patient,
+                            currentRelative: relative,
+                            loggedUid: targetRelativeId,
+                          ),
+                        ),
+                      );
+                    }
+                  } else {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('ไม่พบข้อมูลประวัติ (กรุณาลองเข้าสู่ระบบใหม่อีกครั้ง)')),
+                      );
+                    }
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('เกิดข้อผิดพลาด: $e'), backgroundColor: Colors.red),
+                    );
+                  }
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Widget สร้างปุ่มด้านล่างเหมือนหน้า Search
+  Widget _buildBottomNavItem(IconData icon, String label, bool isActive, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: isActive ? Colors.white : Colors.white70, size: 24),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              color: isActive ? Colors.white : Colors.white70,
+              fontSize: 11,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -65,9 +328,10 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
       ),
       child: Row(
         children: [
+          // ✅ เปลี่ยนไอคอนให้เหมือนหน้า Search และใช้ pop
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.maybePop(context),
+            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
           ),
           const Expanded(
             child: Text(
@@ -333,50 +597,6 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
           ),
         ),
       ),
-    );
-  }
-
-  // ---------------- Bottom nav ----------------
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, -2)),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _navItem(Icons.home, 'บ้าน', false),
-              _navItem(Icons.check_circle_outline, 'ยืนยันการจอง', false),
-              _navItem(Icons.notifications_none, 'สถานะการจัดเตือน', false),
-              _navItem(Icons.person_outline, 'ญาติ', true),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _navItem(IconData icon, String label, bool active) {
-    final color = active ? primaryPurple : Colors.grey;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 22),
-        const SizedBox(height: 2),
-        Text(label,
-            style: TextStyle(color: color, fontSize: 9),
-            textAlign: TextAlign.center),
-      ],
     );
   }
 }

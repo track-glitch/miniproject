@@ -858,7 +858,12 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       width: double.infinity,
       height: 48,
       child: ElevatedButton.icon(
-        onPressed: () {},
+        onPressed: () {Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ViewDoctorAdvicePage(),
+            ),
+          );},
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryPurple,
           shape: RoundedRectangleBorder(
