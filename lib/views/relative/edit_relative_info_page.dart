@@ -652,7 +652,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 13,
-            color: darkPurple,
+            color: Colors.black,
           ),
         ),
       ],
@@ -671,7 +671,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         controller: controller,
         maxLines: maxLines,
         keyboardType: keyboardType,
-        style: TextStyle(fontSize: 14, color: darkPurple),
+        style: TextStyle(fontSize: 14, color: Colors.black),
         validator: (v) => v!.isEmpty ? 'กรุณากรอกข้อมูล' : null,
         decoration: InputDecoration(
           labelText: hint,

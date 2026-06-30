@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniproject/models/patient_model.dart';
 import 'package:miniproject/models/relative_model.dart';
 import 'package:miniproject/views/relative/edit_relative_info_page.dart';
+import 'package:miniproject/views/relative/track_status_notification_page.dart';
 import 'package:miniproject/views/relative/view_caretaker_profile_page.dart';
 import 'package:miniproject/views/login_page.dart';
 import 'dart:convert';
@@ -23,21 +24,43 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
   // ค่าสีด้านล่างนี้สุ่มมาจากพิกเซลจริงในภาพอ้างอิง: ปุ่ม Login/Get Started,
   // พื้นหลังอ่อนๆ, ช่องค้นหา และตัวอักษรหัวข้อ เพื่อให้โทนสีออกมา "เบา สะอาด
   // และนุ่มนวล" แบบเดียวกับภาพ แทนม่วงสดจัดแบบเดิม
-  final Color primaryColor = const Color(0xFF8763E6);   // ม่วงหลัก (จากปุ่ม Login/Get Started ในภาพ)
-  final Color darkPurple   = const Color.fromARGB(255, 153, 116, 255);   // ม่วงเข้ม สำหรับ AppBar/BottomNav/เงา
-  final Color lightPurple  = const Color(0xFFECE2FE);   // ม่วงอ่อนมาก (จากช่องค้นหาในภาพ)
-  final Color accentTeal   = const Color(0xFF0F766E);   // Teal เข้มขึ้นเล็กน้อย
-  final Color accentPink   = const Color(0xFFBE185D);   // Pink accent
-  final Color bgColor      = const Color.fromARGB(255, 225, 202, 255);   // พื้นหลัง — ม่วงอ่อน "เห็นชัด" ว่าเป็นม่วง ไม่จางจนกลายเป็นขาว
-  final Color greyBorder   = const Color(0xFFD3C2F0);   // ขอบ card — เข้มขึ้นพอให้แยกจากพื้นหลังได้ชัด
+  final Color primaryColor = const Color(
+    0xFF8763E6,
+  ); // ม่วงหลัก (จากปุ่ม Login/Get Started ในภาพ)
+  final Color darkPurple = const Color.fromARGB(
+    255,
+    153,
+    116,
+    255,
+  ); // ม่วงเข้ม สำหรับ AppBar/BottomNav/เงา
+  final Color lightPurple = const Color(
+    0xFFECE2FE,
+  ); // ม่วงอ่อนมาก (จากช่องค้นหาในภาพ)
+  final Color accentTeal = const Color(0xFF0F766E); // Teal เข้มขึ้นเล็กน้อย
+  final Color accentPink = const Color(0xFFBE185D); // Pink accent
+  final Color bgColor = const Color.fromARGB(
+    255,
+    225,
+    202,
+    255,
+  ); // พื้นหลัง — ม่วงอ่อน "เห็นชัด" ว่าเป็นม่วง ไม่จางจนกลายเป็นขาว
+  final Color greyBorder = const Color(
+    0xFFD3C2F0,
+  ); // ขอบ card — เข้มขึ้นพอให้แยกจากพื้นหลังได้ชัด
 
   // ── 🎨 สีที่เพิ่มเข้ามาเพื่อ "คุมโทน" ทั้งหน้าให้เป็นชุดเดียวกัน ─────────
   // เดิมในหน้านี้มีสี hex ฝังตรง ๆ กระจายอยู่หลายที่ (เช่น 0xFF5B21B6, 0xFFDDD0F0,
   // 0xFFC4B5FD ฯลฯ) ซึ่งใกล้เคียงกับชุดสีด้านบนแต่ไม่ใช่ตัวเดียวกัน ทำให้สีหลุดโทน
   // จึงรวบเป็น 3 สีหลักนี้ แล้วไปแทนที่สีฝังทั้งหมดในไฟล์ให้ใช้ชุดสีเดียวกัน
-  final Color headingColor = const Color(0xFF241C2B);   // เข้มเกือบดำ (จากตัวอักษร "Calmara" ในภาพ) ดูคลีนกว่าม่วงจัด
-  final Color successColor = const Color(0xFF15803D);   // เขียว สำหรับสถานะ "พร้อมให้บริการ"
-  final Color dangerColor  = const Color(0xFFB91C1C);   // แดง สำหรับสถานะ "ไม่พร้อมให้บริการ"
+  final Color headingColor = const Color(
+    0xFF241C2B,
+  ); // เข้มเกือบดำ (จากตัวอักษร "Calmara" ในภาพ) ดูคลีนกว่าม่วงจัด
+  final Color successColor = const Color(
+    0xFF15803D,
+  ); // เขียว สำหรับสถานะ "พร้อมให้บริการ"
+  final Color dangerColor = const Color(
+    0xFFB91C1C,
+  ); // แดง สำหรับสถานะ "ไม่พร้อมให้บริการ"
 
   String _userName = '';
 
@@ -210,7 +233,7 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        
+
         centerTitle: false,
         actions: [
           if (_userName.isNotEmpty)
@@ -218,7 +241,10 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
               child: Padding(
                 padding: const EdgeInsets.only(right: 4.0),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20),
@@ -329,7 +355,7 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                 children: [
                   // ชื่อหน้า
                   Text(
-                    'ค้นหาบัญชี',
+                    'ขอใช้บริการ',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -356,13 +382,18 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                     child: Row(
                       children: [
                         const SizedBox(width: 14),
-                        Icon(Icons.search_rounded, color: primaryColor, size: 22),
+                        Icon(
+                          Icons.search_rounded,
+                          color: primaryColor,
+                          size: 22,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: TextField(
                             controller: _searchController,
                             decoration: InputDecoration(
-                              hintText: 'ค้นหา ชื่อ-นามสกุล หรือ ที่อยู่ (อำเภอ จังหวัด)',
+                              hintText:
+                                  'ค้นหา ชื่อ-นามสกุล หรือ ที่อยู่ (อำเภอ จังหวัด)',
                               hintStyle: TextStyle(
                                 fontSize: 12.5,
                                 color: Colors.grey.shade400,
@@ -376,7 +407,11 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                           onTap: _openFilterCalendar,
                           child: Padding(
                             padding: const EdgeInsets.only(right: 12),
-                            child: Icon(Icons.tune_rounded, color: Colors.grey.shade500, size: 22),
+                            child: Icon(
+                              Icons.calendar_month,
+                              color: Colors.grey.shade500,
+                              size: 22,
+                            ),
                           ),
                         ),
                       ],
@@ -398,7 +433,10 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                           // TODO: เชื่อมต่อ geolocator
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 9,
+                          ),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [primaryColor, darkPurple],
@@ -417,7 +455,11 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.my_location_rounded, color: Colors.white, size: 16),
+                              Icon(
+                                Icons.my_location_rounded,
+                                color: Colors.white,
+                                size: 16,
+                              ),
                               SizedBox(width: 6),
                               Text(
                                 'ค้นหาบริเวณใกล้ฉัน',
@@ -501,8 +543,10 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                   }).toList();
 
                   filteredList.sort((a, b) {
-                    String statusA = (a['servicestatus']?.toString() ?? '').trim();
-                    String statusB = (b['servicestatus']?.toString() ?? '').trim();
+                    String statusA = (a['servicestatus']?.toString() ?? '')
+                        .trim();
+                    String statusB = (b['servicestatus']?.toString() ?? '')
+                        .trim();
                     bool isAvailableA =
                         (statusA.toLowerCase() == 'online' ||
                         statusA.toLowerCase() == 'on' ||
@@ -511,8 +555,10 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                         (statusB.toLowerCase() == 'online' ||
                         statusB.toLowerCase() == 'on' ||
                         statusB == 'พร้อมให้บริการ');
-                    if (isAvailableA && !isAvailableB) return -1;
-                    else if (!isAvailableA && isAvailableB) return 1;
+                    if (isAvailableA && !isAvailableB)
+                      return -1;
+                    else if (!isAvailableA && isAvailableB)
+                      return 1;
                     return 0;
                   });
 
@@ -549,9 +595,31 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildBottomNavItem(Icons.home_outlined,    'บ้าน',         false, onTap: () {}),
-            _buildBottomNavItem(Icons.support_agent,    'ขอใช้บริการ',  true,  onTap: () {}),
-            _buildBottomNavItem(Icons.notifications_none,'แจ้งเตือน',   false, onTap: () {}),
+            _buildBottomNavItem(
+              Icons.home_outlined,
+              'บ้าน',
+              false,
+              onTap: () {},
+            ),
+            _buildBottomNavItem(
+              Icons.support_agent,
+              'ขอใช้บริการ',
+              true,
+              onTap: () {},
+            ),
+            _buildBottomNavItem(
+              Icons.notifications_none,
+              'แจ้งเตือน',
+              false,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const TrackStatusNotificationPage(),
+                  ),
+                );
+              },
+            ),
             _buildBottomNavItem(
               Icons.person_outline,
               'ญาติ',
@@ -624,18 +692,22 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                         targetUserData['Relative'] as Map,
                       );
                       relative = RelativeModel(
-                        relativeId:   relativeMap['relativeId'] ?? targetRelativeId,
-                        firstname:    relativeMap['firstname']   ?? '',
-                        lastname:     relativeMap['lastname']    ?? '',
-                        phonenumber:  relativeMap['phonenumber'] ?? '',
-                        relationship: relativeMap['relationship']?? '',
-                        email:        relativeMap['email']       ?? '',
+                        relativeId:
+                            relativeMap['relativeId'] ?? targetRelativeId,
+                        firstname: relativeMap['firstname'] ?? '',
+                        lastname: relativeMap['lastname'] ?? '',
+                        phonenumber: relativeMap['phonenumber'] ?? '',
+                        relationship: relativeMap['relationship'] ?? '',
+                        email: relativeMap['email'] ?? '',
                       );
                     } else {
                       relative = RelativeModel(
                         relativeId: targetRelativeId,
-                        firstname: '', lastname: '',
-                        phonenumber: '', relationship: '', email: '',
+                        firstname: '',
+                        lastname: '',
+                        phonenumber: '',
+                        relationship: '',
+                        email: '',
                       );
                     }
 
@@ -645,23 +717,26 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                         relativeMap['Patient'] as Map,
                       );
                       patient = PatientModel(
-                        patientId:    pData['patientId']    ?? '',
+                        patientId: pData['patientId'] ?? '',
                         patientphoto: pData['patientphoto'] ?? '',
-                        firstname:    pData['firstname']    ?? '',
-                        lastname:     pData['lastname']     ?? '',
-                        phonenumber:  pData['phonenumber']  ?? '',
-                        gender:       pData['gender']       ?? '',
-                        birthdate:    pData['birthdate'] != null
+                        firstname: pData['firstname'] ?? '',
+                        lastname: pData['lastname'] ?? '',
+                        phonenumber: pData['phonenumber'] ?? '',
+                        gender: pData['gender'] ?? '',
+                        birthdate: pData['birthdate'] != null
                             ? DateTime.tryParse(pData['birthdate'].toString())
                             : null,
-                        disease:  pData['disease']  ?? '',
+                        disease: pData['disease'] ?? '',
                         mobility: pData['mobility'] ?? '',
                       );
                     } else {
                       patient = PatientModel(
-                        patientId: '', patientphoto: '',
-                        firstname: '', lastname: '',
-                        phonenumber: '', gender: '',
+                        patientId: '',
+                        patientphoto: '',
+                        firstname: '',
+                        lastname: '',
+                        phonenumber: '',
+                        gender: '',
                       );
                     }
 
@@ -670,9 +745,9 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => EditRelativeInfoPage(
-                            currentPatient:  patient,
+                            currentPatient: patient,
                             currentRelative: relative,
-                            loggedUid:       targetRelativeId,
+                            loggedUid: targetRelativeId,
                           ),
                         ),
                       );
@@ -710,30 +785,34 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
   Widget _buildCaretakerCard(Map<String, dynamic> data, String docId) {
     // ── ข้อมูลพื้นฐาน ──────────────────────────────────────────────────────
     String firstname = data['firstname'] ?? 'ไม่ระบุ';
-    String lastname  = data['lastname']  ?? '';
-    String fullName  = '$firstname $lastname'.trim();
-    String location  = data['address']  ?? 'ไม่ระบุ';
-    String gender    = data['gender']   ?? 'ไม่ระบุ';
+    String lastname = data['lastname'] ?? '';
+    String fullName = '$firstname $lastname'.trim();
+    String location = data['address'] ?? 'ไม่ระบุ';
+    String gender = data['gender'] ?? 'ไม่ระบุ';
 
     String carDetail = 'ไม่ระบุ';
     if (data['vehicle'] != null) {
-      final v      = Map<String, dynamic>.from(data['vehicle'] as Map);
+      final v = Map<String, dynamic>.from(data['vehicle'] as Map);
       String brand = v['brand'] ?? '';
       String model = v['model'] ?? '';
-      carDetail    = '$brand $model'.trim();
+      carDetail = '$brand $model'.trim();
       if (carDetail.isEmpty) carDetail = 'ไม่ระบุ';
     }
 
     // ── สถานะ ───────────────────────────────────────────────────────────────
-    String rawStatus    = (data['servicestatus']?.toString() ?? 'ไม่พร้อมให้บริการ').trim();
-    bool   isAvailable  = rawStatus.toLowerCase() == 'online' ||
-                          rawStatus.toLowerCase() == 'on'     ||
-                          rawStatus == 'พร้อมให้บริการ';
+    String rawStatus =
+        (data['servicestatus']?.toString() ?? 'ไม่พร้อมให้บริการ').trim();
+    bool isAvailable =
+        rawStatus.toLowerCase() == 'online' ||
+        rawStatus.toLowerCase() == 'on' ||
+        rawStatus == 'พร้อมให้บริการ';
     String displayStatus = isAvailable ? 'พร้อมให้บริการ' : 'ไม่พร้อมให้บริการ';
 
     // ── คะแนน ───────────────────────────────────────────────────────────────
-    double rating   = data['rating'] != null ? (data['rating'] as num).toDouble() : 0.0;
-    int    comments = data['comments'] ?? 0;
+    double rating = data['rating'] != null
+        ? (data['rating'] as num).toDouble()
+        : 0.0;
+    int comments = data['comments'] ?? 0;
 
     return Container(
       width: double.infinity,
@@ -759,15 +838,20 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
             CircleAvatar(
               radius: 30,
               backgroundColor: lightPurple,
-              backgroundImage: data['profilephoto'] != null &&
+              backgroundImage:
+                  data['profilephoto'] != null &&
                       data['profilephoto'].toString().isNotEmpty
                   ? MemoryImage(
                       base64Decode(
-                        data['profilephoto'].toString().replaceAll('\n', '').trim(),
+                        data['profilephoto']
+                            .toString()
+                            .replaceAll('\n', '')
+                            .trim(),
                       ),
                     )
                   : null,
-              child: data['profilephoto'] == null ||
+              child:
+                  data['profilephoto'] == null ||
                       data['profilephoto'].toString().isEmpty
                   ? Icon(Icons.person, size: 28, color: primaryColor)
                   : null,
@@ -796,7 +880,10 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                       ),
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: isAvailable
                               ? successColor.withOpacity(0.12)
@@ -854,7 +941,9 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                         }),
                       ),
                       Text(
-                        comments == 0 ? '  ยังไม่มีรีวิว' : '  $comments คอมเมนต์',
+                        comments == 0
+                            ? '  ยังไม่มีรีวิว'
+                            : '  $comments คอมเมนต์',
                         style: const TextStyle(
                           fontSize: 11,
                           color: Colors.black45,
@@ -873,7 +962,10 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                       Expanded(
                         child: Text(
                           'พื้นที่ให้บริการ: $location',
-                          style: const TextStyle(fontSize: 12, color: Colors.black54),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black54,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -890,7 +982,10 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                       Expanded(
                         child: Text(
                           'ยี่ห้อรถ: $carDetail',
-                          style: const TextStyle(fontSize: 12, color: Colors.black54),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black54,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -915,8 +1010,9 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
                             MaterialPageRoute(
                               builder: (context) => CaretakerProfilePage(
                                 caretakerId: data['id'],
-                                loggedUid:   widget.loggedUid ??
-                                             FirebaseAuth.instance.currentUser?.uid,
+                                loggedUid:
+                                    widget.loggedUid ??
+                                    FirebaseAuth.instance.currentUser?.uid,
                               ),
                             ),
                           );

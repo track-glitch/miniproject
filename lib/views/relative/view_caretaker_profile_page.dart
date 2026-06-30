@@ -27,7 +27,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   Map<String, dynamic>? vehicleData;
   bool isLoading = true;
   final Color primaryColor = const Color(0xFF9B59B6);
-  final Color bgColor = const Color.fromARGB(255, 183, 157, 255); // ม่วงพาสเทลอ่อน
+  final Color bgColor = const Color.fromARGB(255, 225, 202, 255); // ม่วงพาสเทลอ่อน
   final Color cardColor = Colors.white;
   final Color borderColor = const Color(0xFFDDD0F0); // ขอบม่วงอ่อน สบายตา
   final Color accentPurple = const Color(0xFFB388FF); // ม่วงสด accent
@@ -475,7 +475,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
           Text(
             '${caretakerData?['caretakerId'] ?? '1520201258787'}',
             style: const TextStyle(
-              color: Color(0xFF9E9E9E),
+              color: Color.fromARGB(255, 85, 85, 85),
               fontSize: 13,
               fontWeight: FontWeight.normal,
               letterSpacing: 0.5,

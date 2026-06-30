@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:flutter_map/flutter_map.dart'; 
 import 'package:latlong2/latlong.dart'; 
-import 'package:geolocator/geolocator.dart'; 
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:miniproject/views/login_page.dart';
+import 'package:miniproject/widgets/location_picker_widget.dart';
+
 
 class ServiceRequestPage extends StatefulWidget {
   final Map<String, dynamic> caretakerData;
@@ -26,7 +25,11 @@ class ServiceRequestPage extends StatefulWidget {
 
 class _ServiceRequestPageState extends State<ServiceRequestPage> {
   final Color primaryColor = const Color(0xFF9B59B6);
-  final Color bgColor = const Color(0xFFF3E5F5);
+  final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
+  final Color cardColor = Colors.white;
+  final Color borderColor = const Color(0xFFDDD0F0); 
+  final Color accentPurple = const Color(0xFFB388FF); 
+  final Color labelColor = const Color(0xFF7E57C2); 
 
   final _formKey = GlobalKey<FormState>();
 
@@ -39,8 +42,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   final TextEditingController _departmentController = TextEditingController();
 
   int _locationOption = 1; // 1 = ที่อยู่ปัจจุบัน, 2 = ระบุสถานที่รับ
-  bool _isLoadingMap = false;
-
+  
   // สำหรับแผนที่
   LatLng _selectedLocation = const LatLng(13.7563, 100.5018);
   bool _hasPinned = false;
@@ -48,124 +50,6 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   @override
   void initState() {
     super.initState();
-  }
-
-  // --- ระบบแผนที่ ---
-  Future<bool> _requestLocationPermission() async {
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-    return permission == LocationPermission.whileInUse || permission == LocationPermission.always;
-  }
-
-  Future<LatLng?> _getCurrentLocation() async {
-    try {
-      bool hasPermission = await _requestLocationPermission();
-      if (!hasPermission) return null;
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      return LatLng(position.latitude, position.longitude);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Future<void> _getAddressFromLatLng(LatLng location) async {
-    final url = Uri.parse(
-      'https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.latitude}&lon=${location.longitude}&accept-language=th',
-    );
-    try {
-      final response = await http.get(url, headers: {'User-Agent': 'CaretakerAppFlutter'});
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final address = data['address'];
-        if (address != null) {
-          String subdistrict = address['subdistrict'] ?? address['village'] ?? address['suburb'] ?? '';
-          String district = address['district'] ?? address['city_district'] ?? '';
-          String province = address['state'] ?? address['province'] ?? '';
-          setState(() {
-            _selectedLocation = location;
-            _hasPinned = true;
-            _locationOption = 2;
-            _customLocationController.text = "$subdistrict $district $province";
-          });
-        }
-      }
-    } catch (e) {
-      print("Error: $e");
-    }
-  }
-
-  void _showMapModal() async {
-    setState(() => _isLoadingMap = true);
-    LatLng? currentLocation = await _getCurrentLocation();
-    setState(() => _isLoadingMap = false);
-
-    LatLng initialLocation = currentLocation ?? _selectedLocation;
-    if (!mounted) return;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        LatLng tempLocation = initialLocation;
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.75,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  const Text('คลิกบนแผนที่เพื่อย้ายตำแหน่งหมุด', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: FlutterMap(
-                        options: MapOptions(
-                          initialCenter: tempLocation,
-                          initialZoom: 16.5,
-                          onTap: (tapPosition, point) => setModalState(() => tempLocation = point),
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.example.miniproject',
-                          ),
-                          MarkerLayer(
-                            markers: [
-                              Marker(
-                                point: tempLocation,
-                                width: 40,
-                                height: 40,
-                                child: const Icon(Icons.location_on, color: Colors.red, size: 40),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 45,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _getAddressFromLatLng(tempLocation);
-                      },
-                      child: const Text('ยืนยันตำแหน่งนี้', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -201,38 +85,60 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: primaryColor,
-        elevation: 0,
+        elevation: 2,
+        shadowColor: const Color(0xFF7B1FA2).withOpacity(0.3),
         centerTitle: true,
-        title: const Text('ส่งคำขอบริการ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
+        title: const Text(
+          'ส่งคำขอบริการ',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            letterSpacing: 0.5,
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: borderColor, width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF9B59B6).withOpacity(0.07),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // วันที่นัด
-                const Text('วันที่นัดหมาย', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                Text('วันที่นัดหมาย', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: labelColor)),
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () => _selectDate(context),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade400),
-                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: borderColor, width: 1.5),
+                      borderRadius: BorderRadius.circular(12),
                       color: Colors.white,
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(_formatThaiDate(_selectedDate), style: const TextStyle(fontSize: 14)),
-                        const Icon(Icons.calendar_today, color: Colors.black87),
+                        Icon(Icons.calendar_today, color: primaryColor),
                       ],
                     ),
                   ),
@@ -242,7 +148,11 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                 // การ์ดผู้ดูแล
                 Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade400)),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: borderColor, width: 1.5),
+                    color: bgColor.withOpacity(0.25),
+                  ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -289,7 +199,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                 ),
                 const SizedBox(height: 20),
 
-                const Text('ระบุรายละเอียดคำขอ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                Text('ระบุรายละเอียดคำขอ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: labelColor)),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _detailController,
@@ -299,14 +209,18 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                 ),
                 const SizedBox(height: 16),
 
-                const Text('ระบุสถานที่จุดรับ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                Text('ระบุสถานที่จุดรับ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: labelColor)),
                 RadioListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('ใช้ที่อยู่ปัจจุบันตามที่ระบุในโปรไฟล์', style: TextStyle(fontSize: 13)),
                   value: 1,
                   groupValue: _locationOption,
                   activeColor: primaryColor,
-                  onChanged: (val) => setState(() => _locationOption = val as int),
+                  onChanged: (val) => setState(() {
+                    _locationOption = val as int;
+                    // ล้างค่าที่อยู่ค้นหาเก่าเผื่อเปลี่ยนใจ
+                    FocusScope.of(context).unfocus(); 
+                  }),
                 ),
                 RadioListTile(
                   contentPadding: EdgeInsets.zero,
@@ -317,40 +231,38 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                   onChanged: (val) => setState(() => _locationOption = val as int),
                 ),
                 
-                TextFormField(
-                  controller: _customLocationController,
-                  enabled: _locationOption == 2,
-                  decoration: _inputDecoration('บ้านเลขที่ ถนน ตำบล อำเภอ').copyWith(
-                    fillColor: _locationOption == 1 ? Colors.grey.shade100 : Colors.white,
-                  ),
-                  validator: (value) => _locationOption == 2 && value!.isEmpty ? 'กรุณาระบุสถานที่จุดรับ' : null,
-                ),
-                
-                const SizedBox(height: 16),
-                const Text('ปักหมุดบนแผนที่', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: 8),
-                
-                InkWell(
-                  onTap: _showMapModal,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                // 🌟 ลบ TextFormField (บ้านเลขที่ ถนน ตำบล) ออกไปแล้ว 
+                // 🌟 และใช้ if ควบคุมให้โชว์ LocationPickerWidget เฉพาะเมื่อกดสถานที่จุดรับ
+                if (_locationOption == 2)
+                  Container(
+                    margin: const EdgeInsets.only(top: 8, bottom: 16),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      border: Border.all(color: Colors.grey.shade400),
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(_hasPinned ? 'แก้ไขจุดส่งบนแผนที่' : 'เลือกจุดส่งบนแผนที่', style: const TextStyle(color: Colors.black87, fontSize: 14)),
-                        const Icon(Icons.map_outlined, color: Colors.green, size: 28),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: accentPurple, width: 2), // เพิ่มสีขอบให้เด่นขึ้น
+                      boxShadow: [
+                        BoxShadow(
+                          color: accentPurple.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
                       ],
                     ),
+                    child: LocationPickerWidget(
+                      initialLocation: _selectedLocation,
+                      initialAddress: _customLocationController.text,
+                      onLocationChanged: (newLocation, newAddress) {
+                        setState(() {
+                          _selectedLocation = newLocation;
+                          _customLocationController.text = newAddress;
+                          _hasPinned = true;
+                        });
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
 
-                const Text('ระบุโรงพยาบาล', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                Text('ระบุโรงพยาบาล', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: labelColor)),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _hospitalController,
@@ -359,7 +271,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                 ),
                 const SizedBox(height: 16),
 
-                const Text('ระบุแผนกในโรงพยาบาล', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                Text('ระบุแผนกในโรงพยาบาล', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: labelColor)),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _departmentController,
@@ -368,18 +280,18 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                 ),
                 const SizedBox(height: 16),
 
-                const Text('ระบุเวลานัดหมาย', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                Text('ระบุเวลานัดหมาย', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: labelColor)),
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () => _selectTime(context),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade400), borderRadius: BorderRadius.circular(8), color: Colors.white),
+                    decoration: BoxDecoration(border: Border.all(color: borderColor, width: 1.5), borderRadius: BorderRadius.circular(12), color: Colors.white),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(_selectedTime == null ? '--:-- --' : _selectedTime!.format(context), style: TextStyle(color: _selectedTime == null ? Colors.grey : Colors.black, fontSize: 14)),
-                        const Icon(Icons.access_time, color: Colors.black87),
+                        Icon(Icons.access_time, color: primaryColor),
                       ],
                     ),
                   ),
@@ -390,8 +302,22 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                   children: [
                     Expanded(
                       child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: primaryColor, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          elevation: 4,
+                          shadowColor: const Color(0xFF9B59B6).withOpacity(0.4),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
                         onPressed: () async {
+                          // 🌟 เพิ่ม Validation ให้กับสถานที่จุดรับ ในกรณีที่ไม่ได้กรอกเข้ามา
+                          if (_locationOption == 2 && _customLocationController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("กรุณาค้นหาสถานที่หรือปักหมุดจุดรับ"), backgroundColor: Colors.red)
+                            );
+                            return; // หยุดการทำงานถ้าไม่ได้กรอกสถานที่จุดรับ
+                          }
+
                           if (_formKey.currentState!.validate() && _selectedTime != null) {
                             String uid = widget.loggedUid ?? FirebaseAuth.instance.currentUser!.uid;
                             DatabaseReference requestRef = FirebaseDatabase.instance.ref().child("Login").child(uid).child("Relative").child("Request").push();
@@ -411,6 +337,8 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                               "appointmenttime": appointmentDateTime.toIso8601String(),
                               "requestdate": DateTime.now().toIso8601String(),
                               "requeststatus": "Pending",
+                              "latitude": _locationOption == 2 && _hasPinned ? _selectedLocation.latitude : 0.0, 
+                              "longitude": _locationOption == 2 && _hasPinned ? _selectedLocation.longitude : 0.0,
                             });
 
                             if (!mounted) return;
@@ -426,7 +354,11 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.grey, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
                         onPressed: () => Navigator.pop(context),
                         child: const Text('ยกเลิก', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                       ),
@@ -461,9 +393,9 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
       hintText: hint,
       hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade400)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade400)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: primaryColor, width: 1.5)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor, width: 1.5)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor, width: 1.5)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor, width: 1.5)),
       filled: true,
       fillColor: Colors.white,
     );
