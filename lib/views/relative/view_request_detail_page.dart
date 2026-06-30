@@ -8,11 +8,13 @@ import 'package:miniproject/models/relative_model.dart';
 import 'package:miniproject/views/relative/edit_relative_info_page.dart';
 import 'package:miniproject/views/login_page.dart';
 import 'package:miniproject/views/relative/track_status_notification_page.dart';
+import 'package:miniproject/views/relative/view_doctor_advice_page.dart';
 
 /// หน้ารายละเอียดคำขอ (View Request Detail Page)
 /// ออกแบบตามภาพตัวอย่าง - ใช้ข้อมูลสมมุติ (Mock Data)
 class ViewRequestDetailPage extends StatefulWidget {
-  final String? loggedUid; // เพิ่มเพื่อรับค่าผู้ใช้ที่ล็อกอินสำหรับแถบเมนูด้านล่าง
+  final String?
+  loggedUid; // เพิ่มเพื่อรับค่าผู้ใช้ที่ล็อกอินสำหรับแถบเมนูด้านล่าง
 
   const ViewRequestDetailPage({super.key, this.loggedUid});
 
@@ -21,10 +23,21 @@ class ViewRequestDetailPage extends StatefulWidget {
 }
 
 class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
-  static const Color primaryPurple = Color(0xFF8B3FA8);
-  static const Color darkPurple = Color(0xFF6B2C87);
-  static const Color lightPink = Color(0xFFFCE4EC);
-  static const Color bgGray = Color(0xFFF5F5F7);
+  // ── 🎨 ปรับให้เป็นโทนสีเดียวกับหน้า search_caretaker_profile_page ──
+  static const Color primaryPurple = Color(0xFF8763E6); // ม่วงหลัก
+  static const Color darkPurple = Color.fromARGB(
+    255,
+    153,
+    116,
+    255,
+  ); // ม่วงเข้ม
+  static const Color lightPink = Color(0xFFECE2FE); // ม่วงอ่อนมาก (แทนชมพูเดิม)
+  static const Color bgGray = Color.fromARGB(
+    255,
+    225,
+    202,
+    255,
+  ); // พื้นหลังม่วงอ่อน
 
   // สีสำหรับเมนูด้านล่างและ Dialog ให้เหมือนหน้า Search
   final Color bottomNavPurple = const Color.fromARGB(255, 153, 116, 255);
@@ -36,7 +49,9 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       context: context,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
             decoration: BoxDecoration(
@@ -47,11 +62,19 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.lock_person_outlined, size: 75, color: bottomNavPurple),
+                Icon(
+                  Icons.lock_person_outlined,
+                  size: 75,
+                  color: bottomNavPurple,
+                ),
                 const SizedBox(height: 20),
                 Text(
                   'กรุณาเข้าสู่ระบบก่อนใช้งาน',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: bottomNavPurple),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: bottomNavPurple,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 const Text(
@@ -66,18 +89,26 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: searchPrimaryColor,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(23)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(23),
+                      ),
                     ),
                     onPressed: () {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const LoginPage()),
+                        MaterialPageRoute(
+                          builder: (context) => const LoginPage(),
+                        ),
                       );
                     },
                     child: const Text(
                       'ไปหน้าเข้าสู่ระบบ',
-                      style: TextStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -177,7 +208,11 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => TrackStatusNotificationPage(loggedUid: widget.loggedUid)),
+                    MaterialPageRoute(
+                      builder: (context) => TrackStatusNotificationPage(
+                        loggedUid: widget.loggedUid,
+                      ),
+                    ),
                   );
                 },
               ),
@@ -186,7 +221,10 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                 'ญาติ',
                 false,
                 onTap: () async {
-                  String currentUid = widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+                  String currentUid =
+                      widget.loggedUid ??
+                      FirebaseAuth.instance.currentUser?.uid ??
+                      '';
 
                   if (currentUid.isEmpty) {
                     _showLoginRequiredDialog();
@@ -196,11 +234,14 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                   showDialog(
                     context: context,
                     barrierDismissible: false,
-                    builder: (context) => const Center(child: CircularProgressIndicator()),
+                    builder: (context) =>
+                        const Center(child: CircularProgressIndicator()),
                   );
 
                   try {
-                    final snapshot = await FirebaseDatabase.instance.ref('Login').get();
+                    final snapshot = await FirebaseDatabase.instance
+                        .ref('Login')
+                        .get();
                     if (context.mounted) Navigator.pop(context);
 
                     String targetRelativeId = '';
@@ -208,12 +249,16 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                     bool isFound = false;
 
                     if (snapshot.exists && snapshot.value is Map) {
-                      final allUsers = Map<String, dynamic>.from(snapshot.value as Map);
+                      final allUsers = Map<String, dynamic>.from(
+                        snapshot.value as Map,
+                      );
 
                       for (var key in allUsers.keys) {
                         if (key == currentUid) {
                           targetRelativeId = key;
-                          targetUserData = Map<String, dynamic>.from(allUsers[key] as Map);
+                          targetUserData = Map<String, dynamic>.from(
+                            allUsers[key] as Map,
+                          );
                           isFound = true;
                           break;
                         }
@@ -221,9 +266,13 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                         var childData = allUsers[key];
                         if (childData is Map) {
                           var relNode = childData['Relative'];
-                          if (childData['uid'] == currentUid || (relNode is Map && relNode['relativeId'] == currentUid)) {
+                          if (childData['uid'] == currentUid ||
+                              (relNode is Map &&
+                                  relNode['relativeId'] == currentUid)) {
                             targetRelativeId = key;
-                            targetUserData = Map<String, dynamic>.from(childData);
+                            targetUserData = Map<String, dynamic>.from(
+                              childData,
+                            );
                             isFound = true;
                             break;
                           }
@@ -236,9 +285,12 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                       Map<String, dynamic> relativeMap = {};
 
                       if (targetUserData.containsKey('Relative')) {
-                        relativeMap = Map<String, dynamic>.from(targetUserData['Relative'] as Map);
+                        relativeMap = Map<String, dynamic>.from(
+                          targetUserData['Relative'] as Map,
+                        );
                         relative = RelativeModel(
-                          relativeId: relativeMap['relativeId'] ?? targetRelativeId,
+                          relativeId:
+                              relativeMap['relativeId'] ?? targetRelativeId,
                           firstname: relativeMap['firstname'] ?? '',
                           lastname: relativeMap['lastname'] ?? '',
                           phonenumber: relativeMap['phonenumber'] ?? '',
@@ -247,13 +299,20 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                         );
                       } else {
                         relative = RelativeModel(
-                          relativeId: targetRelativeId, firstname: '', lastname: '', phonenumber: '', relationship: '', email: '',
+                          relativeId: targetRelativeId,
+                          firstname: '',
+                          lastname: '',
+                          phonenumber: '',
+                          relationship: '',
+                          email: '',
                         );
                       }
 
                       PatientModel patient;
                       if (relativeMap.containsKey('Patient')) {
-                        final pData = Map<String, dynamic>.from(relativeMap['Patient'] as Map);
+                        final pData = Map<String, dynamic>.from(
+                          relativeMap['Patient'] as Map,
+                        );
                         patient = PatientModel(
                           patientId: pData['patientId'] ?? '',
                           patientphoto: pData['patientphoto'] ?? '',
@@ -261,13 +320,20 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                           lastname: pData['lastname'] ?? '',
                           phonenumber: pData['phonenumber'] ?? '',
                           gender: pData['gender'] ?? '',
-                          birthdate: pData['birthdate'] != null ? DateTime.tryParse(pData['birthdate'].toString()) : null,
+                          birthdate: pData['birthdate'] != null
+                              ? DateTime.tryParse(pData['birthdate'].toString())
+                              : null,
                           disease: pData['disease'] ?? '',
                           mobility: pData['mobility'] ?? '',
                         );
                       } else {
                         patient = PatientModel(
-                          patientId: '', patientphoto: '', firstname: '', lastname: '', phonenumber: '', gender: '',
+                          patientId: '',
+                          patientphoto: '',
+                          firstname: '',
+                          lastname: '',
+                          phonenumber: '',
+                          gender: '',
                         );
                       }
 
@@ -286,7 +352,11 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                     } else {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('ไม่พบข้อมูลประวัติ (กรุณาลองเข้าสู่ระบบใหม่อีกครั้ง)')),
+                          const SnackBar(
+                            content: Text(
+                              'ไม่พบข้อมูลประวัติ (กรุณาลองเข้าสู่ระบบใหม่อีกครั้ง)',
+                            ),
+                          ),
                         );
                       }
                     }
@@ -294,7 +364,10 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                     if (context.mounted) {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('เกิดข้อผิดพลาด: $e'), backgroundColor: Colors.red),
+                        SnackBar(
+                          content: Text('เกิดข้อผิดพลาด: $e'),
+                          backgroundColor: Colors.red,
+                        ),
                       );
                     }
                   }
@@ -345,13 +418,20 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
 
   // ---------------- Section title ----------------
   Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-        color: darkPurple,
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: darkPurple,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(width: double.infinity, height: 1, color: lightPink),
+      ],
     );
   }
 
@@ -392,7 +472,10 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE6F4EA),
                   borderRadius: BorderRadius.circular(20),
@@ -456,7 +539,10 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                   children: const [
                     Text(
                       'นาง สมใจ รักดี',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                   ],
                 ),
@@ -469,14 +555,20 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFFF3E0),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Text(
                         'เดินไปได้',
-                        style: TextStyle(color: Color(0xFFE65100), fontSize: 11),
+                        style: TextStyle(
+                          color: Color(0xFFE65100),
+                          fontSize: 11,
+                        ),
                       ),
                     ),
                   ],
@@ -486,7 +578,10 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                   children: const [
                     Icon(Icons.favorite, color: Colors.red, size: 14),
                     SizedBox(width: 4),
-                    Text('โรคหัวใจ', style: TextStyle(fontSize: 12, color: Colors.black87)),
+                    Text(
+                      'โรคหัวใจ',
+                      style: TextStyle(fontSize: 12, color: Colors.black87),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -494,7 +589,10 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                   children: const [
                     Icon(Icons.phone, color: Colors.grey, size: 14),
                     SizedBox(width: 4),
-                    Text('เบอร์ผู้ป่วย  062-345-6789', style: TextStyle(fontSize: 12, color: Colors.black87)),
+                    Text(
+                      'เบอร์ผู้ป่วย  062-345-6789',
+                      style: TextStyle(fontSize: 12, color: Colors.black87),
+                    ),
                   ],
                 ),
               ],
@@ -539,7 +637,10 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
             children: const [
               Icon(Icons.phone, color: Colors.grey, size: 14),
               SizedBox(width: 4),
-              Text('เบอร์โทร  081-234-5678', style: TextStyle(fontSize: 12, color: Colors.black87)),
+              Text(
+                'เบอร์โทร  081-234-5678',
+                style: TextStyle(fontSize: 12, color: Colors.black87),
+              ),
             ],
           ),
           const SizedBox(height: 4),
@@ -547,7 +648,10 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
             children: const [
               Icon(Icons.chat_bubble_outline, color: Colors.grey, size: 14),
               SizedBox(width: 4),
-              Text('LINE ID  somsak_rd', style: TextStyle(fontSize: 12, color: Colors.black87)),
+              Text(
+                'LINE ID  somsak_rd',
+                style: TextStyle(fontSize: 12, color: Colors.black87),
+              ),
             ],
           ),
         ],
@@ -569,7 +673,11 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
               color: lightPink,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.calendar_today, color: primaryPurple, size: 18),
+            child: const Icon(
+              Icons.calendar_today,
+              color: primaryPurple,
+              size: 18,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -619,20 +727,24 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                 height: 160,
                 width: double.infinity,
                 color: const Color(0xFFEFEFEF),
-                child: CustomPaint(
-                  painter: _MapPlaceholderPainter(),
-                ),
+                child: CustomPaint(painter: _MapPlaceholderPainter()),
               ),
               Positioned(
                 top: 10,
                 right: 10,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4),
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                      ),
                     ],
                   ),
                   child: const Text(
@@ -684,14 +796,15 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
         Container(
           width: 22,
           height: 22,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           alignment: Alignment.center,
           child: Text(
             letter,
-            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         const SizedBox(width: 10),
@@ -699,10 +812,16 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
+              ),
               Text(
                 title,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               if (subtitle != null)
                 Padding(
@@ -758,9 +877,16 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   Widget _buildSummaryLink() {
     return Center(
       child: TextButton(
-        onPressed: () {},
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ViewDoctorAdvicePage(),
+            ),
+          );
+        },
         child: const Text(
-          'รายงานผู้แล',
+          'รายงานผู้ดูแล',
           style: TextStyle(
             color: primaryPurple,
             decoration: TextDecoration.underline,
@@ -772,7 +898,12 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   }
 
   // Widget สร้างปุ่มด้านล่างเหมือนหน้า Search
-  Widget _buildBottomNavItem(IconData icon, String label, bool isActive, {VoidCallback? onTap}) {
+  Widget _buildBottomNavItem(
+    IconData icon,
+    String label,
+    bool isActive, {
+    VoidCallback? onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -821,11 +952,20 @@ class _MapPlaceholderPainter extends CustomPainter {
     );
     canvas.drawPath(path, linePaint);
 
-    final pointPaintA = Paint()..color = _ViewRequestDetailPageState.primaryPurple;
+    final pointPaintA = Paint()
+      ..color = _ViewRequestDetailPageState.primaryPurple;
     final pointPaintB = Paint()..color = Colors.green;
 
-    canvas.drawCircle(Offset(size.width * 0.25, size.height * 0.75), 6, pointPaintA);
-    canvas.drawCircle(Offset(size.width * 0.8, size.height * 0.25), 6, pointPaintB);
+    canvas.drawCircle(
+      Offset(size.width * 0.25, size.height * 0.75),
+      6,
+      pointPaintA,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.8, size.height * 0.25),
+      6,
+      pointPaintB,
+    );
 
     final roadPaint = Paint()
       ..color = Colors.grey.withOpacity(0.3)
