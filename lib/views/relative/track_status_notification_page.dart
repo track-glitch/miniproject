@@ -1,10 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+// --- เปลี่ยน Path ให้ตรงกับโครงสร้างโฟลเดอร์ในโปรเจกต์ของคุณ ---
+import 'package:miniproject/models/patient_model.dart';
+import 'package:miniproject/models/relative_model.dart';
+import 'package:miniproject/views/relative/edit_relative_info_page.dart';
+import 'package:miniproject/views/login_page.dart';
 
 /// หน้าจอ "สถานะการแจ้งเตือน" (Track Status Notification Page)
-/// ใช้ข้อมูลสมมุติ (mock data) ตามดีไซน์ที่ให้มา
-class TrackStatusNotificationPage extends StatelessWidget {
-  const TrackStatusNotificationPage({super.key});
+class TrackStatusNotificationPage extends StatefulWidget {
+  final String? loggedUid; // เพิ่มเพื่อรับค่าผู้ใช้ที่ล็อกอินสำหรับแถบเมนูด้านล่าง
 
+  const TrackStatusNotificationPage({super.key, this.loggedUid});
+
+  @override
+  State<TrackStatusNotificationPage> createState() => _TrackStatusNotificationPageState();
+}
+
+class _TrackStatusNotificationPageState extends State<TrackStatusNotificationPage> {
   // ---------- Mock Data ----------
   final List<_NotificationItem> _items = const [
     _NotificationItem(
@@ -38,6 +52,69 @@ class TrackStatusNotificationPage extends StatelessWidget {
   static const Color cardBg = Colors.white;
   static const Color redAccent = Color(0xFFE53935);
 
+  // สีสำหรับเมนูด้านล่างและ Dialog ให้เหมือนหน้า Search
+  final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
+  final Color searchPrimaryColor = const Color(0xFF8763E6);
+
+  // ฟังก์ชันแจ้งเตือนให้เข้าสู่ระบบ (ยกมาจากหน้า Search)
+  void _showLoginRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: searchPrimaryColor, width: 1.5),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.lock_person_outlined, size: 75, color: darkPurple),
+                const SizedBox(height: 20),
+                Text(
+                  'กรุณาเข้าสู่ระบบก่อนใช้งาน',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: darkPurple),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'คุณต้องลงชื่อเข้าใช้งานในระบบก่อน จึงจะสามารถแก้ไขข้อมูลได้',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.black),
+                ),
+                const SizedBox(height: 25),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: searchPrimaryColor,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(23)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const LoginPage()),
+                      );
+                    },
+                    child: const Text(
+                      'ไปหน้าเข้าสู่ระบบ',
+                      style: TextStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -45,7 +122,11 @@ class TrackStatusNotificationPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: primaryPurple,
         elevation: 0,
-        leading: const Icon(Icons.arrow_back, color: Colors.white),
+        // ✅ เปลี่ยนปุ่มย้อนกลับให้เหมือนหน้า Search และกดได้
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
           'สถานะการแจ้งเตือน',
           style: TextStyle(
@@ -66,7 +147,185 @@ class TrackStatusNotificationPage extends StatelessWidget {
           ],
         ],
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      // ✅ นำ BottomNavigationBar รูปแบบหน้า Search มาใช้
+      bottomNavigationBar: Container(
+        height: 65,
+        decoration: BoxDecoration(
+          color: darkPurple,
+          boxShadow: [
+            BoxShadow(
+              color: darkPurple.withOpacity(0.27),
+              blurRadius: 12,
+              offset: const Offset(0, -3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildBottomNavItem(
+              Icons.home_outlined,
+              'บ้าน',
+              false,
+              onTap: () {},
+            ),
+            _buildBottomNavItem(
+              Icons.support_agent,
+              'ขอใช้บริการ',
+              false,
+              onTap: () {},
+            ),
+            _buildBottomNavItem(
+              Icons.notifications_none,
+              'แจ้งเตือน',
+              true, // ✅ ให้หน้าต่างนี้เป็นหน้าต่าง Active
+              onTap: () {},
+            ),
+            _buildBottomNavItem(
+              Icons.person_outline,
+              'ญาติ',
+              false,
+              onTap: () async {
+                String currentUid = widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+
+                if (currentUid.isEmpty) {
+                  _showLoginRequiredDialog();
+                  return;
+                }
+
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const Center(child: CircularProgressIndicator()),
+                );
+
+                try {
+                  final snapshot = await FirebaseDatabase.instance.ref('Login').get();
+                  if (context.mounted) Navigator.pop(context);
+
+                  String targetRelativeId = '';
+                  Map<String, dynamic> targetUserData = {};
+                  bool isFound = false;
+
+                  if (snapshot.exists && snapshot.value is Map) {
+                    final allUsers = Map<String, dynamic>.from(snapshot.value as Map);
+
+                    for (var key in allUsers.keys) {
+                      if (key == currentUid) {
+                        targetRelativeId = key;
+                        targetUserData = Map<String, dynamic>.from(allUsers[key] as Map);
+                        isFound = true;
+                        break;
+                      }
+
+                      var childData = allUsers[key];
+                      if (childData is Map) {
+                        var relNode = childData['Relative'];
+                        if (childData['uid'] == currentUid || (relNode is Map && relNode['relativeId'] == currentUid)) {
+                          targetRelativeId = key;
+                          targetUserData = Map<String, dynamic>.from(childData);
+                          isFound = true;
+                          break;
+                        }
+                      }
+                    }
+                  }
+
+                  if (isFound && targetRelativeId.isNotEmpty) {
+                    RelativeModel relative;
+                    Map<String, dynamic> relativeMap = {};
+
+                    if (targetUserData.containsKey('Relative')) {
+                      relativeMap = Map<String, dynamic>.from(targetUserData['Relative'] as Map);
+                      relative = RelativeModel(
+                        relativeId: relativeMap['relativeId'] ?? targetRelativeId,
+                        firstname: relativeMap['firstname'] ?? '',
+                        lastname: relativeMap['lastname'] ?? '',
+                        phonenumber: relativeMap['phonenumber'] ?? '',
+                        relationship: relativeMap['relationship'] ?? '',
+                        email: relativeMap['email'] ?? '',
+                      );
+                    } else {
+                      relative = RelativeModel(
+                        relativeId: targetRelativeId, firstname: '', lastname: '', phonenumber: '', relationship: '', email: '',
+                      );
+                    }
+
+                    PatientModel patient;
+                    if (relativeMap.containsKey('Patient')) {
+                      final pData = Map<String, dynamic>.from(relativeMap['Patient'] as Map);
+                      patient = PatientModel(
+                        patientId: pData['patientId'] ?? '',
+                        patientphoto: pData['patientphoto'] ?? '',
+                        firstname: pData['firstname'] ?? '',
+                        lastname: pData['lastname'] ?? '',
+                        phonenumber: pData['phonenumber'] ?? '',
+                        gender: pData['gender'] ?? '',
+                        birthdate: pData['birthdate'] != null ? DateTime.tryParse(pData['birthdate'].toString()) : null,
+                        disease: pData['disease'] ?? '',
+                        mobility: pData['mobility'] ?? '',
+                      );
+                    } else {
+                      patient = PatientModel(
+                        patientId: '', patientphoto: '', firstname: '', lastname: '', phonenumber: '', gender: '',
+                      );
+                    }
+
+                    if (context.mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => EditRelativeInfoPage(
+                            currentPatient: patient,
+                            currentRelative: relative,
+                            loggedUid: targetRelativeId,
+                          ),
+                        ),
+                      );
+                    }
+                  } else {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('ไม่พบข้อมูลประวัติ (กรุณาลองเข้าสู่ระบบใหม่อีกครั้ง)')),
+                      );
+                    }
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('เกิดข้อผิดพลาด: $e'), backgroundColor: Colors.red),
+                    );
+                  }
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Widget สร้างปุ่มด้านล่างเหมือนหน้า Search
+  Widget _buildBottomNavItem(IconData icon, String label, bool isActive, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: isActive ? Colors.white : Colors.white70, size: 24),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              color: isActive ? Colors.white : Colors.white70,
+              fontSize: 11,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -80,38 +339,11 @@ class TrackStatusNotificationPage extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Text(
               'สถานะล่าสุด',
-              style: TextStyle(
-                color: redAccent,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(color: redAccent, fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
           const Expanded(child: Divider(color: redAccent, thickness: 1)),
         ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNav() {
-    return BottomAppBar(
-      color: primaryPurple,
-      child: SizedBox(
-        height: 64,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavItem(icon: Icons.home, label: 'บ้าน', selected: false),
-            _NavItem(icon: Icons.person_outline, label: 'ขอใช้บริการ', selected: false),
-            _NavItem(
-              icon: Icons.notifications,
-              label: 'แจ้งเตือน',
-              selected: true,
-              badgeCount: 9,
-            ),
-            _NavItem(icon: Icons.person, label: 'ญาติ', selected: false),
-          ],
-        ),
       ),
     );
   }
@@ -146,11 +378,9 @@ class _NotificationCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: TrackStatusNotificationPage.cardBg,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: latest
-            ? const Border(left: BorderSide(color: Color(0xFFE53935), width: 4))
-            : null,
+        border: latest ? const Border(left: BorderSide(color: Color(0xFFE53935), width: 4)) : null,
         boxShadow: const [
           BoxShadow(
             color: Colors.black12,
@@ -166,13 +396,7 @@ class _NotificationCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                item.dateTime,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.black54,
-                ),
-              ),
+              Text(item.dateTime, style: const TextStyle(fontSize: 12, color: Colors.black54)),
               Text(
                 item.requestId,
                 style: TextStyle(
@@ -193,85 +417,11 @@ class _NotificationCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            item.detailLabel,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
-          ),
+          Text(item.detailLabel, style: const TextStyle(fontSize: 12, color: Colors.black54)),
           const SizedBox(height: 2),
-          Text(
-            item.detail,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Colors.black87,
-              height: 1.4,
-            ),
-          ),
+          Text(item.detail, style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.4)),
         ],
       ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final int? badgeCount;
-
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    this.badgeCount,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Icon(
-              icon,
-              color: selected ? Colors.white : Colors.white70,
-              size: 24,
-            ),
-            if (badgeCount != null)
-              Positioned(
-                right: -6,
-                top: -4,
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE53935),
-                    shape: BoxShape.circle,
-                  ),
-                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                  child: Text(
-                    '$badgeCount',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(
-            color: selected ? Colors.white : Colors.white70,
-            fontSize: 10,
-          ),
-        ),
-      ],
     );
   }
 }

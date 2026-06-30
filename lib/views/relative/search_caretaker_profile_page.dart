@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniproject/models/patient_model.dart';
 import 'package:miniproject/models/relative_model.dart';
 import 'package:miniproject/views/relative/edit_relative_info_page.dart';
+import 'package:miniproject/views/relative/list_request_page.dart';
 import 'package:miniproject/views/relative/track_status_notification_page.dart';
 import 'package:miniproject/views/relative/view_caretaker_profile_page.dart';
 import 'package:miniproject/views/login_page.dart';
@@ -605,7 +606,14 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
               Icons.support_agent,
               'ขอใช้บริการ',
               true,
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ListRequestPage(),
+                  ),
+                );
+              },
             ),
             _buildBottomNavItem(
               Icons.notifications_none,
