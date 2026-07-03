@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:miniproject/models/request_model.dart';
+import 'package:miniproject/services/caretaker_service.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import '../../widgets/custom_header_nav.dart';
 import '../caretaker/view_relative_request_page.dart';
@@ -6,7 +8,8 @@ import '../caretaker/add_status_notification_page.dart';
 import '../caretaker/edit_profile_page.dart';
 
 class ListRelativeRequestPage extends StatefulWidget {
-  const ListRelativeRequestPage({super.key});
+  final String uid;
+  const ListRelativeRequestPage({super.key, required this.uid});
 
   @override
   State<ListRelativeRequestPage> createState() =>
@@ -16,6 +19,8 @@ class ListRelativeRequestPage extends StatefulWidget {
 class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
   int _currentTabIndex = 0;
   int _bottomNavIndex = 1;
+  bool _isLoading = true; // 🌟 ตัวแปรโหลดข้อมูล
+  final CaretakerService _service = CaretakerService();
 
   void _onBottomNavTapped(int index) {
     setState(() {
@@ -26,85 +31,116 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
     if (index == 0) {
       // ไปหน้าแรก (บ้าน)
     } else if (index == 1) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const ListRelativeRequestPage(),
-        ),
-      );
+      // Navigator.pushReplacement(
+      //   context,
+      //   MaterialPageRoute(
+      //     builder: (context) => const ListRelativeRequestPage(),
+      //   ),
+      // );
     } else if (index == 2) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) =>
-              const EditProfilePage(uid: "E7TZ3fTabuY8jEgzH81wDAE5LSS2"),
+          builder: (context) => EditProfilePage(uid: widget.uid),
         ),
       );
     }
   }
 
-  final List<RequestCard> requestsInProgress = [
-    RequestCard(
-      id: 'REQ-12346',
-      serviceName: 'โรงพยาบาลสันทราย',
-      statusType: 'accepted',
-      date: 'วันศุกร์ 23 ม.ค. 2568  ·  04:00 น.',
-      category: 'กระดูกและข้อ',
-      patient: 'นาย สมชาย ใจดี',
-      hasAlert: true,
-    ),
-    RequestCard(
-      id: 'REW-15347',
-      serviceName: 'โรงพยาบาลลานนา',
-      statusType: 'pending',
-      date: 'วันศุกร์ 26 ม.ค. 2568  ·  08:00 น.',
-      category: 'ผิวหนัง',
-      patient: 'นาย จันทร์ หนวดเขี้ยว',
-      hasAlert: false, // 🌟 อันนี้จะเป็นปุ่มสีเทากดไม่ได้
-    ),
-    RequestCard(
-      id: 'RQW-16982',
-      serviceName: 'โรงพยาบาลสันทราย',
-      statusType: 'pending',
-      date: 'วันศุกร์ 30 ม.ค. 2568  ·  08:00 น.',
-      category: 'ทั่วไป',
-      patient: 'นาย สมชาย ใจดี',
-      hasAlert: false, // 🌟 อันนี้จะเป็นปุ่มสีเทากดไม่ได้
-    ),
-  ];
+  List<RequestCard> requestsInProgress = [];
+  List<RequestCard> requestsCompleted = [];
+  List<RequestCard> requestsCancelled = [];
 
-  final List<RequestCard> requestsCompleted = [
-    RequestCard(
-      id: 'REQ-12345',
-      serviceName: 'โรงพยาบาลสันทราย',
-      statusType: 'completed',
-      date: 'วันศุกร์ 16 ม.ค. 2568  ·  08:00 น.',
-      category: 'กระดูกและข้อ',
-      patient: 'นาย สมศรี ดีใจ',
-      hasAlert: false,
-    ),
-    RequestCard(
-      id: 'REQ-11223',
-      serviceName: 'โรงพยาบาลมหาราชนครเชียงใหม่',
-      statusType: 'completed',
-      date: 'วันจันทร์ 12 ม.ค. 2568  ·  13:30 น.',
-      category: 'กายภาพบำบัด',
-      patient: 'นาง สมบูรณ์ ใจดี',
-      hasAlert: false,
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchRequests(); // 🌟 ดึงข้อมูลจริงตอนเปิดหน้า
+  }
 
-  final List<RequestCard> requestsCancelled = [
-    RequestCard(
-      id: 'REQ-10001',
-      serviceName: 'โรงพยาบาลเทพปัญญา',
-      statusType: 'cancelled',
-      date: 'วันพฤหัสบดี 2 ม.ค. 2568  ·  10:00 น.',
-      category: 'เวชศาสตร์ฟื้นฟู',
-      patient: 'นาย วิษณุ โสภา',
-      hasAlert: false,
-    ),
-  ];
+  String _formatThaiDate(DateTime? date, DateTime? time) {
+    if (date == null || time == null) return 'ไม่ระบุวัน-เวลา';
+    List<String> days = [
+      'อาทิตย์',
+      'จันทร์',
+      'อังคาร',
+      'พุธ',
+      'พฤหัสบดี',
+      'ศุกร์',
+      'เสาร์',
+    ];
+    List<String> months = [
+      'ม.ค.',
+      'ก.พ.',
+      'มี.ค.',
+      'เม.ย.',
+      'พ.ค.',
+      'มิ.ย.',
+      'ก.ค.',
+      'ส.ค.',
+      'ก.ย.',
+      'ต.ค.',
+      'พ.ย.',
+      'ธ.ค.',
+    ];
+    return 'วัน${days[date.weekday % 7]} ${date.day} ${months[date.month - 1]} ${date.year + 543}  ·  ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} น.';
+  }
+
+  // ดึงข้อมูลและจัดกลุ่มตามแท็บสถานะ
+  Future<void> _fetchRequests() async {
+    final data = await _service.getRequestsForCaretaker(widget.uid);
+
+    List<RequestCard> inProgress = [];
+    List<RequestCard> completed = [];
+    List<RequestCard> cancelled = [];
+
+    for (var item in data) {
+      RequestModel req = item['requestModel'];
+      Map<String, dynamic> pat = item['patientData'];
+      Map<String, dynamic> rel = item['relativeData'];
+
+      String statusType = (req.requeststatus ?? 'pending').toLowerCase();
+      bool hasAlert = (statusType == 'accepted');
+
+      String patGender = pat['gender'] ?? '';
+      String prefix = patGender == 'ชาย'
+          ? 'นาย '
+          : (patGender == 'หญิง' ? 'นาง ' : 'คุณ ');
+
+      // 🌟 2. เอาคำนำหน้ามารวมกับชื่อ
+      String patientName =
+          "$prefix${pat['firstname'] ?? ''} ${pat['lastname'] ?? ''}".trim();
+
+      RequestCard card = RequestCard(
+        id: req.requestId ?? 'Unknow',
+        serviceName: req.hospitalname ?? 'ไม่ระบุสถานที่',
+        statusType: statusType,
+        date: _formatThaiDate(req.appointmentdate, req.appointmenttime),
+        category: req.departmentname ?? 'ทั่วไป',
+        patient: patientName.isEmpty ? 'ไม่ระบุชื่อผู้ป่วย' : patientName,
+        hasAlert: hasAlert,
+        requestModel: req,
+        patientData: pat,
+        relativeData: rel,
+        relativeUid: '',
+      );
+
+      // จัดกลุ่มการ์ดลงกล่องตามสถานะ
+      if (statusType == 'pending' || statusType == 'accepted') {
+        inProgress.add(card);
+      } else if (statusType == 'completed') {
+        completed.add(card);
+      } else {
+        cancelled.add(card);
+      }
+    }
+
+    setState(() {
+      requestsInProgress = inProgress;
+      requestsCompleted = completed;
+      requestsCancelled = cancelled;
+      _isLoading = false;
+    });
+  }
 
   List<RequestCard> _getCurrentTabRequests() {
     switch (_currentTabIndex) {
@@ -121,6 +157,37 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.grey.shade50,
+        appBar: const CustomHeader(
+          title: 'รายการคำขอของฉัน',
+          showBackButton: false, // หน้าหลักไม่ต้องมีปุ่ม back
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                color: Color(
+                  0xFF9B59B6,
+                ), // 🌟 เปลี่ยนสีหลอดโหลดเป็นสีม่วงให้เข้ากับธีมแอป
+              ),
+              SizedBox(height: 16),
+              Text(
+                'กำลังโหลดข้อมูล...',
+                style: TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: CustomBottomNavBar(
+          currentIndex: _bottomNavIndex,
+          onTap: _onBottomNavTapped,
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF4EDFB),
       appBar: const CustomHeader(title: 'รายการคำขอ', showBackButton: true),
@@ -151,15 +218,47 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
           ),
           Container(height: 6, color: const Color(0xFFF4EDFB)),
           Expanded(
-            child: ListView.separated(
-              itemCount: _getCurrentTabRequests().length,
-              separatorBuilder: (context, index) =>
-                  Container(height: 8, color: const Color(0xFFF4EDFB)),
-              itemBuilder: (context, index) {
-                final request = _getCurrentTabRequests()[index];
-                return _buildRequestCard(request);
-              },
-            ),
+            child: _getCurrentTabRequests().isEmpty
+                // ถ้าไม่มีข้อมูล ให้แสดงหน้า Empty State
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.inbox_rounded,
+                          size: 80,
+                          color: Colors.grey.shade300,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'ไม่พบข้อมูลรายการ',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'ยังไม่มีคำขอรับบริการในหมวดหมู่นี้',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                // ถ้ามีข้อมูล ก็แสดง ListView ของการ์ดตามปกติ
+                : ListView.separated(
+                    itemCount: _getCurrentTabRequests().length,
+                    separatorBuilder: (context, index) =>
+                        Container(height: 8, color: const Color(0xFFF4EDFB)),
+                    itemBuilder: (context, index) {
+                      final request = _getCurrentTabRequests()[index];
+                      return _buildRequestCard(request);
+                    },
+                  ),
           ),
         ],
       ),
@@ -235,6 +334,8 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                     const SizedBox(height: 2),
                     Text(
                       request.serviceName,
+                      maxLines: 1, // 🌟 ป้องกันชื่อโรงพยาบาลล้นจอ
+                      overflow: TextOverflow.ellipsis, // ถ้าเกินให้แสดงเป็น ...
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -312,6 +413,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                             MaterialPageRoute(
                               builder: (context) => AddStatusNotificationPage(
                                 requestData: request,
+                                uid: widget.uid,
                               ),
                             ),
                           );
@@ -361,8 +463,10 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          ViewRelativeRequestPage(requestData: request),
+                      builder: (context) => ViewRelativeRequestPage(
+                        requestData: request,
+                        uid: widget.uid,
+                      ),
                     ),
                   );
                 },
@@ -417,6 +521,8 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
               const SizedBox(height: 2),
               Text(
                 value,
+                maxLines: 1, // 🌟 ป้องกันข้อมูลแถวอื่นๆ ล้นจอ
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 15,
                   color: valueColor,
@@ -439,6 +545,10 @@ class RequestCard {
   final String category;
   final String patient;
   final bool hasAlert;
+  final RequestModel requestModel; // 🌟 เก็บก้อนข้อมูล Request จริง
+  final Map<String, dynamic> patientData; // 🌟 เก็บข้อมูลคนไข้จริง
+  final Map<String, dynamic> relativeData; // 🌟 เก็บข้อมูลญาติจริง
+  final String relativeUid;
 
   RequestCard({
     required this.id,
@@ -448,5 +558,9 @@ class RequestCard {
     required this.category,
     required this.patient,
     required this.hasAlert,
+    required this.requestModel,
+    required this.patientData,
+    required this.relativeData,
+    required this.relativeUid,
   });
 }

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final bool showBackButton;
-
   const CustomHeader({
     super.key,
     required this.title,
@@ -21,7 +20,7 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       centerTitle: true,
-      backgroundColor: const Color(0xFFA052BE), // สีม่วงตามภาพ
+      backgroundColor: const Color(0xFF8E6FF0), // สีม่วงตามภาพ
       elevation: 0,
       iconTheme: const IconThemeData(color: Colors.white),
       leading: showBackButton

@@ -15,7 +15,7 @@ class CustomBottomNavBar extends StatelessWidget {
     return BottomNavigationBar(
       currentIndex: currentIndex,
       onTap: onTap,
-      backgroundColor: const Color(0xFFA052BE), // สีม่วงหลักของแอป
+      backgroundColor: const Color(0xFF8E6FF0), // สีม่วงหลักของแอป
       type: BottomNavigationBarType.fixed, // บังคับให้สีพื้นหลังคงที่
       selectedItemColor: Colors.white, // สีไอคอนและข้อความที่ถูกเลือก
       unselectedItemColor: Colors.white70, // สีไอคอนและข้อความที่ไม่ได้เลือก

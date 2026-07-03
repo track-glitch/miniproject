@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:http/http.dart';
+import 'package:miniproject/models/request_model.dart';
 
 class CaretakerService {
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
@@ -97,5 +100,208 @@ class CaretakerService {
     await _dbRef.child('Login').child(uid).child('Caretaker').update({
       'servicestatus': status,
     });
+  }
+
+  // 🌟 ฟังก์ชันสำหรับดึงคำขอ (Requests) ของผู้ดูแลคนนี้โดยเฉพาะ
+  // 🌟 ฟังก์ชันสำหรับดึงคำขอ (Requests) โดยแปลง UID เป็น caretakerId ก่อน
+  Future<List<Map<String, dynamic>>> getRequestsForCaretaker(String uid) async {
+    try {
+      // 🕵️‍♂️ จังหวะที่ 1: เอา uid ไปสืบหา caretakerId (เลขบัตร ปชช.) ของคนๆ นี้ก่อน
+      final myProfileSnapshot = await _dbRef
+          .child('Login')
+          .child(uid)
+          .child('Caretaker')
+          .get();
+
+      // ถ้าไม่พบข้อมูลโปรไฟล์ ให้คืนค่าลิสต์ว่างกลับไปเลย
+      if (!myProfileSnapshot.exists || myProfileSnapshot.value == null)
+        return [];
+
+      // ดึงเลขบัตร ปชช. ออกมาเก็บไว้ในตัวแปร myCaretakerId
+      final myProfile = myProfileSnapshot.value as Map<dynamic, dynamic>;
+      final String myCaretakerId = myProfile['caretakerId']?.toString() ?? '';
+
+      if (myCaretakerId.isEmpty) return [];
+
+      // ---------------------------------------------------------
+
+      // 🔍 จังหวะที่ 2: เริ่มกวาดหา Request ทั้งหมดในระบบ
+      DataSnapshot snapshot = await _dbRef.child('Login').get();
+      if (!snapshot.exists || snapshot.value == null) return [];
+
+      List<Map<String, dynamic>> allRequests = [];
+      final Map<String, dynamic> data = jsonDecode(jsonEncode(snapshot.value));
+
+      data.forEach((userUid, userEntry) {
+        if (userEntry['Relative'] != null) {
+          final relativeData = userEntry['Relative'] as Map<String, dynamic>;
+          final patientData = relativeData['Patient'] as Map<String, dynamic>?;
+
+          if (relativeData['Request'] != null) {
+            final requestsMap = relativeData['Request'] as Map<String, dynamic>;
+
+            requestsMap.forEach((reqId, reqData) {
+              // 🌟 จุดสำคัญ: เทียบ caretakerId ในคำขอ กับ myCaretakerId ที่เราสืบมาได้!
+              if (reqData['caretakerId'] == myCaretakerId) {
+                allRequests.add({
+                  'requestModel': RequestModel.fromJson(reqData),
+                  'relativeData': relativeData,
+                  'patientData': patientData ?? {},
+                  'relativeUid': userUid,
+                });
+              }
+            });
+          }
+        }
+      });
+
+      // ⏱️ เรียงลำดับคำขอจากวันที่สร้างล่าสุด (ใหม่ไปเก่า)
+      allRequests.sort((a, b) {
+        DateTime? dateA = (a['requestModel'] as RequestModel).requestdate;
+        DateTime? dateB = (b['requestModel'] as RequestModel).requestdate;
+        if (dateA == null || dateB == null) return 0;
+        return dateB.compareTo(dateA);
+      });
+
+      return allRequests;
+    } catch (e) {
+      print("Error fetching requests: $e");
+      return [];
+    }
+  }
+
+  Future<void> updateRequestStatus(
+    String relativeUid,
+    String requestId,
+    String status,
+  ) async {
+    try {
+      await _dbRef
+          .child('Login')
+          .child(relativeUid) // อ้างอิง UID ของญาติ
+          .child('Relative')
+          .child('Request')
+          .child(requestId)
+          .update({'requeststatus': status});
+    } catch (e) {
+      print("Error updating request status: $e");
+    }
+  }
+
+  // 🌟 ฟังก์ชันดึงรีวิวล่าสุด (ใช้ของเดิมที่มีอยู่แล้วมาต่อยอด)
+  Future<List<Map<String, dynamic>>> getRecentReviews(
+    String uid, {
+    int limit = 2,
+  }) async {
+    try {
+      // 💡 1. เรียกใช้ฟังก์ชันเดิมของคุณ ที่ไปกวาด Request ทั้งหมดของอาสาคนนี้มา
+      // (ฟังก์ชันเดียวกับที่คุณใช้ในหน้า List)
+      final allRequests = await getRequestsForCaretaker(uid);
+
+      List<Map<String, dynamic>> reviews = [];
+
+      // 💡 2. วนลูปดูทีละ Request เพื่อหาว่าอันไหนมี Review ซ่อนอยู่
+      for (var item in allRequests) {
+        RequestModel req = item['requestModel'];
+        Map<String, dynamic>? relData = item['relativeData'];
+        String reviewerImg = '';
+        // ถ้าคำขอนี้มีการเขียน Review เอาไว้
+        if (req.review != null) {
+          // เอาชื่อญาติมาเป็นชื่อคนรีวิว
+          String reviewerName = 'ไม่ระบุชื่อ';
+          if (relData != null) {
+            reviewerName =
+                "${relData['firstname'] ?? ''} ${relData['lastname'] ?? ''}"
+                    .trim();
+            reviewerImg = relData['Patient']['patientphoto'] ?? '';
+          }
+
+          reviews.add({
+            'reviewerName': reviewerName.isEmpty ? 'ไม่ระบุชื่อ' : reviewerName,
+
+            // ⚠️ ปรับ .rating และ .comment ให้ตรงกับตัวแปรใน ReviewModel ของคุณ
+            'rating': req.review!.rating ?? 5.0,
+            'comment': req.review!.comment ?? 'ไม่มีข้อความ',
+
+            // ใช้เวลาของคำขอมาจัดเรียง (ถ้าใน ReviewModel มีเวลา ก็เปลี่ยนไปใช้ของ Review แทนได้ครับ)
+            'timestamp': req.requestdate?.toIso8601String() ?? '',
+            'timeAgo': _formatSimpleDate(req.requestdate?.toIso8601String()),
+            'reviewerImage': reviewerImg,
+          });
+        }
+      }
+
+      // 💡 3. เรียงลำดับจาก ใหม่ -> เก่า
+      reviews.sort(
+        (a, b) => (b['timestamp'] ?? '').compareTo(a['timestamp'] ?? ''),
+      );
+
+      // 💡 4. ตัดเอาไปโชว์แค่จำนวนจำกัด (เช่น 2 อัน)
+      print(reviews.take(limit).toList());
+      return reviews.take(limit).toList();
+    } catch (e) {
+      print('Error fetching nested reviews: $e');
+      return [];
+    }
+  }
+
+  // ฟังก์ชันช่วยแปลงวันที่ให้ดูง่ายขึ้น
+  String _formatSimpleDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '';
+    try {
+      DateTime dt = DateTime.parse(dateStr);
+      return '${dt.day}/${dt.month}/${dt.year + 543}'; // แสดงเป็น วว/ดด/ปปปป
+    } catch (e) {
+      return '';
+    }
+  }
+
+  // ==========================================
+  // 🌟 ฟังก์ชันดึงรีวิวทั้งหมด (สำหรับหน้าดูรีวิวทั้งหมด)
+  // ==========================================
+  Future<List<Map<String, dynamic>>> getAllReviews(String uid) async {
+    try {
+      final allRequests = await getRequestsForCaretaker(uid);
+      List<Map<String, dynamic>> reviews = [];
+
+      for (var item in allRequests) {
+        RequestModel req = item['requestModel'];
+        Map<String, dynamic>? relData = item['relativeData'];
+
+        // ถ้าคำขอนี้มีการรีวิว
+        if (req.review != null) {
+          String reviewerName = 'ไม่ระบุชื่อ';
+          String reviewerImg = '';
+
+          if (relData != null) {
+            reviewerName =
+                "${relData['firstname'] ?? ''} ${relData['lastname'] ?? ''}"
+                    .trim();
+            reviewerImg =
+                relData['Patient']['patientphoto'] ?? relData['image'] ?? '';
+          }
+
+          reviews.add({
+            'reviewerName': reviewerName.isEmpty ? 'ไม่ระบุชื่อ' : reviewerName,
+            'rating': req.review!.rating ?? 5.0,
+            'comment': req.review!.comment ?? 'ไม่มีข้อความ',
+            'timestamp': req.requestdate?.toIso8601String() ?? '',
+            'timeAgo': _formatSimpleDate(req.requestdate?.toIso8601String()),
+            'reviewerImage': reviewerImg,
+          });
+        }
+      }
+
+      // เรียงจากใหม่ไปเก่า (Reverse)
+      reviews.sort(
+        (a, b) => (b['timestamp'] ?? '').compareTo(a['timestamp'] ?? ''),
+      );
+
+      // 🌟 รีเทิร์นค่ากลับไปทั้งหมดเลย ไม่ต้องจำกัด Row
+      return reviews;
+    } catch (e) {
+      print('Error fetching all reviews: $e');
+      return [];
+    }
   }
 }

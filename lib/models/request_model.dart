@@ -51,14 +51,14 @@ class RequestModel {
       requestdetail: json['requestdetail'],
 
       // 🌟 ดึงข้อมูล JSON ซ้อน JSON มาแปลงเป็น LocationModel
-      pickuplocation: json['pickuplocation'] != null
+      pickuplocation: json['PickupLocation'] != null
           ? LocationModel.fromJson(
-              Map<String, dynamic>.from(json['pickuplocation']),
+              Map<String, dynamic>.from(json['PickupLocation']),
             )
           : null,
-      dropofflocation: json['dropofflocation'] != null
+      dropofflocation: json['DropoffLocation'] != null
           ? LocationModel.fromJson(
-              Map<String, dynamic>.from(json['dropofflocation']),
+              Map<String, dynamic>.from(json['DropoffLocation']),
             )
           : null,
 
@@ -75,19 +75,19 @@ class RequestModel {
           : null,
       requeststatus: json['requeststatus'],
       caretakerId: json['caretakerId'],
-      review: json['review'] != null
-          ? ReviewModel.fromJson(Map<String, dynamic>.from(json['review']))
+      review: json['Review'] != null
+          ? ReviewModel.fromJson(Map<String, dynamic>.from(json['Review']))
           : null,
-      doctoradvice: json['doctoradvice'] != null
+      doctoradvice: json['DoctorAdvice'] != null
           ? DoctorAdviceModel.fromJson(
-              Map<String, dynamic>.from(json['doctoradvice']),
+              Map<String, dynamic>.from(json['DoctorAdvice']),
             )
           : null,
-      report: json['report'] != null
-          ? ReportModel.fromJson(Map<String, dynamic>.from(json['report']))
+      report: json['Report'] != null
+          ? ReportModel.fromJson(Map<String, dynamic>.from(json['Report']))
           : null,
-      notifications: json['notifications'] != null
-          ? (json['notifications'] as List)
+      notifications: json['Notification'] != null
+          ? (json['Notification'] as List)
                 .map(
                   (e) =>
                       NotificationModel.fromJson(Map<String, dynamic>.from(e)),
@@ -103,8 +103,8 @@ class RequestModel {
       'requestdetail': requestdetail,
 
       // 🌟 สั่งให้ LocationModel แปลงตัวเองเป็น JSON
-      'pickuplocation': pickuplocation?.toJson(),
-      'dropofflocation': dropofflocation?.toJson(),
+      'PickupLocation': pickuplocation?.toJson(),
+      'DropoffLocation': dropofflocation?.toJson(),
 
       'hospitalname': hospitalname,
       'departmentname': departmentname,

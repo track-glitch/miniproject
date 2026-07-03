@@ -13,6 +13,7 @@ import '../models/vehicle_photo_model.dart';
 import '../models/document_model.dart';
 import 'waiting_approval_page.dart';
 import 'relative_register_page.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class CaretakerRegisterPage extends StatefulWidget {
   const CaretakerRegisterPage({super.key});
@@ -398,6 +399,8 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         print("Error parsing date: $e");
       }
 
+      String generatedLocId = FirebaseDatabase.instance.ref().push().key!;
+
       CaretakerModel caretakerData = CaretakerModel(
         caretakerId: _citizenIdCtrl.text.trim(),
         profilephoto: _profilePhotoBase64!,
@@ -413,6 +416,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         servicestatus: "Offline",
         accountstatus: "Pending",
         location: LocationModel(
+          locationId: generatedLocId,
           address: _addressCtrl.text.trim(),
           latitude: _selectedLocation.latitude,
           longitude: _selectedLocation.longitude,
@@ -1455,7 +1459,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: Colors.black,
-            fontFamily: 'Sukhumvit',
           ),
           children: [
             TextSpan(text: title),

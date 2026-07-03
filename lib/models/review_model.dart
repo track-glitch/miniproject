@@ -22,6 +22,8 @@ class ReviewModel {
     );
   }
 
+  get rating => null;
+
   Map<String, dynamic> toJson() {
     return {
       'reviewId': reviewId,

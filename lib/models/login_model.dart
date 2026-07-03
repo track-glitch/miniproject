@@ -3,11 +3,7 @@ class LoginModel {
   String? password;
   String? usertype;
 
-  LoginModel({
-    this.username,
-    this.password,
-    this.usertype,
-  });
+  LoginModel({this.username, this.password, this.usertype});
 
   factory LoginModel.fromJson(Map<String, dynamic> json) {
     return LoginModel(
@@ -18,10 +14,6 @@ class LoginModel {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'username': username,
-      'password': password,
-      'usertype': usertype,
-    };
+    return {'username': username, 'password': password, 'usertype': usertype};
   }
 }

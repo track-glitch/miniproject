@@ -15,6 +15,10 @@ class _MyWidgetState extends State<AddDoctorAdvicePage> {
     adminService.addRequest();
   }
 
+  void addRelative() {
+    adminService.addMockRelative();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -27,6 +31,12 @@ class _MyWidgetState extends State<AddDoctorAdvicePage> {
         children: [
           Row(
             children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: addRelative,
+                  child: Text('AddRelative'),
+                ),
+              ),
               Expanded(
                 child: TextButton(
                   onPressed: addRequest,

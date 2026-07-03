@@ -10,8 +10,13 @@ import '../../views/caretaker/list_relative_request_page.dart';
 
 class AddStatusNotificationPage extends StatefulWidget {
   final RequestCard requestData;
+  final String uid;
 
-  const AddStatusNotificationPage({super.key, required this.requestData});
+  const AddStatusNotificationPage({
+    super.key,
+    required this.requestData,
+    required this.uid,
+  });
 
   @override
   State<AddStatusNotificationPage> createState() =>
@@ -30,17 +35,18 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     if (index == 0) {
       // ไปหน้าแรก (บ้าน)
     } else if (index == 1) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const ListRelativeRequestPage(),
-        ),
-      );
+      // Navigator.pushReplacement(
+      //   context,
+      //   MaterialPageRoute(
+      //     builder: (context) => const ListRelativeRequestPage(),
+      //   ),
+      // );
     } else if (index == 2) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const EditProfilePage(uid: 'E7TZ3fTabuY8jEgzH81wDAE5LSS2'),
+          builder: (context) =>
+              const EditProfilePage(uid: 'E7TZ3fTabuY8jEgzH81wDAE5LSS2'),
         ),
       );
     }
@@ -66,8 +72,8 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
   String? _selectedStatus;
 
   // พิกัดแผนที่ (สมมติ)
-  final LatLng pointA = const LatLng(18.8055, 98.9950);
-  final LatLng pointB = const LatLng(18.8236, 99.0068);
+  LatLng pointA = const LatLng(18.8055, 98.9950);
+  LatLng pointB = const LatLng(18.8236, 99.0068);
   final LatLng currentLocation = const LatLng(
     18.8100,
     99.0000,
@@ -80,6 +86,17 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     // เซ็ตค่าเริ่มต้นของ Dropdown ให้ตรงกับสเต็ปปัจจุบัน
     if (_currentStepIndex < _statusList.length) {
       _selectedStatus = _statusList[_currentStepIndex];
+    }
+
+    var pickup = widget.requestData.requestModel.pickuplocation;
+    var dropoff = widget.requestData.requestModel.dropofflocation;
+    if (pickup != null && pickup.latitude != null && pickup.longitude != null) {
+      pointA = LatLng(pickup.latitude!, pickup.longitude!);
+    }
+    if (dropoff != null &&
+        dropoff.latitude != null &&
+        dropoff.longitude != null) {
+      pointB = LatLng(dropoff.latitude!, dropoff.longitude!);
     }
   }
 

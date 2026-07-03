@@ -8,6 +8,7 @@ import 'firebase_options.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'views/caretaker/edit_profile_page.dart';
 import 'views/caretaker/test_page.dart';
+import 'widgets/search_preview_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

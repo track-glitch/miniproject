@@ -7,18 +7,23 @@ import 'package:miniproject/models/patient_model.dart';
 import 'package:miniproject/models/relative_model.dart';
 import 'package:miniproject/views/relative/edit_relative_info_page.dart';
 import 'package:miniproject/views/login_page.dart';
+import 'package:miniproject/views/relative/list_request_page.dart';
+import 'package:miniproject/views/relative/relative_home_page.dart';
 
 /// หน้าจอ "สถานะการแจ้งเตือน" (Track Status Notification Page)
 class TrackStatusNotificationPage extends StatefulWidget {
-  final String? loggedUid; // เพิ่มเพื่อรับค่าผู้ใช้ที่ล็อกอินสำหรับแถบเมนูด้านล่าง
+  final String?
+  loggedUid; // เพิ่มเพื่อรับค่าผู้ใช้ที่ล็อกอินสำหรับแถบเมนูด้านล่าง
 
   const TrackStatusNotificationPage({super.key, this.loggedUid});
 
   @override
-  State<TrackStatusNotificationPage> createState() => _TrackStatusNotificationPageState();
+  State<TrackStatusNotificationPage> createState() =>
+      _TrackStatusNotificationPageState();
 }
 
-class _TrackStatusNotificationPageState extends State<TrackStatusNotificationPage> {
+class _TrackStatusNotificationPageState
+    extends State<TrackStatusNotificationPage> {
   // ---------- Mock Data ----------
   final List<_NotificationItem> _items = const [
     _NotificationItem(
@@ -62,7 +67,9 @@ class _TrackStatusNotificationPageState extends State<TrackStatusNotificationPag
       context: context,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
             decoration: BoxDecoration(
@@ -77,7 +84,11 @@ class _TrackStatusNotificationPageState extends State<TrackStatusNotificationPag
                 const SizedBox(height: 20),
                 Text(
                   'กรุณาเข้าสู่ระบบก่อนใช้งาน',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: darkPurple),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: darkPurple,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 const Text(
@@ -92,18 +103,26 @@ class _TrackStatusNotificationPageState extends State<TrackStatusNotificationPag
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: searchPrimaryColor,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(23)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(23),
+                      ),
                     ),
                     onPressed: () {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const LoginPage()),
+                        MaterialPageRoute(
+                          builder: (context) => const LoginPage(),
+                        ),
                       );
                     },
                     child: const Text(
                       'ไปหน้าเข้าสู่ระบบ',
-                      style: TextStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -167,13 +186,29 @@ class _TrackStatusNotificationPageState extends State<TrackStatusNotificationPag
               Icons.home_outlined,
               'บ้าน',
               false,
-              onTap: () {},
+              onTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        RelativeHomePage(loggedUid: widget.loggedUid),
+                  ),
+                );
+              },
             ),
             _buildBottomNavItem(
               Icons.support_agent,
               'ขอใช้บริการ',
               false,
-              onTap: () {},
+              onTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        ListRequestPage(loggedUid: widget.loggedUid),
+                  ),
+                );
+              },
             ),
             _buildBottomNavItem(
               Icons.notifications_none,
@@ -186,7 +221,10 @@ class _TrackStatusNotificationPageState extends State<TrackStatusNotificationPag
               'ญาติ',
               false,
               onTap: () async {
-                String currentUid = widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+                String currentUid =
+                    widget.loggedUid ??
+                    FirebaseAuth.instance.currentUser?.uid ??
+                    '';
 
                 if (currentUid.isEmpty) {
                   _showLoginRequiredDialog();
@@ -196,11 +234,14 @@ class _TrackStatusNotificationPageState extends State<TrackStatusNotificationPag
                 showDialog(
                   context: context,
                   barrierDismissible: false,
-                  builder: (context) => const Center(child: CircularProgressIndicator()),
+                  builder: (context) =>
+                      const Center(child: CircularProgressIndicator()),
                 );
 
                 try {
-                  final snapshot = await FirebaseDatabase.instance.ref('Login').get();
+                  final snapshot = await FirebaseDatabase.instance
+                      .ref('Login')
+                      .get();
                   if (context.mounted) Navigator.pop(context);
 
                   String targetRelativeId = '';
@@ -208,12 +249,16 @@ class _TrackStatusNotificationPageState extends State<TrackStatusNotificationPag
                   bool isFound = false;
 
                   if (snapshot.exists && snapshot.value is Map) {
-                    final allUsers = Map<String, dynamic>.from(snapshot.value as Map);
+                    final allUsers = Map<String, dynamic>.from(
+                      snapshot.value as Map,
+                    );
 
                     for (var key in allUsers.keys) {
                       if (key == currentUid) {
                         targetRelativeId = key;
-                        targetUserData = Map<String, dynamic>.from(allUsers[key] as Map);
+                        targetUserData = Map<String, dynamic>.from(
+                          allUsers[key] as Map,
+                        );
                         isFound = true;
                         break;
                       }
@@ -221,7 +266,9 @@ class _TrackStatusNotificationPageState extends State<TrackStatusNotificationPag
                       var childData = allUsers[key];
                       if (childData is Map) {
                         var relNode = childData['Relative'];
-                        if (childData['uid'] == currentUid || (relNode is Map && relNode['relativeId'] == currentUid)) {
+                        if (childData['uid'] == currentUid ||
+                            (relNode is Map &&
+                                relNode['relativeId'] == currentUid)) {
                           targetRelativeId = key;
                           targetUserData = Map<String, dynamic>.from(childData);
                           isFound = true;
@@ -236,9 +283,12 @@ class _TrackStatusNotificationPageState extends State<TrackStatusNotificationPag
                     Map<String, dynamic> relativeMap = {};
 
                     if (targetUserData.containsKey('Relative')) {
-                      relativeMap = Map<String, dynamic>.from(targetUserData['Relative'] as Map);
+                      relativeMap = Map<String, dynamic>.from(
+                        targetUserData['Relative'] as Map,
+                      );
                       relative = RelativeModel(
-                        relativeId: relativeMap['relativeId'] ?? targetRelativeId,
+                        relativeId:
+                            relativeMap['relativeId'] ?? targetRelativeId,
                         firstname: relativeMap['firstname'] ?? '',
                         lastname: relativeMap['lastname'] ?? '',
                         phonenumber: relativeMap['phonenumber'] ?? '',
@@ -247,13 +297,20 @@ class _TrackStatusNotificationPageState extends State<TrackStatusNotificationPag
                       );
                     } else {
                       relative = RelativeModel(
-                        relativeId: targetRelativeId, firstname: '', lastname: '', phonenumber: '', relationship: '', email: '',
+                        relativeId: targetRelativeId,
+                        firstname: '',
+                        lastname: '',
+                        phonenumber: '',
+                        relationship: '',
+                        email: '',
                       );
                     }
 
                     PatientModel patient;
                     if (relativeMap.containsKey('Patient')) {
-                      final pData = Map<String, dynamic>.from(relativeMap['Patient'] as Map);
+                      final pData = Map<String, dynamic>.from(
+                        relativeMap['Patient'] as Map,
+                      );
                       patient = PatientModel(
                         patientId: pData['patientId'] ?? '',
                         patientphoto: pData['patientphoto'] ?? '',
@@ -261,13 +318,20 @@ class _TrackStatusNotificationPageState extends State<TrackStatusNotificationPag
                         lastname: pData['lastname'] ?? '',
                         phonenumber: pData['phonenumber'] ?? '',
                         gender: pData['gender'] ?? '',
-                        birthdate: pData['birthdate'] != null ? DateTime.tryParse(pData['birthdate'].toString()) : null,
+                        birthdate: pData['birthdate'] != null
+                            ? DateTime.tryParse(pData['birthdate'].toString())
+                            : null,
                         disease: pData['disease'] ?? '',
                         mobility: pData['mobility'] ?? '',
                       );
                     } else {
                       patient = PatientModel(
-                        patientId: '', patientphoto: '', firstname: '', lastname: '', phonenumber: '', gender: '',
+                        patientId: '',
+                        patientphoto: '',
+                        firstname: '',
+                        lastname: '',
+                        phonenumber: '',
+                        gender: '',
                       );
                     }
 
@@ -286,7 +350,11 @@ class _TrackStatusNotificationPageState extends State<TrackStatusNotificationPag
                   } else {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('ไม่พบข้อมูลประวัติ (กรุณาลองเข้าสู่ระบบใหม่อีกครั้ง)')),
+                        const SnackBar(
+                          content: Text(
+                            'ไม่พบข้อมูลประวัติ (กรุณาลองเข้าสู่ระบบใหม่อีกครั้ง)',
+                          ),
+                        ),
                       );
                     }
                   }
@@ -294,7 +362,10 @@ class _TrackStatusNotificationPageState extends State<TrackStatusNotificationPag
                   if (context.mounted) {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('เกิดข้อผิดพลาด: $e'), backgroundColor: Colors.red),
+                      SnackBar(
+                        content: Text('เกิดข้อผิดพลาด: $e'),
+                        backgroundColor: Colors.red,
+                      ),
                     );
                   }
                 }
@@ -307,7 +378,12 @@ class _TrackStatusNotificationPageState extends State<TrackStatusNotificationPag
   }
 
   // Widget สร้างปุ่มด้านล่างเหมือนหน้า Search
-  Widget _buildBottomNavItem(IconData icon, String label, bool isActive, {VoidCallback? onTap}) {
+  Widget _buildBottomNavItem(
+    IconData icon,
+    String label,
+    bool isActive, {
+    VoidCallback? onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -339,7 +415,11 @@ class _TrackStatusNotificationPageState extends State<TrackStatusNotificationPag
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Text(
               'สถานะล่าสุด',
-              style: TextStyle(color: redAccent, fontSize: 13, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: redAccent,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           const Expanded(child: Divider(color: redAccent, thickness: 1)),
@@ -380,13 +460,11 @@ class _NotificationCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: latest ? const Border(left: BorderSide(color: Color(0xFFE53935), width: 4)) : null,
+        border: latest
+            ? const Border(left: BorderSide(color: Color(0xFFE53935), width: 4))
+            : null,
         boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
         ],
       ),
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
@@ -396,7 +474,10 @@ class _NotificationCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(item.dateTime, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+              Text(
+                item.dateTime,
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
+              ),
               Text(
                 item.requestId,
                 style: TextStyle(
@@ -417,9 +498,19 @@ class _NotificationCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(item.detailLabel, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+          Text(
+            item.detailLabel,
+            style: const TextStyle(fontSize: 12, color: Colors.black54),
+          ),
           const SizedBox(height: 2),
-          Text(item.detail, style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.4)),
+          Text(
+            item.detail,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.black87,
+              height: 1.4,
+            ),
+          ),
         ],
       ),
     );

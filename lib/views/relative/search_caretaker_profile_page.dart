@@ -794,13 +794,19 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
     // ── ข้อมูลพื้นฐาน ──────────────────────────────────────────────────────
     String firstname = data['firstname'] ?? 'ไม่ระบุ';
     String lastname = data['lastname'] ?? '';
-    String fullName = '$firstname $lastname'.trim();
-    String location = data['address'] ?? 'ไม่ระบุ';
+    String fullName = '';
+    String location = data['Location']['address'] ?? 'ไม่ระบุ';
     String gender = data['gender'] ?? 'ไม่ระบุ';
-
+    if (gender == "ชาย") {
+      fullName = 'นาย $firstname $lastname'.trim();
+    } else if (gender == "หญิง") {
+      fullName = 'นาง $firstname $lastname'.trim();
+    } else {
+      fullName = 'คุณ $firstname $lastname'.trim();
+    }
     String carDetail = 'ไม่ระบุ';
-    if (data['vehicle'] != null) {
-      final v = Map<String, dynamic>.from(data['vehicle'] as Map);
+    if (data['Vehicle'] != null) {
+      final v = Map<String, dynamic>.from(data['Vehicle'] as Map);
       String brand = v['brand'] ?? '';
       String model = v['model'] ?? '';
       carDetail = '$brand $model'.trim();
