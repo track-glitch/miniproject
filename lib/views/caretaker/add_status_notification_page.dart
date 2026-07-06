@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:miniproject/views/caretaker/add_doctor_advice_page.dart';
+import 'dart:async';
+
 import '../../widgets/custom_header_nav.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import '../caretaker/edit_profile_page.dart';
-
-// 🌟 Import โมเดล RequestCard เพื่อรับข้อมูลมาจากหน้าก่อนหน้า
 import '../../views/caretaker/list_relative_request_page.dart';
+import '../../services/caretaker_service.dart';
 
 class AddStatusNotificationPage extends StatefulWidget {
   final RequestCard requestData;
@@ -24,33 +27,8 @@ class AddStatusNotificationPage extends StatefulWidget {
 }
 
 class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
-  int _bottomNavIndex = 1; // Active ที่ Tab การแจ้งเตือน
-
-  void _onBottomNavTapped(int index) {
-    setState(() {
-      _bottomNavIndex = index;
-    });
-
-    // เช็คเลขให้ตรงกับลำดับใหม่
-    if (index == 0) {
-      // ไปหน้าแรก (บ้าน)
-    } else if (index == 1) {
-      // Navigator.pushReplacement(
-      //   context,
-      //   MaterialPageRoute(
-      //     builder: (context) => const ListRelativeRequestPage(),
-      //   ),
-      // );
-    } else if (index == 2) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              const EditProfilePage(uid: 'E7TZ3fTabuY8jEgzH81wDAE5LSS2'),
-        ),
-      );
-    }
-  }
+  int _bottomNavIndex = 1;
+  final CaretakerService _service = CaretakerService();
 
   final List<String> _statusList = [
     'กำลังเดินทางไปรับ',
@@ -65,31 +43,28 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     'เสร็จสิ้นการให้บริการ',
   ];
 
-  // 🌟 ตัวแปรเก็บว่าตอนนี้อยู่ที่สเต็ปไหน (0 = ยังไม่เริ่ม, 4 = เสร็จหมดแล้ว)
+  bool _isLoading = true;
+  bool _hasStarted = false;
   int _currentStepIndex = 0;
-
-  // ตัวแปรสำหรับค่าที่ถูกเลือกใน Dropdown
   String? _selectedStatus;
 
-  // พิกัดแผนที่ (สมมติ)
+  LatLng? _currentLocation;
+  StreamSubscription<Position>? _positionStreamSubscription;
+
   LatLng pointA = const LatLng(18.8055, 98.9950);
   LatLng pointB = const LatLng(18.8236, 99.0068);
-  final LatLng currentLocation = const LatLng(
-    18.8100,
-    99.0000,
-  ); // จุดเขียว (สมมติว่าอยู่ตรงกลาง)
   final String maptilerApiKey = 'JCT1H6ehzlMaKZyrC5mp';
 
   @override
   void initState() {
     super.initState();
-    // เซ็ตค่าเริ่มต้นของ Dropdown ให้ตรงกับสเต็ปปัจจุบัน
-    if (_currentStepIndex < _statusList.length) {
-      _selectedStatus = _statusList[_currentStepIndex];
-    }
+    _initData();
+  }
 
+  Future<void> _initData() async {
     var pickup = widget.requestData.requestModel.pickuplocation;
     var dropoff = widget.requestData.requestModel.dropofflocation;
+
     if (pickup != null && pickup.latitude != null && pickup.longitude != null) {
       pointA = LatLng(pickup.latitude!, pickup.longitude!);
     }
@@ -98,38 +73,163 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
         dropoff.longitude != null) {
       pointB = LatLng(dropoff.latitude!, dropoff.longitude!);
     }
+
+    List<Map<dynamic, dynamic>> existingNotifs = await _service
+        .getNotifications(
+          widget.requestData.relativeUid,
+          widget.requestData.id,
+        );
+
+    _currentStepIndex = existingNotifs.length;
+
+    if (_currentStepIndex > 0) {
+      _hasStarted = true;
+      await _startLocationTracking();
+    }
+
+    if (_currentStepIndex < _statusList.length) {
+      _selectedStatus = _statusList[_currentStepIndex];
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
   }
 
-  // ฟังก์ชันเมื่อกดปุ่ม "เพิ่มสถานะ"
-  void _submitStatus() {
-    if (_selectedStatus != null && _currentStepIndex < _statusList.length) {
-      // 1. ส่งข้อมูลขึ้น Database หรือ API ตรงนี้
-      // ...
+  Future<void> _startLocationTracking() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
 
-      // 2. แสดงแจ้งเตือนความสำเร็จ
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('ส่งสถานะ "$_selectedStatus" เรียบร้อยแล้ว!'),
-          backgroundColor: Colors.green,
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+    if (permission == LocationPermission.deniedForever) return;
+
+    Position pos = await Geolocator.getCurrentPosition();
+    if (mounted)
+      setState(() => _currentLocation = LatLng(pos.latitude, pos.longitude));
+
+    _positionStreamSubscription =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 10,
+          ),
+        ).listen((Position position) {
+          if (mounted) {
+            setState(
+              () => _currentLocation = LatLng(
+                position.latitude,
+                position.longitude,
+              ),
+            );
+            _service.updateRealtimeLocation(
+              widget.requestData.relativeUid,
+              widget.requestData.id,
+              position.latitude,
+              position.longitude,
+            );
+          }
+        });
+  }
+
+  @override
+  void dispose() {
+    _positionStreamSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _onBottomNavTapped(int index) {
+    setState(() => _bottomNavIndex = index);
+    if (index == 2) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EditProfilePage(uid: widget.uid),
         ),
       );
+    }
+  }
 
-      // 3. ขยับไปยังสเต็ปถัดไป
-      setState(() {
-        _currentStepIndex++;
-        // อัปเดต Dropdown ให้เลือกสเต็ปถัดไปอัตโนมัติ
-        if (_currentStepIndex < _statusList.length) {
-          _selectedStatus = _statusList[_currentStepIndex];
-        } else {
-          _selectedStatus = null; // เสร็จครบ 4 สเต็ป
+  void _submitStatus() async {
+    if (_isLoading) return;
+
+    if (_selectedStatus != null && _currentStepIndex < _statusList.length) {
+      setState(() => _isLoading = true);
+
+      try {
+        if (!_hasStarted) await _startLocationTracking();
+
+        await _service.addStatusNotification(
+          relativeUid: widget.requestData.relativeUid,
+          requestId: widget.requestData.id,
+          status: _selectedStatus!,
+          lat: _currentLocation?.latitude,
+          lng: _currentLocation?.longitude,
+        );
+
+        // 🌟 เมื่อถึงสถานะสุดท้าย 'เสร็จสิ้นการให้บริการ'
+        if (_selectedStatus == 'เสร็จสิ้นการให้บริการ') {
+          await _service.updateRequestStatus(
+            widget.requestData.relativeUid,
+            widget.requestData.id,
+            'pending_advice', // 🚨 แก้บรรทัดนี้ จาก 'completed' เป็น 'pending_advice'
+          );
+          _positionStreamSubscription?.cancel(); // ปิดบริการ GPS
+
+          // 💡 มัดรวมข้อมูลปัจจุบันส่งต่อให้หน้า AddDoctorAdvicePage โชว์บน Card ด้านบน
+          List<String> dateParts = widget.requestData.date.split('·');
+          String dateOnly = dateParts[0].trim();
+          String timeOnly = dateParts.length > 1 ? dateParts[1].trim() : '';
+
+          Map<String, dynamic> reqInfo = {
+            'patientName': widget.requestData.patient,
+            'dateTime': '$dateOnly $timeOnly',
+            'hospital': widget.requestData.serviceName,
+            'department': widget.requestData.category,
+          };
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddDoctorAdvicePage(
+                relativeUid: widget.requestData.relativeUid,
+                requestId: widget.requestData.id,
+                requestInfo: reqInfo, // 🌟 ส่งข้อมูลที่แพ็คไว้ไปใช้งาน
+              ),
+            ),
+          );
+          return;
         }
-      });
+
+        setState(() {
+          _hasStarted = true;
+          _currentStepIndex++;
+          if (_currentStepIndex < _statusList.length) {
+            _selectedStatus = _statusList[_currentStepIndex];
+          } else {
+            _selectedStatus = null;
+          }
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ส่งสถานะสำเร็จแล้ว!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        print("Error submitting status: $e");
+      } finally {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // แยกวันที่และเวลา
     List<String> dateParts = widget.requestData.date.split('·');
     String dateOnly = dateParts[0].trim();
     String timeOnly = dateParts.length > 1 ? dateParts[1].trim() : '';
@@ -145,14 +245,13 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🌟 1. กล่องข้อมูลบริการปัจจุบัน (สีขาวขอบมน)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade400, width: 1),
+                border: Border.all(color: Colors.grey.shade400),
               ),
               child: Column(
                 children: [
@@ -190,7 +289,6 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
             ),
             const SizedBox(height: 20),
 
-            // 🌟 2. แผนที่ตำแหน่งปัจจุบัน
             Row(
               children: [
                 Container(
@@ -209,82 +307,9 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
               ],
             ),
             const SizedBox(height: 12),
-            Container(
-              height: 180,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.white,
-                  width: 4,
-                ), // ขอบขาวหนาๆ ตามแบบ
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: FlutterMap(
-                  options: MapOptions(
-                    initialCenter: currentLocation,
-                    initialZoom: 14.0,
-                    interactionOptions: const InteractionOptions(
-                      flags: InteractiveFlag.none,
-                    ), // ล็อคแผนที่
-                  ),
-                  children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=$maptilerApiKey',
-                      userAgentPackageName: 'com.example.app',
-                    ),
-                    PolylineLayer(
-                      polylines: [
-                        Polyline(
-                          points: [pointA, currentLocation, pointB],
-                          color: Colors.blue.shade400,
-                          strokeWidth: 5.0,
-                        ),
-                      ],
-                    ),
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: pointA,
-                          width: 30,
-                          height: 30,
-                          child: _buildMapPin('A', const Color(0xFF2196F3)),
-                        ), // สีฟ้า
-                        Marker(
-                          point: pointB,
-                          width: 30,
-                          height: 30,
-                          child: _buildMapPin('B', Colors.grey),
-                        ),
-                        // 🟢 หมุดเขียว (ตำแหน่งปัจจุบัน)
-                        Marker(
-                          point: currentLocation,
-                          width: 20,
-                          height: 20,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            _buildMapSection(),
             const SizedBox(height: 20),
 
-            // 🌟 3. รายละเอียดการแจ้งเตือน (Dropdown)
             const Text(
               'รายละเอียดของการแจ้งเตือน',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -301,55 +326,58 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                 child: DropdownButton<String>(
                   isExpanded: true,
                   value: _selectedStatus,
-                  hint: const Text('เลือกสถานะ'),
+                  hint: const Text(
+                    'เสร็จสิ้นทุกสถานะแล้ว',
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   icon: const Icon(
                     Icons.arrow_drop_down,
                     color: Colors.black,
                     size: 30,
                   ),
-                  items: _statusList.asMap().entries.map((entry) {
-                    int index = entry.key;
-                    String status = entry.value;
+                  items: _statusList
+                      .asMap()
+                      .entries
+                      .where((entry) => entry.key >= _currentStepIndex)
+                      .map((entry) {
+                        int index = entry.key;
+                        String status = entry.value;
+                        bool isEnabled = (index == _currentStepIndex);
 
-                    // 🌟 ล็อค Logic การเลือกสถานะ
-                    // อนุญาตให้เลือกได้เฉพาะ Status ที่ตรงกับ _currentStepIndex เท่านั้น
-                    bool isEnabled = (index == _currentStepIndex);
-
-                    return DropdownMenuItem<String>(
-                      value: status,
-                      enabled: isEnabled, // ถ้าเป็น false จะกดไม่ได้
-                      child: Text(
-                        status,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: isEnabled
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          // เปลี่ยนสีเทา ถ้าถูกส่งไปแล้ว หรือยังไม่ถึงคิว
-                          color: isEnabled
-                              ? Colors.black
-                              : Colors.grey.shade400,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _selectedStatus = newValue;
-                    });
-                  },
+                        return DropdownMenuItem<String>(
+                          value: status,
+                          enabled: isEnabled,
+                          child: Text(
+                            status,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: isEnabled
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: isEnabled
+                                  ? Colors.black
+                                  : Colors.grey.shade400,
+                            ),
+                          ),
+                        );
+                      })
+                      .toList(),
+                  onChanged: (String? newValue) =>
+                      setState(() => _selectedStatus = newValue),
                 ),
               ),
             ),
             const SizedBox(height: 24),
 
-            // 🌟 4. ปุ่มเพิ่มสถานะ
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  // ถ้าเสร็จครบ 4 ขั้นตอน ให้ปุ่มเป็นสีเทาและกดไม่ได้
-                  backgroundColor: _currentStepIndex < _statusList.length
+                  backgroundColor:
+                      (_currentStepIndex < _statusList.length && !_isLoading)
                       ? const Color(0xFFA052BE)
                       : Colors.grey.shade400,
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -357,33 +385,167 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                onPressed: _currentStepIndex < _statusList.length
+                onPressed:
+                    (_currentStepIndex < _statusList.length && !_isLoading)
                     ? _submitStatus
                     : null,
-                child: Text(
-                  _currentStepIndex < _statusList.length
-                      ? 'เพิ่มสถานะ'
-                      : 'เสร็จสิ้นการแจ้งเตือนทั้งหมด',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: _isLoading && _currentStepIndex < _statusList.length
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        _currentStepIndex < _statusList.length
+                            ? 'เพิ่มสถานะ'
+                            : 'เสร็จสิ้นการแจ้งเตือนทั้งหมด',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 30),
           ],
         ),
       ),
-      bottomNavigationBar: CustomBottomNavBar(
-        currentIndex: _bottomNavIndex,
-        onTap: _onBottomNavTapped,
+    );
+  }
+
+  Widget _buildMapSection() {
+    if (!_hasStarted) {
+      return Container(
+        height: 180,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade300, width: 2),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.location_off_rounded,
+              size: 40,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'ยังไม่ได้เริ่มต้นการเดินทาง',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'กดส่งสถานะแรกเพื่อเปิดระบบนำทาง',
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_currentLocation == null) {
+      return Container(
+        height: 180,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: Color(0xFFA052BE)),
+              SizedBox(height: 12),
+              Text(
+                'กำลังค้นหาพิกัด GPS ของคุณ...',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      height: 180,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white, width: 4),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: FlutterMap(
+          options: MapOptions(
+            initialCenter: _currentLocation!,
+            initialZoom: 15.0,
+            interactionOptions: const InteractionOptions(
+              flags: InteractiveFlag.none,
+            ),
+          ),
+          children: [
+            TileLayer(
+              urlTemplate:
+                  'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=$maptilerApiKey',
+              userAgentPackageName: 'com.example.app',
+            ),
+            PolylineLayer(
+              polylines: [
+                Polyline(
+                  points: [pointA, _currentLocation!, pointB],
+                  color: Colors.blue.shade400,
+                  strokeWidth: 4.0,
+                ),
+              ],
+            ),
+            MarkerLayer(
+              markers: [
+                Marker(
+                  point: pointA,
+                  width: 30,
+                  height: 30,
+                  child: _buildMapPin('A', const Color(0xFF2196F3)),
+                ),
+                Marker(
+                  point: pointB,
+                  width: 30,
+                  height: 30,
+                  child: _buildMapPin('B', Colors.grey),
+                ),
+                Marker(
+                  point: _currentLocation!,
+                  width: 20,
+                  height: 20,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  // Helper สำหรับสร้างบรรทัดข้อมูลในกล่อง
   Widget _buildInfoRow(String label, String value, {bool isBold = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
@@ -411,7 +573,6 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     );
   }
 
-  // Helper สร้างหมุด A, B เล็กๆ
   Widget _buildMapPin(String label, Color color) {
     return Stack(
       alignment: Alignment.center,

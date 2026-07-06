@@ -6,6 +6,7 @@ import '../../widgets/custom_header_nav.dart';
 import '../caretaker/view_relative_request_page.dart';
 import '../caretaker/add_status_notification_page.dart';
 import '../caretaker/edit_profile_page.dart';
+import '../caretaker/add_doctor_advice_page.dart'; // 🌟 เพิ่มบรรทัดนี้
 
 class ListRelativeRequestPage extends StatefulWidget {
   final String uid;
@@ -19,24 +20,20 @@ class ListRelativeRequestPage extends StatefulWidget {
 class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
   int _currentTabIndex = 0;
   int _bottomNavIndex = 1;
-  bool _isLoading = true; // 🌟 ตัวแปรโหลดข้อมูล
+  bool _isLoading = true;
   final CaretakerService _service = CaretakerService();
+
+  List<RequestCard> requestsInProgress = [];
+  List<RequestCard> requestsCompleted = [];
+  List<RequestCard> requestsCancelled = [];
+  int _unreadCount = 0; // 🌟 ตัวแปรเก็บจำนวนคำขอที่มาใหม่
 
   void _onBottomNavTapped(int index) {
     setState(() {
       _bottomNavIndex = index;
     });
-
-    // เช็คเลขให้ตรงกับลำดับใหม่
     if (index == 0) {
       // ไปหน้าแรก (บ้าน)
-    } else if (index == 1) {
-      // Navigator.pushReplacement(
-      //   context,
-      //   MaterialPageRoute(
-      //     builder: (context) => const ListRelativeRequestPage(),
-      //   ),
-      // );
     } else if (index == 2) {
       Navigator.pushReplacement(
         context,
@@ -47,14 +44,10 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
     }
   }
 
-  List<RequestCard> requestsInProgress = [];
-  List<RequestCard> requestsCompleted = [];
-  List<RequestCard> requestsCancelled = [];
-
   @override
   void initState() {
     super.initState();
-    _fetchRequests(); // 🌟 ดึงข้อมูลจริงตอนเปิดหน้า
+    _fetchRequests();
   }
 
   String _formatThaiDate(DateTime? date, DateTime? time) {
@@ -85,28 +78,28 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
     return 'วัน${days[date.weekday % 7]} ${date.day} ${months[date.month - 1]} ${date.year + 543}  ·  ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} น.';
   }
 
-  // ดึงข้อมูลและจัดกลุ่มตามแท็บสถานะ
   Future<void> _fetchRequests() async {
     final data = await _service.getRequestsForCaretaker(widget.uid);
 
     List<RequestCard> inProgress = [];
     List<RequestCard> completed = [];
     List<RequestCard> cancelled = [];
+    int unread = 0; // 🌟 ตัวนับยังไม่ได้อ่าน
 
     for (var item in data) {
       RequestModel req = item['requestModel'];
       Map<String, dynamic> pat = item['patientData'];
       Map<String, dynamic> rel = item['relativeData'];
+      bool isRead = req.isReadCaretaker ?? false; // 🌟 ดึงสถานะการอ่านมา
 
       String statusType = (req.requeststatus ?? 'pending').toLowerCase();
-      bool hasAlert = (statusType == 'accepted');
+      bool hasAlert =
+          (statusType == 'accepted' || statusType == 'pending_advice');
 
       String patGender = pat['gender'] ?? '';
       String prefix = patGender == 'ชาย'
           ? 'นาย '
           : (patGender == 'หญิง' ? 'นาง ' : 'คุณ ');
-
-      // 🌟 2. เอาคำนำหน้ามารวมกับชื่อ
       String patientName =
           "$prefix${pat['firstname'] ?? ''} ${pat['lastname'] ?? ''}".trim();
 
@@ -121,10 +114,18 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
         requestModel: req,
         patientData: pat,
         relativeData: rel,
-        relativeUid: '',
+        relativeUid: item['relativeUid'] ?? '',
+        isRead: isRead, // 🌟 ยัดใส่การ์ด
       );
 
-      // จัดกลุ่มการ์ดลงกล่องตามสถานะ
+      // นับเฉพาะที่อยู่แท็บกำลังดำเนินการและยังไม่ได้อ่าน
+      if ((statusType == 'pending' ||
+              statusType == 'accepted' ||
+              statusType == 'pending_advice') &&
+          !isRead) {
+        unread++;
+      }
+
       if (statusType == 'pending' || statusType == 'accepted') {
         inProgress.add(card);
       } else if (statusType == 'completed') {
@@ -138,6 +139,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
       requestsInProgress = inProgress;
       requestsCompleted = completed;
       requestsCancelled = cancelled;
+      _unreadCount = unread; // 🌟 อัปเดตตัวเลขแจ้งเตือน
       _isLoading = false;
     });
   }
@@ -162,17 +164,13 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
         backgroundColor: Colors.grey.shade50,
         appBar: const CustomHeader(
           title: 'รายการคำขอของฉัน',
-          showBackButton: false, // หน้าหลักไม่ต้องมีปุ่ม back
+          showBackButton: false,
         ),
         body: const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(
-                color: Color(
-                  0xFF9B59B6,
-                ), // 🌟 เปลี่ยนสีหลอดโหลดเป็นสีม่วงให้เข้ากับธีมแอป
-              ),
+              CircularProgressIndicator(color: Color(0xFF9B59B6)),
               SizedBox(height: 16),
               Text(
                 'กำลังโหลดข้อมูล...',
@@ -184,6 +182,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
         bottomNavigationBar: CustomBottomNavBar(
           currentIndex: _bottomNavIndex,
           onTap: _onBottomNavTapped,
+          uid: widget.uid,
         ),
       );
     }
@@ -199,19 +198,34 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
               length: 3,
               initialIndex: _currentTabIndex,
               child: TabBar(
-                onTap: (index) {
-                  setState(() {
-                    _currentTabIndex = index;
-                  });
-                },
+                onTap: (index) => setState(() => _currentTabIndex = index),
                 labelColor: const Color(0xFF7D3C98),
                 unselectedLabelColor: Colors.grey.shade600,
                 indicatorColor: const Color(0xFF7D3C98),
                 indicatorWeight: 3,
-                tabs: const [
-                  Tab(text: 'กำลังดำเนินการ'),
-                  Tab(text: 'สิ้นสุด'),
-                  Tab(text: 'ยกเลิก'),
+                tabs: [
+                  // 🌟 เพิ่มการแจ้งเตือนจุดแดงๆ ตรงแท็บ "กำลังดำเนินการ" ได้ด้วย!
+                  Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('กำลังดำเนินการ'),
+                        if (_unreadCount > 0) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const Tab(text: 'สิ้นสุด'),
+                  const Tab(text: 'ยกเลิก'),
                 ],
               ),
             ),
@@ -219,7 +233,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
           Container(height: 6, color: const Color(0xFFF4EDFB)),
           Expanded(
             child: _getCurrentTabRequests().isEmpty
-                // ถ้าไม่มีข้อมูล ให้แสดงหน้า Empty State
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -249,15 +262,12 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                       ],
                     ),
                   )
-                // ถ้ามีข้อมูล ก็แสดง ListView ของการ์ดตามปกติ
                 : ListView.separated(
                     itemCount: _getCurrentTabRequests().length,
                     separatorBuilder: (context, index) =>
                         Container(height: 8, color: const Color(0xFFF4EDFB)),
-                    itemBuilder: (context, index) {
-                      final request = _getCurrentTabRequests()[index];
-                      return _buildRequestCard(request);
-                    },
+                    itemBuilder: (context, index) =>
+                        _buildRequestCard(_getCurrentTabRequests()[index]),
                   ),
           ),
         ],
@@ -265,6 +275,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _bottomNavIndex,
         onTap: _onBottomNavTapped,
+        uid: widget.uid,
       ),
     );
   }
@@ -288,6 +299,12 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
         statusTextColor = const Color(0xFF00B14F);
         statusText = 'ตอบรับแล้ว';
         break;
+      case 'pending_advice':
+        titleColor = const Color(0xFFE67E22);
+        statusBgColor = const Color(0xFFFDEBD0);
+        statusTextColor = const Color(0xFFE67E22);
+        statusText = 'รอเพิ่มคำแนะนำ';
+        break;
       case 'completed':
         titleColor = const Color(0xFF00B14F);
         statusBgColor = const Color(0xFFB9F6CA);
@@ -307,7 +324,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
         statusText = 'ไม่ทราบสถานะ';
     }
 
-    // 🌟 เช็คว่าเป็น Tab กำลังดำเนินการหรือไม่
     bool isInProgressTab = _currentTabIndex == 0;
 
     return Container(
@@ -316,6 +332,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 🌟 1. ส่วนหัวการ์ด (รหัสงาน + ชื่อโรงพยาบาลสีๆ + ป้ายสถานะ)
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -323,23 +340,49 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '# ${request.id}',
-                      style: TextStyle(
-                        color: Colors.grey.shade500,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          '# ${request.id}',
+                          style: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // ป้าย NEW แดงๆ ถืองานเพิ่งเข้าหรือมีสถานะค้างและยังไม่ได้อ่าน
+                        if (!request.isRead && isInProgressTab)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'NEW',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      request.serviceName,
-                      maxLines: 1, // 🌟 ป้องกันชื่อโรงพยาบาลล้นจอ
-                      overflow: TextOverflow.ellipsis, // ถ้าเกินให้แสดงเป็น ...
+                      request.serviceName, // ชื่อโรงพยาบาลกลับมาแล้ว!
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: titleColor,
+                        color: titleColor, // สีตามสถานะ
                       ),
                     ),
                   ],
@@ -368,6 +411,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
           ),
           const SizedBox(height: 16),
 
+          // 🌟 2. ส่วนแสดงรายละเอียดตรงกลาง
           _buildDetailRow(
             icon: Icons.calendar_today,
             iconColor: const Color(0xFFA052BE),
@@ -394,29 +438,48 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
             value: request.patient,
             valueColor: const Color(0xFFFF8C00),
           ),
-
           const SizedBox(height: 16),
 
+          // 🌟 3. ส่วนปุ่มกดด้านล่าง (รวมลอจิก pending_advice)
           Row(
             mainAxisAlignment: isInProgressTab
                 ? MainAxisAlignment.spaceBetween
                 : MainAxisAlignment.end,
             children: [
-              // 🌟 โชว์ปุ่มเสมอถ้าอยู่ Tab 0 (แต่ปรับสี เทา/แดง ตาม request.hasAlert)
               if (isInProgressTab)
                 GestureDetector(
-                  // 🌟 ถ้า hasAlert เป็น true ให้เด้งไปหน้า SendNotification ถ้า false เป็น null (กดไม่ได้)
                   onTap: request.hasAlert
                       ? () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AddStatusNotificationPage(
-                                requestData: request,
-                                uid: widget.uid,
+                          // ดักเช็คสถานะ! ถ้าเป็น pending_advice ให้ดีดไปหน้า AddDoctor
+                          if (request.statusType == 'pending_advice') {
+                            Map<String, dynamic> reqInfo = {
+                              'patientName': request.patient,
+                              'dateTime': request.date,
+                              'hospital': request.serviceName,
+                              'department': request.category,
+                            };
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AddDoctorAdvicePage(
+                                  relativeUid: request.relativeUid,
+                                  requestId: request.id,
+                                  requestInfo: reqInfo,
+                                ),
                               ),
-                            ),
-                          );
+                            ).then((_) => _fetchRequests());
+                          } else {
+                            // ถ้าเป็น accepted ไปหน้าแผนที่ปกติ
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AddStatusNotificationPage(
+                                  requestData: request,
+                                  uid: widget.uid,
+                                ),
+                              ),
+                            ).then((_) => _fetchRequests());
+                          }
                         }
                       : null,
                   child: Container(
@@ -433,7 +496,9 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                     child: Row(
                       children: [
                         Icon(
-                          Icons.notifications,
+                          request.statusType == 'pending_advice'
+                              ? Icons.note_add_rounded
+                              : Icons.notifications,
                           color: request.hasAlert
                               ? const Color(0xFFF44336)
                               : Colors.grey.shade500,
@@ -441,7 +506,9 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'ส่งการแจ้งเตือน',
+                          request.statusType == 'pending_advice'
+                              ? 'เพิ่มคำแนะนำแพทย์'
+                              : 'ส่งการแจ้งเตือน',
                           style: TextStyle(
                             color: request.hasAlert
                                 ? const Color(0xFFF44336)
@@ -459,16 +526,45 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                   ),
                 ),
               TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ViewRelativeRequestPage(
-                        requestData: request,
-                        uid: widget.uid,
+                onPressed: () async {
+                  if (!request.isRead) {
+                    await _service.markRequestAsRead(
+                      request.relativeUid,
+                      request.id,
+                    );
+                  }
+
+                  // ดัก "View More" ถ้าเป็น pending_advice
+                  if (request.statusType == 'pending_advice') {
+                    Map<String, dynamic> reqInfo = {
+                      'patientName': request.patient,
+                      'dateTime': request.date,
+                      'hospital': request.serviceName,
+                      'department': request.category,
+                    };
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AddDoctorAdvicePage(
+                          relativeUid: request.relativeUid,
+                          requestId: request.id,
+                          requestInfo: reqInfo,
+                        ),
                       ),
-                    ),
-                  );
+                    );
+                  } else {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ViewRelativeRequestPage(
+                          requestData: request,
+                          uid: widget.uid,
+                        ),
+                      ),
+                    );
+                  }
+
+                  _fetchRequests();
                 },
                 child: const Text(
                   'View More',
@@ -521,7 +617,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
               const SizedBox(height: 2),
               Text(
                 value,
-                maxLines: 1, // 🌟 ป้องกันข้อมูลแถวอื่นๆ ล้นจอ
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 15,
@@ -545,10 +641,11 @@ class RequestCard {
   final String category;
   final String patient;
   final bool hasAlert;
-  final RequestModel requestModel; // 🌟 เก็บก้อนข้อมูล Request จริง
-  final Map<String, dynamic> patientData; // 🌟 เก็บข้อมูลคนไข้จริง
-  final Map<String, dynamic> relativeData; // 🌟 เก็บข้อมูลญาติจริง
+  final RequestModel requestModel;
+  final Map<String, dynamic> patientData;
+  final Map<String, dynamic> relativeData;
   final String relativeUid;
+  final bool isRead; // 🌟 เพิ่มตัวแปรเช็คสถานะการอ่านในโมเดลการ์ด
 
   RequestCard({
     required this.id,
@@ -562,5 +659,6 @@ class RequestCard {
     required this.patientData,
     required this.relativeData,
     required this.relativeUid,
+    required this.isRead,
   });
 }

@@ -515,6 +515,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _selectedIndex,
         onTap: _onBottomNavTapped,
+        uid: widget.uid,
       ),
     );
   }

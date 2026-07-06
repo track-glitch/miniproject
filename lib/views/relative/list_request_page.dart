@@ -129,6 +129,8 @@ class _ListRequestPageState extends State<ListRequestPage> {
         cancelled.sort(sortDate);
       }
 
+      if (!mounted) return;
+
       setState(() {
         requestsInProgress = inProgress;
         requestsCompleted = completed;

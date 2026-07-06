@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:latlong2/latlong.dart'; 
+import 'package:latlong2/latlong.dart';
 import 'dart:convert';
 import 'package:miniproject/views/login_page.dart';
 import 'package:miniproject/widgets/location_picker_widget.dart';
-
 
 class ServiceRequestPage extends StatefulWidget {
   final Map<String, dynamic> caretakerData;
@@ -24,12 +23,13 @@ class ServiceRequestPage extends StatefulWidget {
 }
 
 class _ServiceRequestPageState extends State<ServiceRequestPage> {
-  final Color primaryColor = const Color(0xFF9B59B6);
+  final Color primaryColor = const Color(0xFF8763E6);
+  final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
+  final Color lightPurple = const Color(0xFFECE2FE);
   final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
   final Color cardColor = Colors.white;
-  final Color borderColor = const Color(0xFFDDD0F0); 
-  final Color accentPurple = const Color(0xFFB388FF); 
-  final Color labelColor = const Color(0xFF7E57C2); 
+  final Color borderColor = const Color(0xFFD3C2F0);
+  final Color labelColor = const Color(0xFF241C2B);
 
   final _formKey = GlobalKey<FormState>();
 
@@ -37,12 +37,13 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   TimeOfDay? _selectedTime;
 
   final TextEditingController _detailController = TextEditingController();
-  final TextEditingController _customLocationController = TextEditingController();
+  final TextEditingController _customLocationController =
+      TextEditingController();
   final TextEditingController _hospitalController = TextEditingController();
   final TextEditingController _departmentController = TextEditingController();
 
   int _locationOption = 1; // 1 = ที่อยู่ปัจจุบัน, 2 = ระบุสถานที่รับ
-  
+
   // สำหรับแผนที่
   LatLng _selectedLocation = const LatLng(13.7563, 100.5018);
   bool _hasPinned = false;
@@ -75,7 +76,20 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   }
 
   String _formatThaiDate(DateTime date) {
-    final thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    final thaiMonths = [
+      'ม.ค.',
+      'ก.พ.',
+      'มี.ค.',
+      'เม.ย.',
+      'พ.ค.',
+      'มิ.ย.',
+      'ก.ค.',
+      'ส.ค.',
+      'ก.ย.',
+      'ต.ค.',
+      'พ.ย.',
+      'ธ.ค.',
+    ];
     return '${date.day} ${thaiMonths[date.month - 1]} ${date.year + 543}';
   }
 
@@ -84,9 +98,9 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: primaryColor,
+        backgroundColor: darkPurple,
         elevation: 2,
-        shadowColor: const Color(0xFF7B1FA2).withOpacity(0.3),
+        shadowColor: const Color.fromARGB(255, 153, 116, 255),
         centerTitle: true,
         title: const Text(
           'ส่งคำขอบริการ',
@@ -98,7 +112,10 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -114,7 +131,9 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
               border: Border.all(color: borderColor, width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF9B59B6).withOpacity(0.07),
+                  color: primaryColor.withValues(
+                    alpha: 0.15,
+                  ), // 🌟 แก้สีเงากล่องให้เป็นโทนม่วง
                   blurRadius: 10,
                   offset: const Offset(0, 3),
                 ),
@@ -123,12 +142,22 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('วันที่นัดหมาย', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: labelColor)),
+                Text(
+                  'วันที่นัดหมาย',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: labelColor,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () => _selectDate(context),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                     decoration: BoxDecoration(
                       border: Border.all(color: borderColor, width: 1.5),
                       borderRadius: BorderRadius.circular(12),
@@ -137,7 +166,10 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(_formatThaiDate(_selectedDate), style: const TextStyle(fontSize: 14)),
+                        Text(
+                          _formatThaiDate(_selectedDate),
+                          style: const TextStyle(fontSize: 14),
+                        ),
                         Icon(Icons.calendar_today, color: primaryColor),
                       ],
                     ),
@@ -151,19 +183,40 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: borderColor, width: 1.5),
-                    color: bgColor.withOpacity(0.25),
+                    color: Colors.white,
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       CircleAvatar(
                         radius: 28,
-                        backgroundColor: Colors.grey.shade300,
-                        backgroundImage: widget.caretakerData['profilephoto'] != null && widget.caretakerData['profilephoto'].toString().isNotEmpty
-                            ? MemoryImage(base64Decode(widget.caretakerData['profilephoto'].toString().replaceAll('\n', '').trim()))
+                        backgroundColor:
+                            lightPurple, // 🌟 เปลี่ยนพื้นหลังเป็นม่วงอ่อน
+                        backgroundImage:
+                            widget.caretakerData['profilephoto'] != null &&
+                                widget.caretakerData['profilephoto']
+                                    .toString()
+                                    .isNotEmpty
+                            ? MemoryImage(
+                                base64Decode(
+                                  widget.caretakerData['profilephoto']
+                                      .toString()
+                                      .replaceAll('\n', '')
+                                      .trim(),
+                                ),
+                              )
                             : null,
-                        child: widget.caretakerData['profilephoto'] == null || widget.caretakerData['profilephoto'].toString().isEmpty
-                            ? const Icon(Icons.person, color: Colors.white, size: 35)
+                        child:
+                            widget.caretakerData['profilephoto'] == null ||
+                                widget.caretakerData['profilephoto']
+                                    .toString()
+                                    .isEmpty
+                            ? Icon(
+                                Icons.person,
+                                color:
+                                    primaryColor, // 🌟 เปลี่ยนสีไอคอนคนเป็นสีม่วง
+                                size: 35,
+                              )
                             : null,
                       ),
                       const SizedBox(width: 12),
@@ -171,24 +224,60 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('ผู้ดูแล', style: TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.bold)),
+                            const Text(
+                              'ผู้ดูแล',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.black54,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             Text(
-                              'นาย ${widget.caretakerData['firstname'] ?? ''} ${widget.caretakerData['lastname'] ?? ''}'.trim(),
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              'นาย ${widget.caretakerData['firstname'] ?? ''} ${widget.caretakerData['lastname'] ?? ''}'
+                                  .trim(),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
                             Row(
                               children: [
-                                Row(children: List.generate(5, (index) => const Icon(Icons.star, color: Colors.orange, size: 14))),
+                                Row(
+                                  children: List.generate(
+                                    5,
+                                    (index) => const Icon(
+                                      Icons.star,
+                                      color: Colors.orange,
+                                      size: 14,
+                                    ),
+                                  ),
+                                ),
                                 const SizedBox(width: 4),
-                                const Text('4.9 - 87 รีวิว', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                const Text(
+                                  '4.9 - 87 รีวิว',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 6),
                             Row(
                               children: [
-                                const Icon(Icons.phone, size: 14, color: Colors.black54),
+                                const Icon(
+                                  Icons.phone,
+                                  size: 14,
+                                  color: Colors.black54,
+                                ),
                                 const SizedBox(width: 4),
-                                Text('เบอร์โทร ${widget.caretakerData['phonenumber'] ?? '-'}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                                Text(
+                                  'เบอร์โทร ${widget.caretakerData['phonenumber'] ?? '-'}',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ],
                             ),
                           ],
@@ -199,39 +288,61 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                 ),
                 const SizedBox(height: 20),
 
-                Text('ระบุรายละเอียดคำขอ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: labelColor)),
+                Text(
+                  'ระบุรายละเอียดคำขอ',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: labelColor,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _detailController,
                   maxLines: 3,
                   decoration: _inputDecoration(''),
-                  validator: (value) => value!.isEmpty ? 'กรุณาระบุรายละเอียด' : null,
+                  validator: (value) =>
+                      value!.isEmpty ? 'กรุณาระบุรายละเอียด' : null,
                 ),
                 const SizedBox(height: 16),
 
-                Text('ระบุสถานที่จุดรับ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: labelColor)),
+                Text(
+                  'ระบุสถานที่จุดรับ',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: labelColor,
+                  ),
+                ),
                 RadioListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('ใช้ที่อยู่ปัจจุบันตามที่ระบุในโปรไฟล์', style: TextStyle(fontSize: 13)),
+                  title: const Text(
+                    'ใช้ที่อยู่ปัจจุบันตามที่ระบุในโปรไฟล์',
+                    style: TextStyle(fontSize: 13),
+                  ),
                   value: 1,
                   groupValue: _locationOption,
                   activeColor: primaryColor,
                   onChanged: (val) => setState(() {
                     _locationOption = val as int;
                     // ล้างค่าที่อยู่ค้นหาเก่าเผื่อเปลี่ยนใจ
-                    FocusScope.of(context).unfocus(); 
+                    FocusScope.of(context).unfocus();
                   }),
                 ),
                 RadioListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('สถานที่จุดรับ', style: TextStyle(fontSize: 13)),
+                  title: const Text(
+                    'สถานที่จุดรับ',
+                    style: TextStyle(fontSize: 13),
+                  ),
                   value: 2,
                   groupValue: _locationOption,
                   activeColor: primaryColor,
-                  onChanged: (val) => setState(() => _locationOption = val as int),
+                  onChanged: (val) =>
+                      setState(() => _locationOption = val as int),
                 ),
-                
-                // 🌟 ลบ TextFormField (บ้านเลขที่ ถนน ตำบล) ออกไปแล้ว 
+
+                // 🌟 ลบ TextFormField (บ้านเลขที่ ถนน ตำบล) ออกไปแล้ว
                 // 🌟 และใช้ if ควบคุมให้โชว์ LocationPickerWidget เฉพาะเมื่อกดสถานที่จุดรับ
                 if (_locationOption == 2)
                   Container(
@@ -240,12 +351,17 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: accentPurple, width: 2), // เพิ่มสีขอบให้เด่นขึ้น
+                      border: Border.all(
+                        color: darkPurple,
+                        width: 2,
+                      ), // เพิ่มสีขอบให้เด่นขึ้น
                       boxShadow: [
                         BoxShadow(
-                          color: accentPurple.withOpacity(0.1),
+                          color: darkPurple.withValues(
+                            alpha: 0.2,
+                          ), // 🌟 ปรับสีเงากล่องแผนที่ให้อ่อนลง
                           blurRadius: 8,
-                          offset: const Offset(0, 2),
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
@@ -262,16 +378,31 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                     ),
                   ),
 
-                Text('ระบุโรงพยาบาล', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: labelColor)),
+                Text(
+                  'ระบุโรงพยาบาล',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: labelColor,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _hospitalController,
                   decoration: _inputDecoration('ชื่อโรงพยาบาล'),
-                  validator: (value) => value!.isEmpty ? 'กรุณาระบุโรงพยาบาล' : null,
+                  validator: (value) =>
+                      value!.isEmpty ? 'กรุณาระบุโรงพยาบาล' : null,
                 ),
                 const SizedBox(height: 16),
 
-                Text('ระบุแผนกในโรงพยาบาล', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: labelColor)),
+                Text(
+                  'ระบุแผนกในโรงพยาบาล',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: labelColor,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _departmentController,
@@ -280,17 +411,41 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                 ),
                 const SizedBox(height: 16),
 
-                Text('ระบุเวลานัดหมาย', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: labelColor)),
+                Text(
+                  'ระบุเวลานัดหมาย',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: labelColor,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () => _selectTime(context),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(border: Border.all(color: borderColor, width: 1.5), borderRadius: BorderRadius.circular(12), color: Colors.white),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: borderColor, width: 1.5),
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.white,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(_selectedTime == null ? '--:-- --' : _selectedTime!.format(context), style: TextStyle(color: _selectedTime == null ? Colors.grey : Colors.black, fontSize: 14)),
+                        Text(
+                          _selectedTime == null
+                              ? '--:-- --'
+                              : _selectedTime!.format(context),
+                          style: TextStyle(
+                            color: _selectedTime == null
+                                ? Colors.grey
+                                : Colors.black,
+                            fontSize: 14,
+                          ),
+                        ),
                         Icon(Icons.access_time, color: primaryColor),
                       ],
                     ),
@@ -305,50 +460,103 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
                           elevation: 4,
-                          shadowColor: const Color(0xFF9B59B6).withOpacity(0.4),
+                          shadowColor: primaryColor.withValues(
+                            alpha: 0.4,
+                          ), // 🌟 ปรับสีเงาปุ่มให้เป็นโทนม่วง
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
                         onPressed: () async {
                           // 🌟 เพิ่ม Validation ให้กับสถานที่จุดรับ ในกรณีที่ไม่ได้กรอกเข้ามา
-                          if (_locationOption == 2 && _customLocationController.text.trim().isEmpty) {
+                          if (_locationOption == 2 &&
+                              _customLocationController.text.trim().isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("กรุณาค้นหาสถานที่หรือปักหมุดจุดรับ"), backgroundColor: Colors.red)
+                              const SnackBar(
+                                content: Text(
+                                  "กรุณาค้นหาสถานที่หรือปักหมุดจุดรับ",
+                                ),
+                                backgroundColor: Colors.red,
+                              ),
                             );
                             return; // หยุดการทำงานถ้าไม่ได้กรอกสถานที่จุดรับ
                           }
 
-                          if (_formKey.currentState!.validate() && _selectedTime != null) {
-                            String uid = widget.loggedUid ?? FirebaseAuth.instance.currentUser!.uid;
-                            DatabaseReference requestRef = FirebaseDatabase.instance.ref().child("Login").child(uid).child("Relative").child("Request").push();
+                          if (_formKey.currentState!.validate() &&
+                              _selectedTime != null) {
+                            String uid =
+                                widget.loggedUid ??
+                                FirebaseAuth.instance.currentUser!.uid;
+                            DatabaseReference requestRef = FirebaseDatabase
+                                .instance
+                                .ref()
+                                .child("Login")
+                                .child(uid)
+                                .child("Relative")
+                                .child("Request")
+                                .push();
                             String requestId = requestRef.key!;
-                            
-                            DateTime appointmentDateTime = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, _selectedTime!.hour, _selectedTime!.minute);
+
+                            DateTime appointmentDateTime = DateTime(
+                              _selectedDate.year,
+                              _selectedDate.month,
+                              _selectedDate.day,
+                              _selectedTime!.hour,
+                              _selectedTime!.minute,
+                            );
 
                             await requestRef.set({
                               "requestId": requestId,
                               "caretakerId": widget.caretakerId,
                               "requestdetail": _detailController.text.trim(),
-                              "pickuplocation": _locationOption == 1 ? "ที่อยู่จากโปรไฟล์ผู้ป่วย" : _customLocationController.text.trim(),
-                              "dropofflocation": _hospitalController.text.trim(),
+                              "pickuplocation": _locationOption == 1
+                                  ? "ที่อยู่จากโปรไฟล์ผู้ป่วย"
+                                  : _customLocationController.text.trim(),
+                              "dropofflocation": _hospitalController.text
+                                  .trim(),
                               "hospitalname": _hospitalController.text.trim(),
-                              "departmentname": _departmentController.text.trim(),
-                              "appointmentdate": _selectedDate.toIso8601String(),
-                              "appointmenttime": appointmentDateTime.toIso8601String(),
+                              "departmentname": _departmentController.text
+                                  .trim(),
+                              "appointmentdate": _selectedDate
+                                  .toIso8601String(),
+                              "appointmenttime": appointmentDateTime
+                                  .toIso8601String(),
                               "requestdate": DateTime.now().toIso8601String(),
                               "requeststatus": "Pending",
-                              "latitude": _locationOption == 2 && _hasPinned ? _selectedLocation.latitude : 0.0, 
-                              "longitude": _locationOption == 2 && _hasPinned ? _selectedLocation.longitude : 0.0,
+                              "latitude": _locationOption == 2 && _hasPinned
+                                  ? _selectedLocation.latitude
+                                  : 0.0,
+                              "longitude": _locationOption == 2 && _hasPinned
+                                  ? _selectedLocation.longitude
+                                  : 0.0,
                             });
 
                             if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("ส่งคำขอสำเร็จ"), backgroundColor: Colors.green));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("ส่งคำขอสำเร็จ"),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
                             Navigator.pop(context);
                           } else if (_selectedTime == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("กรุณาระบุเวลานัดหมาย"), backgroundColor: Colors.red));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("กรุณาระบุเวลานัดหมาย"),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
                           }
                         },
-                        child: const Text('ยืนยัน', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          'ยืนยัน',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -357,10 +565,19 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.grey,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('ยกเลิก', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          'ยกเลิก',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -373,16 +590,28 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 1,
         type: BottomNavigationBarType.fixed,
-        backgroundColor: primaryColor,
+        backgroundColor: darkPurple,
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white70,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
         unselectedLabelStyle: const TextStyle(fontSize: 12),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'บ้าน'),
-          BottomNavigationBarItem(icon: Icon(Icons.support_agent), label: 'ขอใช้บริการ'),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'แจ้งเตือน'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'ญาติ'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.support_agent),
+            label: 'ขอใช้บริการ',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.notifications),
+            label: 'แจ้งเตือน',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: 'ญาติ',
+          ),
         ],
       ),
     );
@@ -393,9 +622,18 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
       hintText: hint,
       hintStyle: const TextStyle(color: Colors.grey, fontSize: 13),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor, width: 1.5)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor, width: 1.5)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor, width: 1.5)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: borderColor, width: 1.5),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: borderColor, width: 1.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: primaryColor, width: 1.5),
+      ),
       filled: true,
       fillColor: Colors.white,
     );
