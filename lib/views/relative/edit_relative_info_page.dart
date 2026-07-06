@@ -5,14 +5,12 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:latlong2/latlong.dart';
-
-// 🌟 Imports สำหรับการเปลี่ยนหน้า (กรุณาเช็ค Path ให้ตรงกับโปรเจกต์ของคุณ)
+import 'package:miniproject/views/relative/search_caretaker_profile_page.dart';
 import 'package:miniproject/widgets/location_picker_widget.dart';
+
+// 🌟 Import LocationPickerWidget เข้ามาใช้งาน (ตรวจสอบ Path ให้ตรงกับโปรเจกต์ของคุณ)
 import 'package:miniproject/models/patient_model.dart';
 import 'package:miniproject/models/relative_model.dart';
-import 'package:miniproject/views/relative/list_request_page.dart';
-import 'package:miniproject/views/relative/track_status_notification_page.dart';
-import 'package:miniproject/views/relative/relative_home_page.dart'; // 🌟 ดึงหน้า Home มาใช้งาน
 
 class EditRelativeInfoPage extends StatefulWidget {
   final PatientModel currentPatient;
@@ -34,15 +32,28 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
 
+  // 🌟 บังคับให้หน้าจอโหลดจนกว่าจะดึงที่อยู่เดิมเสร็จ
   bool _isLoading = true;
 
-  // 🎨 Theme ใหม่
-  final Color primaryColor = const Color(0xFF7C5CFC);
-  final Color darkPurple = const Color(0xFF6E5ABF);
-  final Color lightPurple = const Color(0xFFF3E5F5);
-  final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
-  final Color greyBorder = const Color(0xFFB9A4F2);
+  // 🎨 Theme ใหม่ - อ้างอิงจากตัวอย่างหน้า "ค้นหาบัญชี" (โทนม่วงสบายตา การ์ดสีขาว)
+  final Color primaryColor = const Color(
+    0xFF7C5CFC,
+  ); // ม่วงหลัก ใช้กับปุ่ม/ไอคอนสำคัญ
+  final Color darkPurple = const Color(
+    0xFF6E5ABF,
+  ); // ม่วงเข้ม ใช้กับหัวข้อ/ตัวหนา
+  final Color lightPurple = const Color(
+    0xFFF3E5F5,
+  ); // คงไว้เผื่อมีการใช้งานที่อื่น
+  final Color bgColor = const Color.fromARGB(
+    255,
+    225,
+    202,
+    255,
+  ); // พื้นหลังม่วงอ่อนสบายตา
+  final Color greyBorder = const Color(0xFFB9A4F2); // เส้นขอบม่วงอ่อน
 
+  // สีเพิ่มเติมสำหรับ Gradient ของ AppBar และพื้นหลัง ให้ตรงกับภาพตัวอย่าง
   final Color headerGradientStart = const Color(0xFF8E6FF0);
   final Color headerGradientEnd = const Color(0xFF7C5CFC);
   final Color bgGradientTop = const Color.fromARGB(255, 225, 202, 255);
@@ -77,6 +88,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   void initState() {
     super.initState();
     _initData();
+    // 🌟 รอจนกว่า _fetchAndForceShowData จะทำงานเสร็จค่อยปิด Loading
     _fetchAndForceShowData().then((_) {
       if (mounted) {
         setState(() {
@@ -129,6 +141,10 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
       final relSnapshot = await FirebaseDatabase.instance
           .ref('Login/$uid/Relative')
           .get();
+
+      // 🌟 เพิ่มบรรทัดนี้: ถ้าผู้ใช้กดปิดหน้าไปแล้ว ให้หยุดทำงานทันที
+      if (!mounted) return;
+
       if (relSnapshot.exists && relSnapshot.value is Map) {
         final relData = Map<String, dynamic>.from(relSnapshot.value as Map);
         _patLineIdController.text =
@@ -141,10 +157,14 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
       final patSnapshot = await FirebaseDatabase.instance
           .ref('Login/$uid/Relative/Patient')
           .get();
+
+      // 🌟 เพิ่มบรรทัดนี้: เช็คอีกครั้งก่อนเอาข้อมูล Patient มาแสดง
+      if (!mounted) return;
+
       if (patSnapshot.exists && patSnapshot.value is Map) {
         final data = Map<String, dynamic>.from(patSnapshot.value as Map);
         _patAddressController.text =
-            data['Location']['address'] ?? _patAddressController.text;
+            data['address'] ?? _patAddressController.text;
         _patDiseaseController.text =
             data['disease'] ?? _patDiseaseController.text;
         _patMobilityController.text =
@@ -156,8 +176,8 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           });
         }
 
-        double lat = data['Location']['latitude']?.toDouble() ?? 0.0;
-        double lng = data['Location']['longitude']?.toDouble() ?? 0.0;
+        double lat = data['latitude']?.toDouble() ?? 0.0;
+        double lng = data['longitude']?.toDouble() ?? 0.0;
         if (lat != 0.0 && lng != 0.0) {
           _selectedLocation = LatLng(lat, lng);
           _hasPinned = true;
@@ -178,6 +198,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     _patDiseaseController.dispose();
     _patMobilityController.dispose();
     _patAddressController.dispose();
+
     _relFirstNameController.dispose();
     _relLastNameController.dispose();
     _relEmailController.dispose();
@@ -240,7 +261,19 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('แก้ไขข้อมูลสำเร็จแล้ว')));
-      Navigator.pop(context);
+
+      // ปรับปรุงการย้อนกลับหลัง Save สำเร็จ
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                CaretakerSearchPage(loggedUid: widget.loggedUid),
+          ),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -265,6 +298,9 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(0)),
+        ),
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -272,11 +308,29 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
               end: Alignment.bottomRight,
               colors: [headerGradientStart, headerGradientEnd],
             ),
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(0),
+            ),
           ),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            // เช็คว่าย้อนกลับแบบปกติได้ไหม ถ้าได้ให้ย้อน ถ้าไม่ได้ค่อยสร้างหน้าใหม่พร้อมส่ง UID
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CaretakerSearchPage(
+                    loggedUid: widget
+                        .loggedUid, // ส่ง UID กลับไปเพื่อไม่ให้หลุดล็อกอิน
+                  ),
+                ),
+              );
+            }
+          },
         ),
       ),
       body: Container(
@@ -290,7 +344,9 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         ),
         child: SafeArea(
           child: _isLoading
-              ? Center(child: CircularProgressIndicator(color: primaryColor))
+              ? Center(
+                  child: CircularProgressIndicator(color: primaryColor),
+                ) // 🌟 แสดงโหลดดิ้งรอให้ดึงที่อยู่ให้เสร็จ
               : SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
@@ -365,12 +421,14 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                           ],
                         ),
 
+                        // 🌟 2. ใช้งาน LocationPickerWidget เหมือนหน้า Register ทุกประการ
                         _buildSectionContainer(
                           title: 'ข้อมูลที่อยู่ผู้ป่วย',
                           children: [
                             LocationPickerWidget(
                               initialLocation: _selectedLocation,
-                              initialAddress: _patAddressController.text,
+                              initialAddress: _patAddressController
+                                  .text, // ส่งที่อยู่ที่ดึงมาให้ Widget
                               onLocationChanged: (newLocation, newAddress) {
                                 setState(() {
                                   _selectedLocation = newLocation;
@@ -474,7 +532,22 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                       borderRadius: BorderRadius.circular(14),
                                     ),
                                   ),
-                                  onPressed: () => Navigator.pop(context),
+                                  onPressed: () {
+                                    // ใช้โค้ดชุดเดียวกันกับปุ่ม Back
+                                    if (Navigator.canPop(context)) {
+                                      Navigator.pop(context);
+                                    } else {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              CaretakerSearchPage(
+                                                loggedUid: widget.loggedUid,
+                                              ),
+                                        ),
+                                      );
+                                    }
+                                  },
                                   child: Text(
                                     'ยกเลิก',
                                     style: TextStyle(
@@ -494,104 +567,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                   ),
                 ),
         ),
-      ),
-      // 🌟 เพิ่ม Bottom Navigation Bar เข้ามาตรงนี้
-      bottomNavigationBar: Container(
-        height: 65,
-        decoration: BoxDecoration(
-          color: darkPurple,
-          boxShadow: [
-            BoxShadow(
-              color: darkPurple.withOpacity(0.27),
-              blurRadius: 12,
-              offset: const Offset(0, -3),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildBottomNavItem(
-              Icons.home_outlined,
-              'บ้าน',
-              false,
-              onTap: () {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        RelativeHomePage(loggedUid: widget.loggedUid),
-                  ),
-                  (route) => false,
-                );
-              },
-            ),
-            _buildBottomNavItem(
-              Icons.support_agent,
-              'ขอใช้บริการ',
-              false,
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        ListRequestPage(loggedUid: widget.loggedUid),
-                  ),
-                );
-              },
-            ),
-            _buildBottomNavItem(
-              Icons.notifications_none,
-              'แจ้งเตือน',
-              false,
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TrackStatusNotificationPage(
-                      loggedUid: widget.loggedUid,
-                    ),
-                  ),
-                );
-              },
-            ),
-            _buildBottomNavItem(
-              Icons.person_outline,
-              'ญาติ',
-              true, // 🌟 ตั้งค่าให้แท็บนี้เป็นแบบกำลังใช้งาน (Active)
-              onTap:
-                  () {}, // อยู่หน้า Profile/ญาติ อยู่แล้ว จึงไม่ต้องใส่คำสั่งเปลี่ยนหน้า
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 🌟 ฟังก์ชันสำหรับสร้างปุ่มใน Bottom Navigation Bar
-  Widget _buildBottomNavItem(
-    IconData icon,
-    String label,
-    bool isActive, {
-    VoidCallback? onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: isActive ? Colors.white : Colors.white70, size: 24),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              color: isActive ? Colors.white : Colors.white70,
-              fontSize: 11,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -648,6 +623,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
   Widget _buildProfileImageSection() {
     ImageProvider? imageProvider;
+
     try {
       if (_profileImageFile != null) {
         imageProvider = FileImage(_profileImageFile!);
@@ -722,7 +698,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           ],
         ),
         const SizedBox(height: 10),
-        const Text(
+        Text(
           'รูปโปรไฟล์ผู้ป่วย',
           style: TextStyle(
             fontWeight: FontWeight.bold,
@@ -746,13 +722,13 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         controller: controller,
         maxLines: maxLines,
         keyboardType: keyboardType,
-        style: const TextStyle(fontSize: 14, color: Colors.black),
+        style: TextStyle(fontSize: 14, color: Colors.black),
         validator: (v) => v!.isEmpty ? 'กรุณากรอกข้อมูล' : null,
         decoration: InputDecoration(
           labelText: hint,
           hintText: hint,
           hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-          labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF8D7AE6)),
+          labelStyle: TextStyle(fontSize: 13, color: Color(0xFF8D7AE6)),
           filled: true,
           fillColor: const Color(0xFFFAF8FF),
           contentPadding: const EdgeInsets.symmetric(

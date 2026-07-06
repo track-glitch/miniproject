@@ -795,7 +795,10 @@ class _CaretakerSearchPageState extends State<CaretakerSearchPage> {
     String firstname = data['firstname'] ?? 'ไม่ระบุ';
     String lastname = data['lastname'] ?? '';
     String fullName = '';
-    String location = data['Location']['address'] ?? 'ไม่ระบุ';
+    String location = 'ไม่ระบุ';
+    if (data['Location'] != null) {
+      location = data['Location']['address'] ?? 'ไม่ระบุ';
+    }
     String gender = data['gender'] ?? 'ไม่ระบุ';
     if (gender == "ชาย") {
       fullName = 'นาย $firstname $lastname'.trim();
