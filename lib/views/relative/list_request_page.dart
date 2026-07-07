@@ -25,9 +25,10 @@ class _ListRequestPageState extends State<ListRequestPage> {
   int _currentTabIndex = 0; // 0 = กำลังดำเนินการ, 1 = สิ้นสุด, 2 = ยกเลิก
   bool _isLoading = true;
 
+  final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
   final Color primaryPurple = const Color(0xFF8763E6);
   final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
-  final Color lightPurpleBg = const Color(0xFFF4EDFB);
+  final Color lightPurpleBg = const Color.fromARGB(255, 206, 157, 255);
 
   List<RequestCardData> requestsInProgress = [];
   List<RequestCardData> requestsCompleted = [];
@@ -180,15 +181,15 @@ class _ListRequestPageState extends State<ListRequestPage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
+      return Scaffold(
         body: Center(
-          child: CircularProgressIndicator(color: Color(0xFF8763E6)),
+          child: CircularProgressIndicator(color: bgColor),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: lightPurpleBg,
+      backgroundColor: bgColor,
       appBar: const CustomHeader(title: 'รายการคำขอ', showBackButton: true),
       body: Column(
         children: [
@@ -203,15 +204,27 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 unselectedLabelColor: Colors.grey.shade600,
                 indicatorColor: primaryPurple,
                 indicatorWeight: 3,
+
+                // 1. เพิ่มโค้ดส่วนนี้เพื่อปรับขนาดตัวอักษร
+                labelStyle: const TextStyle(
+                  fontSize: 14, // ปรับขนาดตัวอักษรตอนที่เลือก
+                  fontWeight: FontWeight.bold,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontSize: 13, // ปรับขนาดตัวอักษรตอนที่ไม่ได้เลือก
+                  fontWeight: FontWeight.normal,
+                ),
+
                 tabs: const [
-                  Tab(text: 'กำลังดำเนินการ'),
-                  Tab(text: 'สิ้นสุด'),
-                  Tab(text: 'ยกเลิก'),
+                  // 2. เพิ่ม height เพื่อขยายความสูงของแถบให้ดูกว้างขึ้น
+                  Tab(text: 'ดำเนินการ', height: 55),
+                  Tab(text: 'สิ้นสุด', height: 55),
+                  Tab(text: 'ยกเลิก', height: 55),
                 ],
               ),
             ),
           ),
-          Container(height: 6, color: lightPurpleBg),
+          Container(height: 6, color: bgColor),
           Expanded(
             child: _getCurrentTabRequests().isEmpty
                 ? Center(
@@ -253,7 +266,7 @@ class _ListRequestPageState extends State<ListRequestPage> {
           color: darkPurple,
           boxShadow: [
             BoxShadow(
-              color: darkPurple.withOpacity(0.27),
+              color: darkPurple.withValues(alpha: 0.27),
               blurRadius: 12,
               offset: const Offset(0, -3),
             ),

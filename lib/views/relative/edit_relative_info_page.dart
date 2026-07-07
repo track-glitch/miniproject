@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:miniproject/views/relative/search_caretaker_profile_page.dart';
+import 'package:miniproject/views/relative/relative_home_page.dart';
 import 'package:miniproject/widgets/location_picker_widget.dart';
 
 // 🌟 Import LocationPickerWidget เข้ามาใช้งาน (ตรวจสอบ Path ให้ตรงกับโปรเจกต์ของคุณ)
@@ -270,7 +270,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           context,
           MaterialPageRoute(
             builder: (context) =>
-                CaretakerSearchPage(loggedUid: widget.loggedUid),
+                RelativeHomePage(loggedUid: widget.loggedUid),
           ),
         );
       }
@@ -323,7 +323,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => CaretakerSearchPage(
+                  builder: (context) => RelativeHomePage(
                     loggedUid: widget
                         .loggedUid, // ส่ง UID กลับไปเพื่อไม่ให้หลุดล็อกอิน
                   ),
@@ -541,7 +541,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) =>
-                                              CaretakerSearchPage(
+                                              RelativeHomePage(
                                                 loggedUid: widget.loggedUid,
                                               ),
                                         ),

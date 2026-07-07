@@ -42,12 +42,13 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   bool _isLoading = true;
 
   Map<String, dynamic>? patientData;
+  Map<String, dynamic>? relativeData;
   Map<String, dynamic>? caretakerData;
   double caretakerRating = 0.0;
   int caretakerReviewCount = 0;
 
-  final Color primaryPurple = const Color(0xFFA052BE);
-  final Color bgPurple = const Color(0xFFF4EDFB);
+  final Color primaryPurple = const Color(0xFF9B59B6);
+  final Color bgPurple = const Color.fromARGB(255, 225, 202, 255);
   final Color orangeAccent = const Color(0xFFFF8C00);
 
   @override
@@ -80,6 +81,15 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
 
   Future<void> _fetchDetailData() async {
     try {
+      // 🌟 ดึงข้อมูลญาติ
+      final relSnap = await FirebaseDatabase.instance
+          .ref('Login/${widget.loggedUid}/Relative')
+          .get();
+      if (relSnap.exists && relSnap.value is Map) {
+        relativeData = Map<String, dynamic>.from(relSnap.value as Map);
+      }
+
+      // 🌟 ดึงข้อมูลผู้ป่วย
       final patSnap = await FirebaseDatabase.instance
           .ref('Login/${widget.loggedUid}/Relative/Patient')
           .get();
@@ -87,6 +97,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
         patientData = Map<String, dynamic>.from(patSnap.value as Map);
       }
 
+      // 🌟 ดึงข้อมูล Caretaker
       String? targetId = widget.requestModel.caretakerId;
       if (targetId != null && targetId.isNotEmpty) {
         final usersSnap = await FirebaseDatabase.instance.ref('Login').get();
@@ -127,75 +138,118 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
+        return Dialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
           ),
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
-              SizedBox(width: 8),
-              Text(
-                'ยกเลิกคำขอ',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'ยกเลิกคำขอ',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
-              ),
-            ],
-          ),
-          content: const Text(
-            'คุณแน่ใจหรือไม่ว่าต้องการยกเลิกคำขอนี้?\n(การยกเลิกไม่สามารถย้อนกลับได้)',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'ปิด',
-                style: TextStyle(color: Colors.grey, fontSize: 16),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                const SizedBox(height: 20),
+                _buildAvatar(
+                  caretakerData?['profilephoto'] ??
+                      patientData?['patientphoto'],
+                  radius: 35,
                 ),
-              ),
-              onPressed: () async {
-                Navigator.pop(context);
-                setState(() => _isLoading = true);
+                const SizedBox(height: 12),
+                Text(
+                  widget.caretakerName,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'คุณต้องการยกเลิกคำขอไหม?',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey.shade500,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text(
+                          'ยกเลิก',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF97316), // สีส้ม
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          setState(() => _isLoading = true);
 
-                try {
-                  await FirebaseDatabase.instance
-                      .ref(
-                        'Login/${widget.loggedUid}/Relative/Request/${widget.requestModel.requestId}',
-                      )
-                      .update({'requeststatus': 'cancelled'});
+                          try {
+                            await FirebaseDatabase.instance
+                                .ref(
+                                  'Login/${widget.loggedUid}/Relative/Request/${widget.requestModel.requestId}',
+                                )
+                                .update({'requeststatus': 'cancelled'});
 
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('ยกเลิกคำขอสำเร็จ')),
-                    );
-                    Navigator.pop(context);
-                  }
-                } catch (e) {
-                  setState(() => _isLoading = false);
-                  if (context.mounted)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
-                    );
-                }
-              },
-              child: const Text(
-                'ยืนยันยกเลิก',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('ยกเลิกคำขอสำเร็จ'),
+                                ),
+                              );
+                              Navigator.pop(context);
+                            }
+                          } catch (e) {
+                            setState(() => _isLoading = false);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
+                              );
+                            }
+                          }
+                        },
+                        child: const Text(
+                          'ตกลง',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         );
       },
     );
@@ -279,12 +333,13 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     String countdownText = '';
     if (req.appointmentdate != null) {
       final difference = req.appointmentdate!.difference(DateTime.now()).inDays;
-      if (difference > 0)
+      if (difference > 0) {
         countdownText = 'อีก $difference วัน';
-      else if (difference == 0)
+      } else if (difference == 0) {
         countdownText = 'วันนี้';
-      else
+      } else {
         countdownText = 'ผ่านมาแล้ว';
+      }
     }
 
     return Scaffold(
@@ -295,32 +350,69 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── 1. การ์ดหัวข้อ (Header) ──
+            // ── 1. การ์ดหัวข้อ (Header) ตามรูป ──
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryPurple.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: Column(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '# ${req.requestId}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade500,
-                          fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          req.hospitalname ?? 'ไม่ระบุสถานที่',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: orangeAccent,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF3E5F5),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            req.departmentname ?? '-',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: primaryPurple,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
+                          horizontal: 14,
+                          vertical: 6,
                         ),
                         decoration: BoxDecoration(
                           color: statusBgColor,
@@ -331,47 +423,169 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                           statusText,
                           style: TextStyle(
                             color: statusColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        '# ${req.requestId}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ── ข้อมูลผู้ป่วย (Patient Data) ──
+            _buildSectionTitle('ข้อมูลผู้ป่วย'),
+            _buildCard(
+              child: Column(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildAvatar(patientData?['patientphoto'], radius: 32),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${patientData?['firstname'] ?? 'ไม่ระบุ'} ${patientData?['lastname'] ?? ''}',
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'อายุ ${_calculateAge(patientData?['birthdate'])} ปี · เพศ${patientData?['gender'] ?? '-'}  ${patientData?['mobility'] ?? ''}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            if (patientData?['disease'] != null &&
+                                patientData!['disease'].toString().isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF3E0),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.favorite,
+                                      color: Colors.orange,
+                                      size: 14,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        patientData!['disease'],
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.orange,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Divider(height: 1, color: Color(0xFFEEEEEE)),
+                  ),
+                  _buildInfoRow(
+                    icon: Icons.phone,
+                    label: 'เบอร์ผู้ป่วย',
+                    value: patientData?['phonenumber'] ?? '-',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ── ข้อมูลญาติ (Relative Data) ──
+            _buildSectionTitle('ญาติ'),
+            _buildCard(
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        '${relativeData?['firstname'] ?? 'ไม่ระบุ'} ${relativeData?['lastname'] ?? ''}',
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3E5F5),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          relativeData?['relationship'] ?? 'ญาติ',
+                          style: TextStyle(
                             fontSize: 12,
+                            color: primaryPurple,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    req.hospitalname ?? 'ไม่ระบุสถานที่',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Divider(height: 1, color: Color(0xFFEEEEEE)),
                   ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3E5F5),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      req.departmentname ?? '-',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: primaryPurple,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  _buildInfoRow(
+                    icon: Icons.phone,
+                    label: 'เบอร์โทร',
+                    value: relativeData?['phonenumber'] ?? '-',
+                  ),
+                  const SizedBox(height: 12),
+                  _buildInfoRow(
+                    icon: Icons.chat_bubble_outline,
+                    label: 'LINE ID',
+                    value: relativeData?['lineId'] ?? '-',
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
-            // ── 2. วันและเวลานัดหมาย ──
+            // ── วันและเวลานัดหมาย ──
             _buildSectionTitle('วันและเวลานัดหมาย'),
             _buildCard(
               child: Row(
@@ -420,21 +634,21 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFEBEE),
+                        color: const Color(0xFFFFE0B2), // ส้มอ่อน
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
                         children: [
                           const Icon(
                             Icons.timer_outlined,
-                            color: Color(0xFFF44336),
+                            color: Colors.orange,
                             size: 14,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             countdownText,
                             style: const TextStyle(
-                              color: Color(0xFFF44336),
+                              color: Colors.orange,
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
@@ -445,9 +659,9 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
-            // ── 3. จุดรับจุดส่ง (Timeline) ──
+            // ── จุดรับจุดส่ง (Timeline) ──
             _buildSectionTitle('จุดรับจุดส่ง'),
             _buildCard(
               child: Row(
@@ -462,7 +676,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                           margin: const EdgeInsets.symmetric(vertical: 2),
                           width: 2,
                           height: 4,
-                          color: Colors.grey.shade300,
+                          color: Colors.grey.shade400, // สีเทาไข่ปลา
                         ),
                       ),
                       _buildHollowCircle(Colors.black),
@@ -476,7 +690,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                         const Text(
                           'จุดรับ',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 11,
                             color: Colors.grey,
                             fontWeight: FontWeight.bold,
                           ),
@@ -484,7 +698,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                         Text(
                           req.pickuplocation?.address ?? 'ไม่ระบุ',
                           style: const TextStyle(
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                             height: 1.4,
                           ),
@@ -493,7 +707,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                         const Text(
                           'จุดส่ง',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 11,
                             color: Colors.grey,
                             fontWeight: FontWeight.bold,
                           ),
@@ -501,7 +715,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                         Text(
                           req.dropofflocation?.address ?? 'ไม่ระบุ',
                           style: const TextStyle(
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                             height: 1.4,
                           ),
@@ -512,89 +726,76 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
-            // ── 4. ผู้ดูแลที่ได้รับมอบหมาย ──
-            _buildSectionTitle('ผู้ดูแลที่ได้รับมอบหมาย'),
-            _buildCard(
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      _buildAvatar(caretakerData?['profilephoto']),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.caretakerName,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
+            // ── ผู้ดูแลที่ได้รับมอบหมาย (ถ้ามี) ──
+            if (caretakerData != null &&
+                widget.caretakerName != 'รอผู้ดูแลตอบรับ') ...[
+              _buildSectionTitle('ผู้ดูแลที่ได้รับมอบหมาย'),
+              _buildCard(
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        _buildAvatar(caretakerData?['profilephoto']),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.caretakerName,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Row(
-                                  children: List.generate(
-                                    5,
-                                    (i) => Icon(
-                                      i < caretakerRating.floor()
-                                          ? Icons.star
-                                          : Icons.star_border,
-                                      color: const Color(0xFFFFC107),
-                                      size: 14,
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Row(
+                                    children: List.generate(
+                                      5,
+                                      (i) => Icon(
+                                        i < caretakerRating.floor()
+                                            ? Icons.star
+                                            : Icons.star_border,
+                                        color: const Color(0xFFFFC107),
+                                        size: 14,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${caretakerRating.toStringAsFixed(1)} • $caretakerReviewCount รีวิว',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey,
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${caretakerRating.toStringAsFixed(1)} • $caretakerReviewCount รีวิว',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Divider(height: 1, color: Color(0xFFEEEEEE)),
-                  ),
-                  Row(
-                    children: [
-                      const Icon(Icons.phone, size: 16, color: Colors.black87),
-                      const SizedBox(width: 8),
-                      Text(
-                        'เบอร์โทร',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Text(
-                        caretakerData?['phonenumber'] ?? '-',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Divider(height: 1, color: Color(0xFFEEEEEE)),
+                    ),
+                    _buildInfoRow(
+                      icon: Icons.phone,
+                      label: 'เบอร์โทร',
+                      value: caretakerData?['phonenumber'] ?? '-',
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 20),
+            ],
 
-            // ── 5. รายละเอียดคำร้อง ──
+            // ── รายละเอียดคำร้อง ──
             _buildSectionTitle('รายละเอียดคำร้อง'),
             _buildCard(
               child: Text(
@@ -607,9 +808,9 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
               ),
             ),
 
-            const SizedBox(height: 10),
-            _buildBottomActionButtons(),
             const SizedBox(height: 20),
+            _buildBottomActionButtons(),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -663,14 +864,16 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                 const SnackBar(content: Text('กำลังเปิดหน้ารายงาน...')),
               );
             },
-            child: const Text(
-              'รายงานผู้ดูแล',
-              style: TextStyle(
-                color: Colors.red,
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                decoration: TextDecoration.underline,
-                decorationColor: Colors.red,
+            child: const Center(
+              child: Text(
+                'รายงานผู้ดูแล',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  decoration: TextDecoration.underline,
+                  decorationColor: Colors.red,
+                ),
               ),
             ),
           ),
@@ -723,14 +926,26 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0, left: 4),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.bold,
-          color: primaryPurple,
-        ),
+      padding: const EdgeInsets.only(bottom: 10.0, left: 4, right: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 15, // ปรับขนาดตัวอักษรนิดหน่อยให้พอดี
+              fontWeight: FontWeight.bold,
+              color: primaryPurple,
+            ),
+          ),
+          const SizedBox(width: 12), // ระยะห่างระหว่างข้อความกับเส้น
+          Expanded(
+            child: Divider(
+              color: primaryPurple.withOpacity(0.25), // สีเส้นขีดบางๆ โทนม่วง
+              thickness: 2, // ความหนาของเส้น
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -738,10 +953,17 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   Widget _buildCard({required Widget child}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: primaryPurple.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: child,
     );
@@ -758,7 +980,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     );
   }
 
-  Widget _buildAvatar(dynamic imageString) {
+  Widget _buildAvatar(dynamic imageString, {double radius = 26}) {
     ImageProvider? imgProv;
     if (imageString != null && imageString.toString().isNotEmpty) {
       try {
@@ -770,12 +992,45 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       } catch (_) {}
     }
     return CircleAvatar(
-      radius: 26,
+      radius: radius,
       backgroundColor: const Color(0xFFE8D5FF),
       backgroundImage: imgProv,
       child: imgProv == null
-          ? const Icon(Icons.person, color: Colors.black54, size: 28)
+          ? Icon(Icons.person, color: Colors.black54, size: radius + 2)
           : null,
+    );
+  }
+
+  // ฟังก์ชันช่วยจัดเรียงข้อมูลแบบแถวให้ตรงกัน (Grid-like)
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(icon, size: 20, color: Colors.black87),
+        const SizedBox(width: 12),
+        // กำหนดความกว้างคงที่ให้ Label เพื่อให้ Value ด้านหลังเรียงตรงกัน
+        SizedBox(
+          width: 90,
+          child: Text(
+            label,
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

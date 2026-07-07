@@ -26,7 +26,8 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   Map<String, dynamic>? caretakerData;
   Map<String, dynamic>? vehicleData;
   bool isLoading = true;
-  final Color primaryColor = const Color(0xFF9B59B6);
+  
+  final Color primaryColor = const Color.fromARGB(255, 153, 116, 255);
   final Color bgColor = const Color.fromARGB(255, 225, 202, 255); // ม่วงพาสเทลอ่อน
   final Color cardColor = Colors.white;
   final Color borderColor = const Color(0xFFDDD0F0); // ขอบม่วงอ่อน สบายตา

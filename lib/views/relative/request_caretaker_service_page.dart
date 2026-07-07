@@ -131,7 +131,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
               border: Border.all(color: borderColor, width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF9B59B6).withOpacity(0.07),
+                  color: primaryColor.withValues(alpha: 0.15), // 🌟 แก้สีเงากล่องให้เป็นโทนม่วง
                   blurRadius: 10,
                   offset: const Offset(0, 3),
                 ),
@@ -188,7 +188,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                     children: [
                       CircleAvatar(
                         radius: 28,
-                        backgroundColor: Colors.grey.shade300,
+                        backgroundColor: lightPurple, // 🌟 เปลี่ยนพื้นหลังเป็นม่วงอ่อน
                         backgroundImage:
                             widget.caretakerData['profilephoto'] != null &&
                                 widget.caretakerData['profilephoto']
@@ -208,9 +208,9 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                                 widget.caretakerData['profilephoto']
                                     .toString()
                                     .isEmpty
-                            ? const Icon(
+                            ? Icon(
                                 Icons.person,
-                                color: Colors.white,
+                                color: primaryColor, // 🌟 เปลี่ยนสีไอคอนคนเป็นสีม่วง
                                 size: 35,
                               )
                             : null,
@@ -353,9 +353,9 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                       ), // เพิ่มสีขอบให้เด่นขึ้น
                       boxShadow: [
                         BoxShadow(
-                          color: darkPurple,
+                          color: darkPurple.withValues(alpha: 0.2), // 🌟 ปรับสีเงากล่องแผนที่ให้อ่อนลง
                           blurRadius: 8,
-                          offset: const Offset(0, 2),
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
@@ -454,7 +454,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
                           elevation: 4,
-                          shadowColor: const Color(0xFF9B59B6).withOpacity(0.4),
+                          shadowColor: primaryColor.withValues(alpha: 0.4), // 🌟 ปรับสีเงาปุ่มให้เป็นโทนม่วง
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
