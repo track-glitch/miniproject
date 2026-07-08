@@ -239,201 +239,55 @@ class AdminService {
     DateTime appointmenttime = DateTime.parse("2026-06-20T09:00:00.000");
     DateTime requestdate = DateTime.parse("2026-06-18T08:30:00.000");
 
-    RequestModel req1 = RequestModel(
-      requestId: "REQ-20260618-001",
-      requestdetail: "พาผู้ป่วยไปตรวจสุขภาพประจำปี",
-      // 🌟 จุดรับ (บ้านผู้ป่วย)
+    DateTime testCurrentTime = DateTime.parse("2026-07-05T19:22:40.000");
+
+    DateTime currentTime = DateTime.now(); // 🌟 ดึงเวลาปัจจุบันของเครื่องทันที
+
+    RequestModel req6 = RequestModel(
+      // ใช้เวลา milliseconds มาต่อท้าย ID จะได้ไม่ซ้ำเวลาสุ่มสร้างหลายๆ รอบ
+      requestId:
+          "REQ-NOW-${currentTime.millisecondsSinceEpoch.toString().substring(7)}",
+      requestdetail: "พาผู้ป่วยไปล้างแผลที่คลินิก",
       pickuplocation: LocationModel(
         locationId: "LOC-${_dbRef.push().key}",
-        address: "123 หมู่ 4 ต.พระบาท อ.เมือง จ.ลำปาง",
-        latitude: 18.2744,
-        longitude: 99.5100,
-      ),
-      // 🌟 จุดส่ง (โรงพยาบาล) - พิกัดคนละจุดกัน
-      dropofflocation: LocationModel(
-        locationId: "LOC-${_dbRef.push().key}",
-        address: "โรงพยาบาลลำปาง",
-        latitude: 18.2905,
-        longitude: 99.5028,
-      ),
-      hospitalname: "โรงพยาบาลลำปาง",
-      departmentname: "แผนกอายุรกรรม",
-      appointmentdate: appointmentdate,
-      appointmenttime: appointmenttime,
-      requestdate: requestdate,
-      requeststatus: "Pending",
-      caretakerId: '1111111111119',
-      review: null,
-      doctoradvice: null,
-      report: null,
-      notifications: null,
-    );
-
-    // ========================================================
-    // Request 2: สถานะตอบรับแล้ว (Accepted)
-    // ========================================================
-    DateTime req2AppointmentDate = DateTime.parse("2026-06-21T00:00:00.000");
-    DateTime req2AppointmentTime = DateTime.parse("2026-06-21T13:00:00.000");
-    DateTime req2RequestDate = DateTime.parse("2026-06-18T09:00:00.000");
-
-    RequestModel req2 = RequestModel(
-      requestId: "REQ-20260618-002",
-      requestdetail: "รับยาตามนัดและพาทำกายภาพบำบัด",
-      // 🌟 จุดรับ (บ้านผู้ป่วย)
-      pickuplocation: LocationModel(
-        locationId: "LOC-${_dbRef.push().key}",
-        address: "45/2 ซอยสุขสวัสดิ์ ต.หัวเวียง จ.ลำปาง",
-        latitude: 18.2912,
+        address: "บ้านพัก ต.สบตุ๋ย จ.ลำปาง",
+        latitude: 18.2800,
         longitude: 99.4900,
       ),
-      // 🌟 จุดส่ง (คลินิก)
       dropofflocation: LocationModel(
         locationId: "LOC-${_dbRef.push().key}",
-        address: "คลินิกกายภาพบำบัด",
-        latitude: 18.2965,
-        longitude: 99.5080,
+        address: "คลินิกเวชกรรมใกล้บ้าน",
+        latitude: 18.2850,
+        longitude: 99.4950,
       ),
-      hospitalname: "โรงพยาบาลศูนย์",
-      departmentname: "เวชศาสตร์ฟื้นฟู",
-      appointmentdate: req2AppointmentDate,
-      appointmenttime: req2AppointmentTime,
-      requestdate: req2RequestDate,
-      requeststatus: "Accepted",
+      hospitalname: "คลินิกเวชกรรมใกล้บ้าน",
+      departmentname: "ปฐมพยาบาล/ทำแผล",
+      // สมมติว่านัดหมายเป็นวันพรุ่งนี้ แต่ส่งคำขอ "วันนี้ ณ เวลานี้"
+      appointmentdate: currentTime.add(const Duration(days: 1)),
+      appointmenttime: currentTime.add(const Duration(days: 1)),
+      requestdate: currentTime, // 🌟 เวลาที่ส่งคำขอคือตอนนี้เลย!
+      requeststatus: "Pending", // 🌟 สถานะยังไม่ได้ตอบรับ
       caretakerId: '1111111111119',
       review: null,
       doctoradvice: null,
       report: null,
       notifications: null,
+      isReadCaretaker:
+          false, // 🌟 ให้สถานะการอ่านเป็น false เพื่อให้จุดแดงเด้ง!
     );
 
-    // ========================================================
-    // Request 3: สถานะเสร็จสิ้นแบบทั่วไป (Completed)
-    // ========================================================
-    DateTime req3AppointmentDate = DateTime.parse("2026-06-10T00:00:00.000");
-    DateTime req3AppointmentTime = DateTime.parse("2026-06-10T08:00:00.000");
-    DateTime req3RequestDate = DateTime.parse("2026-06-08T10:00:00.000");
+    List<RequestModel> allRequests = [
+      req6,
+    ]; // เพิ่ม req5 เข้าไปใน List[cite: 11]
 
-    DateTime req3ReviewDate = DateTime.parse("2026-06-11T09:00:00.000");
-    DateTime req3DocApptDate = DateTime.parse("2026-09-10T00:00:00.000");
-    DateTime req3DocApptTime = DateTime.parse("2026-09-10T08:00:00.000");
-
-    RequestModel req3 = RequestModel(
-      requestId: "REQ-20260618-003",
-      requestdetail: "พาผู้ป่วยเจาะเลือดและฟังผล",
-      // 🌟 จุดรับ (บ้านผู้ป่วย)
-      pickuplocation: LocationModel(
-        locationId: "LOC-${_dbRef.push().key}",
-        address: "หมู่บ้านสวนสิริ ต.พิชัย จ.ลำปาง",
-        latitude: 18.3200,
-        longitude: 99.5150,
-      ),
-      // 🌟 จุดส่ง (โรงพยาบาล)
-      dropofflocation: LocationModel(
-        locationId: "LOC-${_dbRef.push().key}",
-        address: "โรงพยาบาลเขลางค์นคร-ราม",
-        latitude: 18.2855,
-        longitude: 99.4975,
-      ),
-      hospitalname: "โรงพยาบาลเขลางค์นคร-ราม",
-      departmentname: "แผนกอายุรกรรม",
-      appointmentdate: req3AppointmentDate,
-      appointmenttime: req3AppointmentTime,
-      requestdate: req3RequestDate,
-      requeststatus: "Completed",
-      caretakerId: '1111111111119',
-      review: ReviewModel(
-        reviewId: "REV-001",
-        ratingscore: "5",
-        comment: "บริการดีเยี่ยม ดูแลคุณพ่อดีมากครับ",
-        reviewdate: req3ReviewDate,
-      ),
-      doctoradvice: DoctorAdviceModel(
-        doctoradviceId: "DOC-001",
-        doctorname: "นพ. สมเกียรติ ใจดี",
-        advicedetail:
-            "ผลเลือดปกติ แนะนำให้ลดอาหารเค็มและมัน นัดติดตามผลอีก 3 เดือน",
-        departmentname: "อายุรกรรม",
-        hospitalname: "โรงพยาบาลเขลางค์นคร-ราม",
-        appointmentdate: req3DocApptDate,
-        appointmenttime: req3DocApptTime,
-        medicalphoto: "base64_or_image_name_here.jpg",
-      ),
-      report: null,
-      notifications: null,
-    );
-
-    // ========================================================
-    // Request 4: สถานะเสร็จสิ้นแบบมี Report (Completed)
-    // ========================================================
-    DateTime req4AppointmentDate = DateTime.parse("2026-06-15T00:00:00.000");
-    DateTime req4AppointmentTime = DateTime.parse("2026-06-15T08:00:00.000");
-    DateTime req4RequestDate = DateTime.parse("2026-06-14T15:00:00.000");
-
-    DateTime req4ReviewDate = DateTime.parse("2026-06-16T10:00:00.000");
-    DateTime req4ReportDate = DateTime.parse("2026-06-15T20:30:00.000");
-
-    RequestModel req4 = RequestModel(
-      requestId: "REQ-20260618-004",
-      requestdetail: "ไปรับที่บ้านเพื่อเฝ้าไข้ที่โรงพยาบาล",
-      // 🌟 จุดรับ (บ้านผู้ป่วย)
-      pickuplocation: LocationModel(
-        locationId: "LOC-${_dbRef.push().key}",
-        address: "99/9 หมู่ 2 ต.บ่อแฮ้ว จ.ลำปาง",
-        latitude: 18.3001,
-        longitude: 99.4800,
-      ),
-      // 🌟 จุดส่ง (โรงพยาบาลตึกผู้ป่วยใน)
-      dropofflocation: LocationModel(
-        locationId: "LOC-${_dbRef.push().key}",
-        address: "โรงพยาบาลลำปาง ตึกผู้ป่วยใน",
-        latitude: 18.2905,
-        longitude: 99.5028,
-      ),
-      hospitalname: "โรงพยาบาลลำปาง",
-      departmentname: "กุมารเวชกรรม",
-      appointmentdate: req4AppointmentDate,
-      appointmenttime: req4AppointmentTime,
-      requestdate: req4RequestDate,
-      requeststatus: "Completed",
-      caretakerId: '1111111111119',
-      review: ReviewModel(
-        reviewId: "REV-002",
-        ratingscore: "4",
-        comment: "น้องงอแงนิดหน่อย แต่คนดูแลใจเย็นมากค่ะ",
-        reviewdate: req4ReviewDate,
-      ),
-      doctoradvice: DoctorAdviceModel(
-        doctoradviceId: "DOC-002",
-        doctorname: "พญ. สมศรี พัฒนา",
-        advicedetail:
-            "เฝ้าระวังไข้สูง ให้จิบน้ำเกลือแร่บ่อยๆ ถ้าไข้เกิน 38 ให้เช็ดตัวทันที",
-        departmentname: "กุมารเวชกรรม",
-        hospitalname: "โรงพยาบาลลำปาง",
-        appointmentdate: null,
-        appointmenttime: null,
-        medicalphoto: null,
-      ),
-      report: ReportModel(
-        reportId: "REP-001",
-        reporttype: "เฝ้าไข้",
-        reportdetail:
-            "เช็ดตัวลดไข้ทุก 2 ชม. น้องทานข้าวได้ครึ่งชาม ขับถ่ายปกติ 1 ครั้ง อุณหภูมิ 37.5",
-        reportphoto: "report_base64_or_image.jpg",
-        reportdate: req4ReportDate,
-      ),
-      notifications: null,
-    );
-
-    List<RequestModel> allRequests = [req1, req2, req3, req4];
-
-    // 2. วนลูปบันทึกทีละตัว
+    // วนลูปบันทึกทีละตัว
     for (var req in allRequests) {
       await _dbRef
           .child('Login')
           .child("23yM1I0mQMOusy74CQsu4t6FaPs1")
           .child('Relative')
           .child('Request')
-          .child(req.requestId!) // ใช้รหัส REQ-... เป็นชื่อโฟลเดอร์เลย
+          .child(req.requestId!)
           .set(req.toJson());
     }
 

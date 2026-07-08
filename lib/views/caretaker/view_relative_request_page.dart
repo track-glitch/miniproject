@@ -288,6 +288,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
         bottomNavigationBar: CustomBottomNavBar(
           currentIndex: _bottomNavIndex,
           onTap: _onBottomNavTapped,
+          uid: widget.uid,
         ),
       );
     }
@@ -1066,6 +1067,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
       bottomNavigationBar: CustomBottomNavBar(
         currentIndex: _bottomNavIndex,
         onTap: _onBottomNavTapped,
+        uid: widget.uid,
       ),
     );
   }

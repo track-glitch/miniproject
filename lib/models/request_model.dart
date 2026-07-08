@@ -20,6 +20,7 @@ class RequestModel {
   DateTime? requestdate;
   String? requeststatus;
   String? caretakerId;
+  bool? isReadCaretaker;
 
   // ความสัมพันธ์
   ReviewModel? review; // 1 : 1
@@ -43,6 +44,7 @@ class RequestModel {
     this.doctoradvice,
     this.report,
     this.notifications,
+    this.isReadCaretaker,
   });
 
   factory RequestModel.fromJson(Map<String, dynamic> json) {
@@ -75,6 +77,7 @@ class RequestModel {
           : null,
       requeststatus: json['requeststatus'],
       caretakerId: json['caretakerId'],
+      isReadCaretaker: json['isReadCaretaker'] ?? false,
       review: json['Review'] != null
           ? ReviewModel.fromJson(Map<String, dynamic>.from(json['Review']))
           : null,
@@ -87,12 +90,21 @@ class RequestModel {
           ? ReportModel.fromJson(Map<String, dynamic>.from(json['Report']))
           : null,
       notifications: json['Notification'] != null
-          ? (json['Notification'] as List)
-                .map(
-                  (e) =>
-                      NotificationModel.fromJson(Map<String, dynamic>.from(e)),
-                )
-                .toList()
+          ? (json['Notification'] is Map)
+                ? (json['Notification'] as Map).values
+                      .map(
+                        (e) => NotificationModel.fromJson(
+                          Map<String, dynamic>.from(e),
+                        ),
+                      )
+                      .toList()
+                : (json['Notification'] as List)
+                      .map(
+                        (e) => NotificationModel.fromJson(
+                          Map<String, dynamic>.from(e),
+                        ),
+                      )
+                      .toList()
           : null,
     );
   }
@@ -113,6 +125,7 @@ class RequestModel {
       'requestdate': requestdate?.toIso8601String(),
       'requeststatus': requeststatus,
       'caretakerId': caretakerId,
+      'isReadCaretaker': isReadCaretaker ?? false,
       'Review': review?.toJson(),
       'DoctorAdvice': doctoradvice?.toJson(),
       'Report': report?.toJson(),

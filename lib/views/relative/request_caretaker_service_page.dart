@@ -28,7 +28,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   final Color lightPurple = const Color(0xFFECE2FE);
   final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
   final Color cardColor = Colors.white;
-  final Color borderColor = const Color(0xFFD3C2F0); 
+  final Color borderColor = const Color(0xFFD3C2F0);
   final Color labelColor = const Color(0xFF241C2B);
 
   final _formKey = GlobalKey<FormState>();
@@ -131,7 +131,13 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
               border: Border.all(color: borderColor, width: 1.5),
               boxShadow: [
                 BoxShadow(
+<<<<<<< HEAD
                   color: primaryColor.withValues(alpha: 0.15), // 🌟 แก้สีเงากล่องให้เป็นโทนม่วง
+=======
+                  color: primaryColor.withValues(
+                    alpha: 0.15,
+                  ), // 🌟 แก้สีเงากล่องให้เป็นโทนม่วง
+>>>>>>> b519ff17f9516aff75d567b820e13ebaa86f3b88
                   blurRadius: 10,
                   offset: const Offset(0, 3),
                 ),
@@ -188,7 +194,12 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                     children: [
                       CircleAvatar(
                         radius: 28,
+<<<<<<< HEAD
                         backgroundColor: lightPurple, // 🌟 เปลี่ยนพื้นหลังเป็นม่วงอ่อน
+=======
+                        backgroundColor:
+                            lightPurple, // 🌟 เปลี่ยนพื้นหลังเป็นม่วงอ่อน
+>>>>>>> b519ff17f9516aff75d567b820e13ebaa86f3b88
                         backgroundImage:
                             widget.caretakerData['profilephoto'] != null &&
                                 widget.caretakerData['profilephoto']
@@ -210,7 +221,12 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                                     .isEmpty
                             ? Icon(
                                 Icons.person,
+<<<<<<< HEAD
                                 color: primaryColor, // 🌟 เปลี่ยนสีไอคอนคนเป็นสีม่วง
+=======
+                                color:
+                                    primaryColor, // 🌟 เปลี่ยนสีไอคอนคนเป็นสีม่วง
+>>>>>>> b519ff17f9516aff75d567b820e13ebaa86f3b88
                                 size: 35,
                               )
                             : null,
@@ -353,7 +369,13 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                       ), // เพิ่มสีขอบให้เด่นขึ้น
                       boxShadow: [
                         BoxShadow(
+<<<<<<< HEAD
                           color: darkPurple.withValues(alpha: 0.2), // 🌟 ปรับสีเงากล่องแผนที่ให้อ่อนลง
+=======
+                          color: darkPurple.withValues(
+                            alpha: 0.2,
+                          ), // 🌟 ปรับสีเงากล่องแผนที่ให้อ่อนลง
+>>>>>>> b519ff17f9516aff75d567b820e13ebaa86f3b88
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -454,7 +476,13 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
                           elevation: 4,
+<<<<<<< HEAD
                           shadowColor: primaryColor.withValues(alpha: 0.4), // 🌟 ปรับสีเงาปุ่มให้เป็นโทนม่วง
+=======
+                          shadowColor: primaryColor.withValues(
+                            alpha: 0.4,
+                          ), // 🌟 ปรับสีเงาปุ่มให้เป็นโทนม่วง
+>>>>>>> b519ff17f9516aff75d567b820e13ebaa86f3b88
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),

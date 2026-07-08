@@ -123,6 +123,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
       if (snapshot.exists) {
         final data = Map<String, dynamic>.from(snapshot.value as Map);
 
+        if (!mounted) return;
         setState(() {
           caretakerData = Map<String, dynamic>.from(data['Caretaker'] ?? {});
 

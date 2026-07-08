@@ -148,6 +148,7 @@ class CaretakerService {
                   'relativeData': relativeData,
                   'patientData': patientData ?? {},
                   'relativeUid': userUid,
+                  'isReadCaretaker': reqData['isReadCaretaker'] ?? false,
                 });
               }
             });
@@ -302,6 +303,142 @@ class CaretakerService {
     } catch (e) {
       print('Error fetching all reviews: $e');
       return [];
+    }
+  }
+
+  // ==========================================
+  // 🌟 ฟังก์ชันสำหรับระบบ Tracking และแจ้งเตือน
+  // ==========================================
+
+  // 1. ดึงประวัติการแจ้งเตือน (เพื่อดูว่าเคยส่งสถานะไหนไปแล้วบ้าง)
+  Future<List<Map<dynamic, dynamic>>> getNotifications(
+    String relativeUid,
+    String requestId,
+  ) async {
+    try {
+      final snapshot = await _dbRef
+          .child('Login')
+          .child(relativeUid)
+          .child('Relative')
+          .child('Request')
+          .child(requestId)
+          .child('Notification')
+          .get();
+
+      if (snapshot.exists && snapshot.value != null) {
+        final Map<dynamic, dynamic> data =
+            snapshot.value as Map<dynamic, dynamic>;
+        List<Map<dynamic, dynamic>> list = data.values
+            .map((e) => e as Map<dynamic, dynamic>)
+            .toList();
+        // เรียงลำดับตามเวลาที่ส่ง
+        list.sort(
+          (a, b) => (a['timestamp'] ?? '').compareTo(b['timestamp'] ?? ''),
+        );
+        return list;
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // 2. เพิ่มการแจ้งเตือนใหม่ และอัปเดตพิกัดปัจจุบัน
+  Future<void> addStatusNotification({
+    required String relativeUid,
+    required String requestId,
+    required String status,
+    required double? lat,
+    required double? lng,
+  }) async {
+    try {
+      // เพิ่มประวัติแจ้งเตือน
+      final ref = _dbRef
+          .child('Login')
+          .child(relativeUid)
+          .child('Relative')
+          .child('Request')
+          .child(requestId)
+          .child('Notification')
+          .push();
+      await ref.set({
+        'status': status,
+        'timestamp': DateTime.now().toIso8601String(),
+        'latitude': lat,
+        'longitude': lng,
+      });
+
+      // ถ้ามีพิกัด ให้เซฟพิกัดล่าสุดแยกไว้ เพื่อให้ญาติดูแบบ Real-time ง่ายๆ
+      if (lat != null && lng != null) {
+        await updateRealtimeLocation(relativeUid, requestId, lat, lng);
+      }
+    } catch (e) {
+      print("Error adding notification: $e");
+    }
+  }
+
+  // 3. อัปเดตเฉพาะพิกัดแบบ Real-time (ยิงตลอดเวลาที่รถวิ่ง)
+  Future<void> updateRealtimeLocation(
+    String relativeUid,
+    String requestId,
+    double lat,
+    double lng,
+  ) async {
+    try {
+      await _dbRef
+          .child('Login')
+          .child(relativeUid)
+          .child('Relative')
+          .child('Request')
+          .child(requestId)
+          .child('currentLocation')
+          .set({
+            'latitude': lat,
+            'longitude': lng,
+            'timestamp': DateTime.now().toIso8601String(),
+          });
+    } catch (e) {}
+  }
+
+  // 🌟 ฟังก์ชันอัปเดตสถานะว่า "ผู้ดูแลกดเข้าไปดูคำขอนี้แล้ว"
+  Future<void> markRequestAsRead(String relativeUid, String requestId) async {
+    try {
+      await _dbRef
+          .child('Login')
+          .child(relativeUid)
+          .child('Relative')
+          .child('Request')
+          .child(requestId)
+          .update({'isReadCaretaker': true});
+    } catch (e) {
+      print("Error marking request as read: $e");
+    }
+  }
+
+  Future<void> saveDoctorAdvice({
+    required String relativeUid,
+    required String requestId,
+    required String adviceText,
+    required String base64Image,
+    required Map<String, dynamic> nextAppointment, // 🌟 เพิ่มตัวแปรตารางนัดหมาย
+  }) async {
+    try {
+      await _dbRef
+          .child('Login')
+          .child(relativeUid)
+          .child('Relative')
+          .child('Request')
+          .child(requestId)
+          .child('DoctorAdvice')
+          .set({
+            'advice': adviceText,
+            'image': base64Image,
+            'nextAppointment':
+                nextAppointment, // 🌟 อัปโหลดขึ้น Firebase คู่กัน
+            'timestamp': DateTime.now().toIso8601String(),
+          });
+    } catch (e) {
+      print("Error saving doctor advice: $e");
     }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:miniproject/views/caretaker/add_doctor_advice_page.dart';
+import 'package:miniproject/views/caretaker/test_add_relative.dart';
 import 'views/login_page.dart';
 import 'views/admin/list_caretaker_page.dart';
 
