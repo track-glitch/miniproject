@@ -62,6 +62,36 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
                     .toString()
                     .toLowerCase();
 
+                // ==========================================
+                // 🌟 ลอจิกใหม่: ปลุกแจ้งเตือน (Badge) เมื่อถึงเวลาบริการ
+                // ==========================================
+                if (status == 'accepted') {
+                  String? dateStr = reqData['appointmentdate'];
+                  // ใช้ตัวแปรนี้เช็คว่าเราเคยยิงเตือนรอบสองไปหรือยัง
+                  bool hasTriggeredAlert =
+                      reqData['hasTriggeredTimeAlert'] ?? false;
+
+                  if (dateStr != null && !hasTriggeredAlert) {
+                    DateTime? apptDate = DateTime.tryParse(dateStr);
+
+                    // ถ้าเวลาปัจจุบัน เลยเวลานัดไปแล้ว
+                    if (apptDate != null && DateTime.now().isAfter(apptDate)) {
+                      // อัปเดตกลับไปที่ Firebase ให้เป็น Unread อีกครั้ง
+                      FirebaseDatabase.instance
+                          .ref('Login/$userUid/Relative/Request/$reqId')
+                          .update({
+                            'isReadCaretaker': false,
+                            'hasTriggeredTimeAlert':
+                                true, // มาร์คไว้ว่าปลุกแจ้งเตือนรอบสองไปแล้วนะ
+                          });
+
+                      // อัปเดตตัวแปรสำหรับนับ count ของ Badge ให้เด้งโชว์ทันที
+                      isRead = false;
+                    }
+                  }
+                }
+                // ==========================================
+
                 if ((status == 'pending' || status == 'accepted') && !isRead) {
                   count++;
                 }
@@ -98,11 +128,6 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
         fontSize: 12,
       ),
       items: [
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.home, size: 28),
-          label: 'บ้าน',
-        ),
-
         // 🌟 แท็บที่มีการแจ้งเตือน (ตกแต่ง Badge แบบในรูปเป๊ะๆ)
         BottomNavigationBarItem(
           icon: Badge(

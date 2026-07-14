@@ -1,6 +1,10 @@
+// ==========================================
+// File: lib/views/login_page.dart
+// ==========================================
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:miniproject/views/admin/list_caretaker_page.dart';
+import 'package:miniproject/views/caretaker/list_relative_request_page.dart';
 import 'package:miniproject/views/relative/view_caretaker_profile_page.dart';
 import 'package:miniproject/views/relative_register_page.dart';
 import '../services/auth_service.dart';
@@ -10,6 +14,7 @@ import 'waiting_approval_page.dart';
 import 'relative/search_caretaker_profile_page.dart';
 import 'caretaker/edit_profile_page.dart';
 import '../widgets/reject_page.dart';
+import 'caretaker_register_page.dart'; // 🌟 Import หน้าสมัครผู้ดูแลเพิ่มเติม
 
 class LoginPage extends StatefulWidget {
   final String? caretakerId;
@@ -86,7 +91,6 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       if (usertype == 'relative') {
-        // 🎯 ตรวจสอบก่อนว่ามี caretakerId ส่งมาจากหน้าก่อนหน้าหรือไม่เพื่อป้องกันการเกิด Null Error
         if (widget.caretakerId != null && widget.caretakerId!.isNotEmpty) {
           Navigator.pushReplacement(
             context,
@@ -98,7 +102,6 @@ class _LoginPageState extends State<LoginPage> {
             ),
           );
         } else {
-          // 🎯 หากเป็นการล็อกอินเข้าแอปตามปกติ ให้เปลี่ยนเส้นทางไปหน้าค้นหาผู้ดูแล (CaretakerSearchPage)
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -116,9 +119,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           );
           return;
-        }
-        // 🌟 เพิ่มเงื่อนไขเช็กการปฏิเสธ (Rejected) ตรงนี้ครับ
-        else if (accountStatus == 'Rejected' ||
+        } else if (accountStatus == 'Rejected' ||
             result['accountstatus'] == 'Rejected') {
           String comment =
               result['admincomment'] ?? 'ไม่ระบุเหตุผล โปรดติดต่อแอดมิน';
@@ -134,7 +135,9 @@ class _LoginPageState extends State<LoginPage> {
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => EditProfilePage(uid: uid)),
+          MaterialPageRoute(
+            builder: (context) => ListRelativeRequestPage(uid: uid),
+          ),
         );
       } else if (usertype == 'admin') {
         Navigator.pushReplacement(
@@ -179,21 +182,17 @@ class _LoginPageState extends State<LoginPage> {
                 Column(
                   children: [
                     Image(
-                      image: const AssetImage(
-                        'assets/logo.png',
-                      ), // อย่าลืมเปลี่ยนไฟล์รูปในโฟลเดอร์ assets เป็นรูปใหม่ที่ไม่มีตัวหนังสือและวงกลมนะครับ
-                      width:
-                          MediaQuery.of(context).size.width *
-                          0.55, // ปรับขนาดรูปให้ยืดหยุ่นพอดีกับหน้าจอมือถือแต่ละรุ่น (ประมาณ 55% ของความกว้างจอ)
+                      image: const AssetImage('assets/logo.png'),
+                      width: MediaQuery.of(context).size.width * 0.55,
                       fit: BoxFit.contain,
                     ),
                     const Text(
                       'อาสาพาไปโรงหมอ',
                       style: TextStyle(
-                        fontSize: 24, // ขนาดตัวอักษรเด่นชัดพอดีกับหน้าจอ
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Color.fromARGB(255, 123, 69, 145),
-                      ), // ปรับสีตัวอักษรให้เข้มเข้ากับธีมตามภาพตัวอย่าง
+                      ),
                     ),
                   ],
                 ),
@@ -329,34 +328,87 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 30),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'ยังไม่มีบัญชี?',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RelativeRegisterPage(),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        'สมัครสมาชิกใหม่',
-                        style: TextStyle(
-                          color: primaryColor,
-                          fontWeight: FontWeight.bold,
-                        ),
+                // 🌟 ส่วนแยกปุ่มสมัครสมาชิก
+                const Divider(),
+                const SizedBox(height: 16),
+                const Text(
+                  'ยังไม่มีบัญชีใช่หรือไม่?',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.black54,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: primaryColor,
+                      side: BorderSide(color: primaryColor, width: 1.5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                  ],
+                    icon: const Icon(Icons.family_restroom),
+                    label: const Text(
+                      'สมัครสมาชิกสำหรับญาติ/ผู้ป่วย',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const RelativeRegisterPage(),
+                        ),
+                      );
+                    },
+                  ),
                 ),
+                const SizedBox(height: 12),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(
+                        0xFF0F766E,
+                      ), // ใช้สีเขียวอมฟ้าแยกประเภท
+                      side: const BorderSide(
+                        color: Color(0xFF0F766E),
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.medical_services),
+                    label: const Text(
+                      'สมัครสมาชิกผู้ให้บริการพาไปหาหมอ',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CaretakerRegisterPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 20),
               ],
             ),
           ),

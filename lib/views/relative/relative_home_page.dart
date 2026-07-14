@@ -9,6 +9,7 @@ import 'package:miniproject/views/relative/track_status_notification_page.dart';
 import 'package:miniproject/views/relative/view_caretaker_profile_page.dart';
 import 'package:miniproject/views/login_page.dart';
 import 'dart:convert';
+import 'package:intl/intl.dart';
 
 class RelativeHomePage extends StatefulWidget {
   final String? loggedUid; // 🌟 รับค่า uid ของ User ที่ล็อกอิน
@@ -35,6 +36,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   final Color dangerColor = const Color(0xFFB91C1C);
 
   String _userName = '';
+  DateTime? _selectedFilterDate;
 
   @override
   void initState() {
@@ -199,10 +201,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
       appBar: AppBar(
         backgroundColor: darkPurple,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
         centerTitle: false,
         actions: [
           if (_userName.isNotEmpty)
@@ -374,10 +372,42 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                           onTap: _openFilterCalendar,
                           child: Padding(
                             padding: const EdgeInsets.only(right: 12),
-                            child: Icon(
-                              Icons.calendar_month,
-                              color: Colors.grey.shade500,
-                              size: 22,
+                            child: Row(
+                              children: [
+                                if (_selectedFilterDate != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 4.0),
+                                    child: Text(
+                                      DateFormat(
+                                        'dd/MM',
+                                      ).format(_selectedFilterDate!),
+                                      style: TextStyle(
+                                        color: primaryColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                Icon(
+                                  Icons.calendar_month,
+                                  color: _selectedFilterDate != null
+                                      ? primaryColor
+                                      : Colors.grey.shade500,
+                                  size: 22,
+                                ),
+                                // ปุ่มกากบาทล้างวันที่
+                                if (_selectedFilterDate != null)
+                                  GestureDetector(
+                                    onTap: () => setState(
+                                      () => _selectedFilterDate = null,
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      size: 16,
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                         ),
@@ -470,6 +500,9 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   List<Map<String, dynamic>> caretakersList = [];
                   Map<String, List<double>> caregiverReviewsMap = {};
 
+                  // 🌟 ตัวแปรเก็บวันที่ไม่ว่างของอาสาแต่ละคน
+                  Map<String, List<String>> busyDatesMap = {};
+
                   if (rootValue is Map) {
                     // 🌟 1. วนลูปกวาดหา Review ทั้งหมดของระบบมารวมไว้ก่อน
                     rootValue.forEach((userKey, userValue) {
@@ -496,6 +529,29 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                     ratingScore =
                                         double.tryParse(rawRating.toString()) ??
                                         0.0;
+                                  }
+
+                                  String status =
+                                      (reqData['requeststatus'] ?? '')
+                                          .toString()
+                                          .toLowerCase();
+                                  if (status == 'pending' ||
+                                      status == 'accepted' ||
+                                      status == 'pending_advice') {
+                                    String apptDateStr =
+                                        reqData['appointmentdate'] ?? '';
+                                    if (apptDateStr.isNotEmpty) {
+                                      try {
+                                        DateTime d = DateTime.parse(
+                                          apptDateStr,
+                                        );
+                                        String formattedDate =
+                                            "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+                                        if (!busyDatesMap.containsKey(cId))
+                                          busyDatesMap[cId] = [];
+                                        busyDatesMap[cId]!.add(formattedDate);
+                                      } catch (e) {}
+                                    }
                                   }
 
                                   if (!caregiverReviewsMap.containsKey(cId)) {
@@ -569,6 +625,16 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
                     // ถ้าไม่พร้อมให้บริการ ตัดทิ้ง (return false ทันที)
                     if (!isAvailable) return false;
+
+                    if (_selectedFilterDate != null) {
+                      String filterDateStr =
+                          "${_selectedFilterDate!.year}-${_selectedFilterDate!.month.toString().padLeft(2, '0')}-${_selectedFilterDate!.day.toString().padLeft(2, '0')}";
+                      String idCard = data['caretakerId']?.toString() ?? '';
+                      List<String> busyDates = busyDatesMap[idCard] ?? [];
+                      if (busyDates.contains(filterDateStr)) {
+                        return false; // ติดคิว! ซ่อนคนนี้
+                      }
+                    }
 
                     // ค้นหาจากชื่อหรือที่อยู่
                     final name =
@@ -1052,6 +1118,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                 loggedUid:
                                     widget.loggedUid ??
                                     FirebaseAuth.instance.currentUser?.uid,
+                                selectedDate: _selectedFilterDate,
                               ),
                             ),
                           );

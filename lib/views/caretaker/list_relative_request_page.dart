@@ -19,7 +19,7 @@ class ListRelativeRequestPage extends StatefulWidget {
 
 class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
   int _currentTabIndex = 0;
-  int _bottomNavIndex = 1;
+  int _bottomNavIndex = 0;
   bool _isLoading = true;
   final CaretakerService _service = CaretakerService();
 
@@ -32,9 +32,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
     setState(() {
       _bottomNavIndex = index;
     });
-    if (index == 0) {
-      // ไปหน้าแรก (บ้าน)
-    } else if (index == 2) {
+    if (index == 1) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -126,7 +124,9 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
         unread++;
       }
 
-      if (statusType == 'pending' || statusType == 'accepted') {
+      if (statusType == 'pending' ||
+          statusType == 'accepted' ||
+          statusType == 'pending_advice') {
         inProgress.add(card);
       } else if (statusType == 'completed') {
         completed.add(card);
@@ -189,7 +189,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4EDFB),
-      appBar: const CustomHeader(title: 'รายการคำขอ', showBackButton: true),
+      appBar: const CustomHeader(title: 'รายการคำขอ', showBackButton: false),
       body: Column(
         children: [
           Container(

@@ -351,10 +351,6 @@ class _ViewCaretakerRegistrationPageState
                           ),
                         ),
                         const Divider(height: 30),
-                        _buildInfoRow(
-                          'Username:',
-                          widget.caretaker.login?.username ?? '',
-                        ),
                       ],
                     ),
                   ),
@@ -399,7 +395,7 @@ class _ViewCaretakerRegistrationPageState
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          widget.caretaker.aboutme ?? '-',
+                          widget.caretaker.experience ?? '-',
                           style: const TextStyle(fontSize: 15),
                         ),
                         const SizedBox(height: 12),
@@ -411,10 +407,7 @@ class _ViewCaretakerRegistrationPageState
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          widget.caretaker.equipmentdetails ?? '-',
-                          style: const TextStyle(fontSize: 15),
-                        ),
+                        Text('-', style: const TextStyle(fontSize: 15)),
                       ],
                     ),
                   ),

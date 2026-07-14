@@ -36,7 +36,7 @@ class ViewRelativeRequestPage extends StatefulWidget {
 
 class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
   late RequestStatus currentStatus;
-  int _bottomNavIndex = 1;
+  int _bottomNavIndex = 0;
   bool _isLoading = true;
 
   LatLng pointA = const LatLng(18.8055, 98.9950);
@@ -54,15 +54,13 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     });
 
     if (index == 0) {
-      // ไปหน้าแรก (บ้าน)
-    } else if (index == 1) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => ListRelativeRequestPage(uid: widget.uid),
         ),
       );
-    } else if (index == 2) {
+    } else if (index == 1) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -228,16 +226,33 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                               : 'Cancelled';
 
                           await CaretakerService().updateRequestStatus(
-                            widget
-                                .requestData
-                                .relativeUid, // เอา UID ญาติจากการ์ด
-                            widget.requestData.id, // เอารหัส Request จากการ์ด
+                            widget.requestData.relativeUid,
+                            widget.requestData.id,
                             newStatus,
                           );
 
                           setState(() {
                             if (isAccept) {
-                              currentStatus = RequestStatus.acceptedEarly;
+                              // 🌟 1. เช็คเวลานัดหมายว่าถึงหรือยัง ณ ตอนที่กดอนุมัติ
+                              bool isTimeArrived = false;
+                              final appt = widget
+                                  .requestData
+                                  .requestModel
+                                  .appointmentdate;
+                              if (appt != null) {
+                                // ถ้าเวลาปัจจุบัน เลยเวลานัด หรือถึงเวลานัดพอดี
+                                if (DateTime.now().isAfter(appt) ||
+                                    DateTime.now().isAtSameMomentAs(appt)) {
+                                  isTimeArrived = true;
+                                }
+                              }
+
+                              // 🌟 2. ถ้าถึงเวลาแล้ว ให้สถานะเป็น acceptedReady เลย (ปุ่มกดได้ทันที แจ้งเตือนสีแดงหายไป)
+                              // ถ้ายังไม่ถึง ให้เป็น acceptedEarly
+                              currentStatus =
+                                  isTimeArrived || widget.requestData.hasAlert
+                                  ? RequestStatus.acceptedReady
+                                  : RequestStatus.acceptedEarly;
                             } else {
                               currentStatus = RequestStatus.cancelled;
                             }

@@ -1,4 +1,3 @@
-import 'package:miniproject/models/login_model.dart';
 import 'package:miniproject/models/vehicle_model.dart';
 import 'package:miniproject/models/document_model.dart';
 import 'package:miniproject/models/request_model.dart';
@@ -6,6 +5,8 @@ import 'package:miniproject/models/location_model.dart'; // 🌟 Import เข�
 
 class CaretakerModel {
   String? caretakerId;
+  String? password;
+  String? usertype;
   String? profilephoto;
   String? firstname;
   String? lastname;
@@ -13,22 +14,21 @@ class CaretakerModel {
   DateTime? birthdate;
   String? phonenumber;
   String? email;
-  String? aboutme;
-  String? equipmentdetails;
+  String? experience;
   String? admincomment;
   String? servicestatus;
   String? accountstatus;
 
   LocationModel? location; // 🌟 แทนที่ address, latitude, longitude แบบเก่า
 
-  // ความสัมพันธ์
-  LoginModel? login;
   VehicleModel? vehicle;
   List<DocumentModel>? documents;
   List<RequestModel>? requests;
 
   CaretakerModel({
     this.caretakerId,
+    this.password,
+    this.usertype,
     this.profilephoto,
     this.firstname,
     this.lastname,
@@ -36,13 +36,11 @@ class CaretakerModel {
     this.birthdate,
     this.phonenumber,
     this.email,
-    this.aboutme,
-    this.equipmentdetails,
+    this.experience,
     this.admincomment,
     this.servicestatus,
     this.accountstatus,
     this.location, // 🌟
-    this.login,
     this.vehicle,
     this.documents,
     this.requests,
@@ -51,6 +49,8 @@ class CaretakerModel {
   factory CaretakerModel.fromJson(Map<String, dynamic> json) {
     return CaretakerModel(
       caretakerId: json['caretakerId'],
+      password: json['password'],
+      usertype: json['usertype'],
       profilephoto: json['profilephoto'],
       firstname: json['firstname'],
       lastname: json['lastname'],
@@ -60,8 +60,7 @@ class CaretakerModel {
           : null,
       phonenumber: json['phonenumber'],
       email: json['email'],
-      aboutme: json['aboutme'],
-      equipmentdetails: json['equipmentdetails'],
+      experience: json['experience'],
       admincomment: json['admincomment'],
       servicestatus: json['servicestatus'],
       accountstatus: json['accountstatus'],
@@ -69,10 +68,6 @@ class CaretakerModel {
       // 🌟 ดึงข้อมูลจาก JSON แปลงเป็น Object LocationModel
       location: json['location'] != null
           ? LocationModel.fromJson(Map<String, dynamic>.from(json['location']))
-          : null,
-
-      login: json['login'] != null
-          ? LoginModel.fromJson(Map<String, dynamic>.from(json['login']))
           : null,
       vehicle: json['vehicle'] != null
           ? VehicleModel.fromJson(Map<String, dynamic>.from(json['vehicle']))
@@ -95,6 +90,8 @@ class CaretakerModel {
   Map<String, dynamic> toJson() {
     return {
       'caretakerId': caretakerId,
+      'password': password,
+      'usertype': usertype,
       'profilephoto': profilephoto,
       'firstname': firstname,
       'lastname': lastname,
@@ -102,13 +99,11 @@ class CaretakerModel {
       'birthdate': birthdate?.toIso8601String(),
       'phonenumber': phonenumber,
       'email': email,
-      'aboutme': aboutme,
-      'equipmentdetails': equipmentdetails,
+      'experience': experience,
       'admincomment': admincomment,
       'servicestatus': servicestatus,
       'accountstatus': accountstatus,
       'Location': location?.toJson(), // 🌟 แปลง Location กลับเป็น JSON
-      'login': login?.toJson(),
       'vehicle': vehicle?.toJson(),
       'documents': documents?.map((e) => e.toJson()).toList(),
       'requests': requests?.map((e) => e.toJson()).toList(),

@@ -11,11 +11,13 @@ import 'package:firebase_database/firebase_database.dart';
 class CaretakerProfilePage extends StatefulWidget {
   final String caretakerId;
   final String? loggedUid;
+  final DateTime? selectedDate;
 
   const CaretakerProfilePage({
     super.key,
     required this.caretakerId,
     this.loggedUid,
+    this.selectedDate,
   });
 
   @override
@@ -26,9 +28,16 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   Map<String, dynamic>? caretakerData;
   Map<String, dynamic>? vehicleData;
   bool isLoading = true;
-  
+  List<Map<String, dynamic>> _reviews =
+      []; // 🌟 รายการรีวิวที่ดึงมาจาก Firebase
+
   final Color primaryColor = const Color.fromARGB(255, 153, 116, 255);
-  final Color bgColor = const Color.fromARGB(255, 225, 202, 255); // ม่วงพาสเทลอ่อน
+  final Color bgColor = const Color.fromARGB(
+    255,
+    225,
+    202,
+    255,
+  ); // ม่วงพาสเทลอ่อน
   final Color cardColor = Colors.white;
   final Color borderColor = const Color(0xFFDDD0F0); // ขอบม่วงอ่อน สบายตา
   final Color accentPurple = const Color(0xFFB388FF); // ม่วงสด accent
@@ -38,6 +47,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   void initState() {
     super.initState();
     loadCaretaker();
+    _fetchReviews(); // 🌟 ดึงรีวิวจาก Firebase
   }
 
   // 🎯 ฟังก์ชันสำหรับเปิดแจ้งเตือนกรณีที่ยังไม่ได้เข้าสู่ระบบ
@@ -88,13 +98,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                     ),
                     onPressed: () {
                       Navigator.pop(context); // ปิด Dialog
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              LoginPage(caretakerId: widget.caretakerId),
-                        ),
-                      );
                     },
                     child: const Text(
                       'ไปหน้าเข้าสู่ระบบ',
@@ -139,6 +142,73 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     }
   }
 
+  // 🌟 ดึงรีวิวของผู้ดูแลคนนี้ทั้งหมด โดยไล่ดูทุก Request ของทุกญาติ
+  // (โครงสร้าง Firebase: Login/{relativeUid}/Relative/Request/{requestId}/Review)
+  Future<void> _fetchReviews() async {
+    try {
+      final snapshot = await FirebaseDatabase.instance.ref('Login').get();
+      if (!snapshot.exists || snapshot.value is! Map) return;
+
+      final allUsers = Map<String, dynamic>.from(snapshot.value as Map);
+      List<Map<String, dynamic>> collected = [];
+
+      allUsers.forEach((uid, val) {
+        if (val is! Map || val['Relative'] == null) return;
+        final relativeData = Map<String, dynamic>.from(val['Relative'] as Map);
+        if (relativeData['Request'] == null) return;
+
+        final reqs = Map<String, dynamic>.from(relativeData['Request'] as Map);
+        reqs.forEach((reqId, reqData) {
+          if (reqData is! Map) return;
+          if (reqData['caretakerId'] != widget.caretakerId) return;
+          if (reqData['Review'] == null) return;
+
+          final reviewData = Map<String, dynamic>.from(
+            reqData['Review'] as Map,
+          );
+          final double score =
+              double.tryParse(reviewData['ratingscore']?.toString() ?? '') ?? 0;
+
+          collected.add({
+            'ratingscore': score,
+            'comment': reviewData['comment']?.toString() ?? '',
+            'reviewdate': reviewData['reviewdate']?.toString(),
+            'reviewerName':
+                '${relativeData['firstname'] ?? ''} ${relativeData['lastname'] ?? ''}'
+                    .trim(),
+          });
+        });
+      });
+
+      // เรียงรีวิวล่าสุดไว้บนสุด
+      collected.sort((a, b) {
+        final dateA =
+            DateTime.tryParse(a['reviewdate'] ?? '') ?? DateTime(2000);
+        final dateB =
+            DateTime.tryParse(b['reviewdate'] ?? '') ?? DateTime(2000);
+        return dateB.compareTo(dateA);
+      });
+
+      double avgRating = 0;
+      if (collected.isNotEmpty) {
+        final total = collected.fold<double>(
+          0,
+          (sum, r) => sum + (r['ratingscore'] as double),
+        );
+        avgRating = total / collected.length;
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _reviews = collected;
+        rating = avgRating;
+        reviewCount = collected.length;
+      });
+    } catch (e) {
+      print('Error fetching reviews: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -157,7 +227,10 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
         shadowColor: const Color(0xFF7B1FA2).withOpacity(0.3),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -364,10 +437,13 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
 
   // 1. ส่วนหัวโปรไฟล์
   Widget _buildProfileHeader() {
-    String rawStatus = (caretakerData?['servicestatus']?.toString() ?? 'ไม่พร้อมให้บริการ').trim();
-    bool isAvailable = rawStatus.toLowerCase() == 'online' || 
-                       rawStatus.toLowerCase() == 'on' || 
-                       rawStatus == 'พร้อมให้บริการ';
+    String rawStatus =
+        (caretakerData?['servicestatus']?.toString() ?? 'ไม่พร้อมให้บริการ')
+            .trim();
+    bool isAvailable =
+        rawStatus.toLowerCase() == 'online' ||
+        rawStatus.toLowerCase() == 'on' ||
+        rawStatus == 'พร้อมให้บริการ';
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -779,7 +855,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   double rating = 0;
   int reviewCount = 0;
 
-  // 6. รีวิวล่าสุด (คืนค่ากลับเป็นโค้ดเดิม ยังไม่มีรีวิว)
+  // 6. รีวิวล่าสุด (🌟 ดึงจาก Firebase จริงแล้ว)
   Widget _buildReviews() {
     return _buildCard(
       child: Column(
@@ -812,18 +888,92 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
               style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
             )
           else ...[
-            Text('$rating คะแนน ($reviewCount รีวิว)'),
+            Text('${rating.toStringAsFixed(1)} คะแนน ($reviewCount รีวิว)'),
 
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Divider(),
             ),
 
-            // ค่อยใส่ _buildReviewItem ตอนดึงจาก Firebase ได้จริง
+            // 🌟 แสดงรีวิวจริง (สูงสุด 5 รายการล่าสุด)
+            ..._reviews.take(5).map(_buildReviewItem),
           ],
         ],
       ),
     );
+  }
+
+  // 🌟 การ์ดรีวิวแต่ละรายการ
+  Widget _buildReviewItem(Map<String, dynamic> review) {
+    final double score = (review['ratingscore'] as double?) ?? 0;
+    final String comment = (review['comment'] as String?) ?? '';
+    final String reviewerName = (review['reviewerName'] as String?) ?? '';
+    final DateTime? date = review['reviewdate'] != null
+        ? DateTime.tryParse(review['reviewdate'])
+        : null;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  reviewerName.isEmpty ? 'ผู้ใช้บริการ' : reviewerName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              if (date != null)
+                Text(
+                  _formatThaiReviewDate(date),
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: List.generate(5, (index) {
+              return Icon(
+                index < score.round() ? Icons.star : Icons.star_border,
+                color: Colors.orange,
+                size: 13,
+              );
+            }),
+          ),
+          if (comment.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              comment,
+              style: const TextStyle(fontSize: 13, color: Colors.black87),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatThaiReviewDate(DateTime date) {
+    const thaiMonths = [
+      'ม.ค.',
+      'ก.พ.',
+      'มี.ค.',
+      'เม.ย.',
+      'พ.ค.',
+      'มิ.ย.',
+      'ก.ค.',
+      'ส.ค.',
+      'ก.ย.',
+      'ต.ค.',
+      'พ.ย.',
+      'ธ.ค.',
+    ];
+    return '${date.day} ${thaiMonths[date.month - 1]} ${date.year + 543}';
   }
 
   // 7. ปุ่มขอใช้บริการ
@@ -868,6 +1018,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                   caretakerData: caretakerData!,
                   caretakerId: widget.caretakerId,
                   loggedUid: uid,
+                  initialSelectedDate: widget.selectedDate, // 🌟 ส่งวันที่ต่อไป
                 ),
               ),
             );

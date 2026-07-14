@@ -37,7 +37,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   // สถานะและพิกัด
   bool isServiceOn = false;
   LatLng selectedLocation = const LatLng(18.2881, 99.4921);
-  int _selectedIndex = 2;
+  int _selectedIndex = 1;
 
   // ข้อมูลที่ดึงมา
   String profileImageUrl = '';
@@ -199,7 +199,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     setState(() {
       _selectedIndex = index;
     });
-    if (index == 1) {
+    if (index == 0) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

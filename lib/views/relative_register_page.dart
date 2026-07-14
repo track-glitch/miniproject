@@ -266,14 +266,18 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
   void _handleRegister() async {
     // 1. ตรวจสอบข้อมูลเบื้องต้น
     if (!_formKey.currentState!.validate()) return;
-    
+
     // ตรวจสอบรูปโปรไฟล์และที่อยู่ก่อนบันทึก
     if (_profilePhotoBase64 == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('กรุณาเลือกรูปโปรไฟล์ผู้ป่วย')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('กรุณาเลือกรูปโปรไฟล์ผู้ป่วย')),
+      );
       return;
     }
     if (_patAddressController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('กรุณาระบุที่อยู่หรือปักหมุดบนแผนที่')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('กรุณาระบุที่อยู่หรือปักหมุดบนแผนที่')),
+      );
       return;
     }
 
@@ -320,10 +324,15 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
 
       if (userCredential != null) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('สมัครสมาชิกสำเร็จ!')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('สมัครสมาชิกสำเร็จ!')));
         Navigator.pop(context);
       } else {
-        setState(() => _submitErrorMessage = 'สมัครสมาชิกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง');
+        setState(
+          () => _submitErrorMessage =
+              'สมัครสมาชิกไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง',
+        );
       }
     } catch (e) {
       setState(() => _submitErrorMessage = 'เกิดข้อผิดพลาด: $e');
@@ -410,7 +419,9 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                                 return 'กรุณากรอกอีเมล';
                               }
                               // ตรวจสอบรูปแบบอีเมลคร่าวๆ
-                              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(val)) {
+                              if (!RegExp(
+                                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                              ).hasMatch(val)) {
                                 return 'รูปแบบอีเมลไม่ถูกต้อง';
                               }
                               return null;
@@ -623,18 +634,24 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                                   : null,
                             ),
                           ),
-                          
+
                           _buildLabelField('โรคประจำตัว'),
                           _buildInputField(
-                            hint: 'เช่น เบาหวาน, ความดันโลหิตสูง (ถ้าไม่มีให้เว้นว่าง)',
+                            hint:
+                                'เช่น เบาหวาน, ความดันโลหิตสูง (ถ้าไม่มีให้เว้นว่าง)',
                             controller: _patDiseaseController,
                           ),
 
-                          _buildLabelField('ความคล่องตัวในการเคลื่อนไหว', isRequired: true),
+                          _buildLabelField(
+                            'ความคล่องตัวในการเคลื่อนไหว',
+                            isRequired: true,
+                          ),
                           _buildInputField(
-                            hint: 'เช่น เดินได้ปกติ, ใช้ไม้เท้า, นั่งวีลแชร์, ผู้ป่วยติดเตียง',
+                            hint:
+                                'เช่น เดินได้ปกติ, ใช้ไม้เท้า, นั่งวีลแชร์, ผู้ป่วยติดเตียง',
                             controller: _patMobilityController,
-                            validator: (val) => val!.isEmpty ? 'กรุณาระบุความคล่องตัว' : null,
+                            validator: (val) =>
+                                val!.isEmpty ? 'กรุณาระบุความคล่องตัว' : null,
                           ),
 
                           _buildLabelField('เบอร์โทรศัพท์', isRequired: true),

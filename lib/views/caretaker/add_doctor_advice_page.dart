@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart'; // 🌟 เพิ่ม package สำหรับจัดการรูปแบบวันที่
 import '../../services/caretaker_service.dart';
 import '../../widgets/custom_header_nav.dart';
 
@@ -24,6 +25,7 @@ class AddDoctorAdvicePage extends StatefulWidget {
 class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
   final CaretakerService _service = CaretakerService();
 
+  // Controllers
   final TextEditingController _doctorController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _timeController = TextEditingController();
@@ -33,7 +35,76 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
 
   File? _imageFile;
   String? _base64Image;
-  bool _isLoading = false; // 🌟 เพิ่มสเตทควบคุมการปุ่มโหลด
+  bool _isLoading = false;
+
+  // 🌟 1. เพิ่มตัวแปรสำหรับควบคุม Checkbox
+  bool _hasNextAppointment = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 🌟 2. Autofill ข้อมูลโรงพยาบาลและแผนก จากข้อมูลปัจจุบัน
+    _hospitalController.text = widget.requestInfo['hospital'] ?? '';
+    _deptController.text = widget.requestInfo['department'] ?? '';
+  }
+
+  // 🌟 3. ฟังก์ชันสำหรับเลือกวันที่ (Date Picker)
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(), // ป้องกันการเลือกวันในอดีต
+      lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFFA052BE), // Header background color
+              onPrimary: Colors.white, // Header text color
+              onSurface: Colors.black, // Body text color
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        // จัดรูปแบบเป็น วัน/เดือน/ปี (ค.ศ. หรือ พ.ศ. ค่อยว่ากัน)
+        _dateController.text = DateFormat('dd/MM/yyyy').format(picked);
+      });
+    }
+  }
+
+  // 🌟 4. ฟังก์ชันสำหรับเลือกเวลา (Time Picker)
+  Future<void> _selectTime(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(primary: Color(0xFFA052BE)),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        // แปลงเวลาเป็น 24 ชม. Format (เช่น 08:30)
+        final now = DateTime.now();
+        final dt = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          picked.hour,
+          picked.minute,
+        );
+        _timeController.text = DateFormat('HH:mm').format(dt);
+      });
+    }
+  }
 
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(
@@ -51,11 +122,9 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop:
-          false, // 🌟 ล็อคบังคับ: ห้ามผู้ใช้กดย้อนกลับทางอื่นเด็ดขาด (ปุ่ม Back เครื่อง / ปัดหน้าจอ)
+      canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        // แสดงการเตือนเมื่อผู้ใช้งานพยายามหาทางออก
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -69,8 +138,7 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
         backgroundColor: const Color(0xFFF4EDFB),
         appBar: const CustomHeader(
           title: 'เพิ่มวันนัดและคำแนะนำ',
-          showBackButton:
-              false, // 🌟 ล็อคบังคับ: ซ่อนปุ่มกดย้อนกลับบนหัวแอปบาร์ออกไปเลย
+          showBackButton: false,
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
@@ -98,14 +166,47 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
               // 2. ส่วน การนัดหมายครั้งต่อไป
               _buildSectionCard(
                 title: "การนัดหมายครั้งต่อไป",
-                trailing: Checkbox(value: true, onChanged: (v) {}),
+                trailing: Checkbox(
+                  value: _hasNextAppointment,
+                  activeColor: const Color(0xFFA052BE),
+                  onChanged: (bool? value) {
+                    setState(() {
+                      _hasNextAppointment = value ?? false;
+                      // เคลียร์ข้อมูลถ้าเอาติ๊กออก (ยกเว้นรพ.และแผนกที่เป็นค่า Default)
+                      if (!_hasNextAppointment) {
+                        _doctorController.clear();
+                        _dateController.clear();
+                        _timeController.clear();
+                      }
+                    });
+                  },
+                ),
                 child: Column(
                   children: [
-                    _textField("แพทย์ผู้นัด", _doctorController),
-                    _textField("วันที่", _dateController),
-                    _textField("เวลา", _timeController),
-                    _textField("สถานที่", _hospitalController),
-                    _textField("แผนก", _deptController),
+                    const Text(
+                      "ติ๊กถูกหากมีการนัดหมายในครั้งถัดไป",
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                    // 🌟 5. ใช้ Visibility เพื่อซ่อน/แสดง ฟอร์มตามการติ๊กถูก
+                    Visibility(
+                      visible: _hasNextAppointment,
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 12),
+                          _textField(
+                            "แพทย์ผู้นัด (ไม่บังคับ)",
+                            _doctorController,
+                          ),
+
+                          // 🌟 เปลี่ยนเป็น Picker แทน TextField
+                          _datePickerField("วันที่", _dateController, context),
+                          _timePickerField("เวลา", _timeController, context),
+
+                          _textField("สถานที่", _hospitalController),
+                          _textField("แผนก", _deptController),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -124,6 +225,7 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                         ),
                         filled: true,
                         fillColor: Colors.white,
+                        hintText: "พิมพ์คำแนะนำหรือรายละเอียดเพิ่มเติม...",
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -142,7 +244,7 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                         child: _imageFile == null
                             ? const Center(
                                 child: Text(
-                                  "📎 เพิ่มรูปถ่ายใบนัดหมาย",
+                                  "📎 เพิ่มรูปถ่ายใบนัดหมาย (ถ้ามี)",
                                   style: TextStyle(color: Color(0xFFA052BE)),
                                 ),
                               )
@@ -160,11 +262,14 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFA052BE),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
                   ),
                   onPressed: _isLoading
                       ? null
                       : () async {
-                          // 🌟 ล็อคบังคับ: เช็คว่ากรอกข้อมูลสำคัญหรือยัง (อย่างใดอย่างหนึ่ง: คำแนะนำ หรือแนบรูป)
+                          // ล็อคบังคับ 1: เช็ครายละเอียดหรือรูป
                           if (_adviceController.text.trim().isEmpty &&
                               _base64Image == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -175,30 +280,47 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                                 backgroundColor: Colors.red,
                               ),
                             );
-                            return; // เบรกระบบไว้ ไม่ให้เซฟลง Firebase
+                            return;
                           }
 
-                          setState(
-                            () => _isLoading = true,
-                          ); // เปิดโหมดดาวน์โหลด หมุนๆ
+                          // ล็อคบังคับ 2: ถ้าติ๊กถูกว่ามีนัดหมาย ต้องกรอกวันและเวลา
+                          if (_hasNextAppointment) {
+                            if (_dateController.text.isEmpty ||
+                                _timeController.text.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    '❌ กรุณาเลือกวันที่และเวลาสำหรับการนัดหมายครั้งถัดไปค่ะ',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+                          }
+
+                          setState(() => _isLoading = true);
 
                           try {
-                            // มัดโครงสร้างข้อมูลนัดครั้งถัดไป
-                            Map<String, dynamic> nextAppt = {
-                              'doctor': _doctorController.text,
-                              'date': _dateController.text,
-                              'time': _timeController.text,
-                              'hospital': _hospitalController.text,
-                              'department': _deptController.text,
-                            };
+                            // เก็บเฉพาะตอนที่ติ๊กเลือก
+                            Map<String, dynamic> nextAppt = {};
+                            if (_hasNextAppointment) {
+                              nextAppt = {
+                                'doctor': _doctorController.text,
+                                'date': _dateController.text,
+                                'time': _timeController.text,
+                                'hospital': _hospitalController.text,
+                                'department': _deptController.text,
+                              };
+                            }
 
-                            // สั่งเซฟข้อมูลตรงไปยัง Firebase
                             await _service.saveDoctorAdvice(
                               relativeUid: widget.relativeUid,
                               requestId: widget.requestId,
                               adviceText: _adviceController.text,
                               base64Image: _base64Image ?? '',
-                              nextAppointment: nextAppt,
+                              nextAppointment:
+                                  nextAppt, // ส่ง {} ไปถ้าไม่มีนัดหมาย
                             );
 
                             await _service.updateRequestStatus(
@@ -211,13 +333,11 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
-                                    'บันทึกคำแนะนำแพทย์สำเร็จเสร็จสิ้น!',
+                                    'บันทึกข้อมูลเสร็จสิ้น ขอบคุณที่ให้บริการค่ะ!',
                                   ),
                                   backgroundColor: Colors.green,
                                 ),
                               );
-
-                              // 🌟 ล็อคบังคับ: พอบันทึกเสร็จเรียบร้อยแล้ว ให้เคลียร์ Stack หน้าจอดีดผู้ใช้ออกไปหน้าแรก (Home/Dashboard)
                               Navigator.of(
                                 context,
                               ).popUntil((route) => route.isFirst);
@@ -238,11 +358,16 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                           ),
                         )
                       : const Text(
-                          "บันทึก",
-                          style: TextStyle(color: Colors.white, fontSize: 18),
+                          "บันทึกและจบงาน",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                 ),
               ),
+              const SizedBox(height: 30),
             ],
           ),
         ),
@@ -274,6 +399,7 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
+                  color: Color(0xFFA052BE), // เปลี่ยนสีหัวข้อให้สวยขึ้น
                 ),
               ),
               if (trailing != null) trailing,
@@ -290,20 +416,85 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(
       children: [
-        SizedBox(width: 80, child: Text(label)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        SizedBox(
+          width: 70,
+          child: Text(label, style: const TextStyle(color: Colors.grey)),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
       ],
     ),
   );
 
   Widget _textField(String label, TextEditingController controller) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.only(bottom: 10),
     child: TextField(
       controller: controller,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
+      ),
+    ),
+  );
+
+  // 🌟 Widget พิเศษสำหรับกดเลือกวันที่
+  Widget _datePickerField(
+    String label,
+    TextEditingController controller,
+    BuildContext context,
+  ) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: TextField(
+      controller: controller,
+      readOnly: true, // ป้องกันการพิมพ์เอง
+      onTap: () => _selectDate(context),
+      decoration: InputDecoration(
+        labelText: label,
+        suffixIcon: const Icon(
+          Icons.calendar_today,
+          color: Color(0xFFA052BE),
+          size: 20,
+        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
+      ),
+    ),
+  );
+
+  // 🌟 Widget พิเศษสำหรับกดเลือกเวลา
+  Widget _timePickerField(
+    String label,
+    TextEditingController controller,
+    BuildContext context,
+  ) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: TextField(
+      controller: controller,
+      readOnly: true, // ป้องกันการพิมพ์เอง
+      onTap: () => _selectTime(context),
+      decoration: InputDecoration(
+        labelText: label,
+        suffixIcon: const Icon(
+          Icons.access_time,
+          color: Color(0xFFA052BE),
+          size: 20,
+        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
       ),
     ),
   );

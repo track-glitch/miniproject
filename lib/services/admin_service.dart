@@ -4,7 +4,6 @@ import 'package:miniproject/models/request_model.dart';
 import '../models/caretaker_model.dart';
 import '../models/vehicle_model.dart';
 import '../models/document_model.dart';
-import '../models/login_model.dart';
 import '../models/review_model.dart';
 import '../models/doctor_advice_model.dart';
 import '../models/report_model.dart';
@@ -56,6 +55,8 @@ class AdminService {
         caretakers.add(
           CaretakerModel(
             caretakerId: caretakerData['caretakerId'] ?? '',
+            password: caretakerData['password'] ?? '',
+            usertype: caretakerData['usertype'] ?? '',
             profilephoto: caretakerData['profilephoto'] ?? '',
             firstname: caretakerData['firstname'] ?? '',
             lastname: caretakerData['lastname'] ?? '',
@@ -65,8 +66,7 @@ class AdminService {
                 : null,
             phonenumber: caretakerData['phonenumber'] ?? '',
             email: caretakerData['email'] ?? '',
-            aboutme: caretakerData['aboutme'] ?? '',
-            equipmentdetails: caretakerData['equipmentdetails'] ?? '',
+            experience: caretakerData['experience'] ?? '',
             admincomment: caretakerData['admincomment'] ?? '',
             servicestatus: caretakerData['servicestatus'] ?? '',
             accountstatus: caretakerData['accountstatus'] ?? '',
@@ -77,13 +77,6 @@ class AdminService {
                     Map<String, dynamic>.from(caretakerData['Location']),
                   )
                 : null,
-
-            // 🔐 3. ผูกข้อมูลล็อกอิน (ใช้ username เป็น PK ตามที่คุณออกแบบไว้เลยครับ ไม่ต้องมี uid)
-            login: LoginModel(
-              username: userData['username'] ?? '',
-              password: userData['password'] ?? '',
-              usertype: userData['usertype'] ?? '',
-            ),
 
             vehicle: vehicle,
             documents: documents,
@@ -235,64 +228,88 @@ class AdminService {
   }
 
   Future<void> addRequest() async {
-    DateTime appointmentdate = DateTime.parse("2026-06-20T00:00:00.000");
-    DateTime appointmenttime = DateTime.parse("2026-06-20T09:00:00.000");
-    DateTime requestdate = DateTime.parse("2026-06-18T08:30:00.000");
+    DateTime currentTime = DateTime.now();
 
-    DateTime testCurrentTime = DateTime.parse("2026-07-05T19:22:40.000");
-
-    DateTime currentTime = DateTime.now(); // 🌟 ดึงเวลาปัจจุบันของเครื่องทันที
-
-    RequestModel req6 = RequestModel(
-      // ใช้เวลา milliseconds มาต่อท้าย ID จะได้ไม่ซ้ำเวลาสุ่มสร้างหลายๆ รอบ
+    // ===============================================
+    // 🌟 1. Mockup: สถานะ "อยู่ระหว่างรอ(ตอบรับ)" -> Pending
+    // งานเพิ่งเด้งเข้ามา อาสายังไม่ได้กดตกลงหรือปฏิเสธ
+    // ===============================================
+    RequestModel reqPending = RequestModel(
       requestId:
-          "REQ-NOW-${currentTime.millisecondsSinceEpoch.toString().substring(7)}",
-      requestdetail: "พาผู้ป่วยไปล้างแผลที่คลินิก",
+          "REQ-PEND-${currentTime.millisecondsSinceEpoch.toString().substring(7)}",
+      requestdetail: "พาผู้ป่วยไปทำกายภาพบำบัดและรอรับกลับ",
       pickuplocation: LocationModel(
         locationId: "LOC-${_dbRef.push().key}",
-        address: "บ้านพัก ต.สบตุ๋ย จ.ลำปาง",
-        latitude: 18.2800,
-        longitude: 99.4900,
+        address: "บ้านพัก ต.พระบาท จ.ลำปาง",
+        latitude: 18.2750,
+        longitude: 99.5050,
       ),
       dropofflocation: LocationModel(
         locationId: "LOC-${_dbRef.push().key}",
-        address: "คลินิกเวชกรรมใกล้บ้าน",
-        latitude: 18.2850,
-        longitude: 99.4950,
+        address: "โรงพยาบาลเขลางค์นคร-ราม",
+        latitude: 18.2865,
+        longitude: 99.4855,
       ),
-      hospitalname: "คลินิกเวชกรรมใกล้บ้าน",
-      departmentname: "ปฐมพยาบาล/ทำแผล",
-      // สมมติว่านัดหมายเป็นวันพรุ่งนี้ แต่ส่งคำขอ "วันนี้ ณ เวลานี้"
-      appointmentdate: currentTime.add(const Duration(days: 1)),
-      appointmenttime: currentTime.add(const Duration(days: 1)),
-      requestdate: currentTime, // 🌟 เวลาที่ส่งคำขอคือตอนนี้เลย!
-      requeststatus: "Pending", // 🌟 สถานะยังไม่ได้ตอบรับ
+      hospitalname: "โรงพยาบาลเขลางค์นคร-ราม",
+      departmentname: "แผนกเวชศาสตร์ฟื้นฟู",
+      appointmentdate: currentTime.add(
+        const Duration(days: 3),
+      ), // นัดหมายในอีก 3 วันข้างหน้า
+      appointmenttime: currentTime.add(const Duration(days: 3)),
+      requestdate: currentTime, // ส่งคำขอวันนี้
+      requeststatus: "Pending", // 🌟 สถานะ รอตอบรับ
       caretakerId: '1111111111119',
-      review: null,
-      doctoradvice: null,
-      report: null,
-      notifications: null,
-      isReadCaretaker:
-          false, // 🌟 ให้สถานะการอ่านเป็น false เพื่อให้จุดแดงเด้ง!
+      isReadCaretaker: false, // ยังไม่ได้เปิดอ่าน (จุดแดงเด้ง)
     );
 
-    List<RequestModel> allRequests = [
-      req6,
-    ]; // เพิ่ม req5 เข้าไปใน List[cite: 11]
+    // ===============================================
+    // 🌟 2. Mockup: สถานะ "อยู่ระหว่างรอ(ถึงเวลานัด)" -> Accepted
+    // อาสากดตอบรับแล้ว แต่วันนัดหมายยังมาไม่ถึง
+    // ===============================================
+    RequestModel reqAccepted = RequestModel(
+      requestId:
+          "REQ-WAIT-${currentTime.millisecondsSinceEpoch.toString().substring(7)}",
+      requestdetail: "พาผู้ป่วยไปพบแพทย์เพื่อติดตามอาการเบาหวาน",
+      pickuplocation: LocationModel(
+        locationId: "LOC-${_dbRef.push().key}",
+        address: "หมู่บ้านค่ายพระร่วง ต.หัวเวียง จ.ลำปาง",
+        latitude: 18.2905,
+        longitude: 99.5010,
+      ),
+      dropofflocation: LocationModel(
+        locationId: "LOC-${_dbRef.push().key}",
+        address: "โรงพยาบาลศูนย์ลำปาง",
+        latitude: 18.2900,
+        longitude: 99.5000,
+      ),
+      hospitalname: "โรงพยาบาลศูนย์ลำปาง",
+      departmentname: "อายุรกรรม",
+      appointmentdate: currentTime.add(
+        const Duration(days: 1),
+      ), // นัดหมายในวันพรุ่งนี้
+      appointmenttime: currentTime.add(const Duration(days: 1)),
+      requestdate: currentTime.subtract(
+        const Duration(days: 1),
+      ), // ส่งคำขอตั้งแต่เมื่อวาน
+      requeststatus: "accepted", // 🌟 สถานะ ตอบรับแล้ว
+      caretakerId: '1111111111119',
+      isReadCaretaker: true, // เปิดอ่านรายละเอียดตอนกดรับงานไปแล้ว
+    );
+
+    // นำคำขอใส่ใน List เพื่อเตรียมส่งขึ้น Firebase
+    List<RequestModel> allRequests = [reqPending, reqAccepted];
 
     // วนลูปบันทึกทีละตัว
     for (var req in allRequests) {
       await _dbRef
           .child('Login')
-          .child("23yM1I0mQMOusy74CQsu4t6FaPs1")
+          .child(
+            "23yM1I0mQMOusy74CQsu4t6FaPs1",
+          ) // เปลี่ยน UID ญาติตามที่คุณใช้เทสต์[cite: 17]
           .child('Relative')
           .child('Request')
           .child(req.requestId!)
           .set(req.toJson());
     }
-
-    print(
-      "✅ บันทึกข้อมูล Request จำลองทั้ง ${allRequests.length} รายการสำเร็จแล้ว!",
-    );
   }
 }

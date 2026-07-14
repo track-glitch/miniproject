@@ -140,15 +140,57 @@ class CaretakerService {
           if (relativeData['Request'] != null) {
             final requestsMap = relativeData['Request'] as Map<String, dynamic>;
 
+            // 🌟 ในไฟล์ caretaker_service.dart ปรับปรุงฟังก์ชัน getRequestsForCaretaker
+
             requestsMap.forEach((reqId, reqData) {
               // 🌟 จุดสำคัญ: เทียบ caretakerId ในคำขอ กับ myCaretakerId ที่เราสืบมาได้!
               if (reqData['caretakerId'] == myCaretakerId) {
+                // =========================================================
+                // 💥 เพิ่มลอจิกเช็คเวลาตรงนี้ เพื่อแก้ไขข้อมูลให้เสร็จก่อนส่งไปหน้าจอ List
+                // =========================================================
+                String status = (reqData['requeststatus'] ?? '')
+                    .toString()
+                    .toLowerCase();
+                if (status == 'accepted') {
+                  String? dateStr = reqData['appointmentdate'];
+                  bool hasTriggeredAlert =
+                      reqData['hasTriggeredTimeAlert'] ?? false;
+
+                  if (dateStr != null && !hasTriggeredAlert) {
+                    DateTime? apptDate = DateTime.tryParse(dateStr);
+
+                    // ถ้าเวลาปัจจุบัน เลยเวลานัดหมายไปแล้ว
+                    if (apptDate != null && DateTime.now().isAfter(apptDate)) {
+                      // 1. อัปเดตลง Firebase เผื่อไว้เบื้องหลัง
+                      _dbRef
+                          .child('Login')
+                          .child(userUid)
+                          .child('Relative')
+                          .child('Request')
+                          .child(reqId)
+                          .update({
+                            'isReadCaretaker': false,
+                            'hasTriggeredTimeAlert': true,
+                          });
+
+                      // 2. ปรับค่าในตัวแปรจำลอง (Local Map) ณ ตอนนี้ทันที!
+                      // เพื่อให้ RequestModel รับรู้ค่าใหม่และแสดงคำว่า "NEW" บนหน้าจอทันทีโดยไม่ต้องรอรีเฟรช
+                      reqData['isReadCaretaker'] = false;
+                      reqData['hasTriggeredTimeAlert'] = true;
+                    }
+                  }
+                }
+                // =========================================================
+
                 allRequests.add({
-                  'requestModel': RequestModel.fromJson(reqData),
+                  'requestModel': RequestModel.fromJson(
+                    reqData,
+                  ), // ค่านี่จะกลายเป็นผลลัพธ์ล่าสุดทันที
                   'relativeData': relativeData,
                   'patientData': patientData ?? {},
                   'relativeUid': userUid,
                   'isReadCaretaker': reqData['isReadCaretaker'] ?? false,
+                  'rawData': reqData,
                 });
               }
             });
