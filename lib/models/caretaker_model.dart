@@ -104,9 +104,9 @@ class CaretakerModel {
       'servicestatus': servicestatus,
       'accountstatus': accountstatus,
       'Location': location?.toJson(), // 🌟 แปลง Location กลับเป็น JSON
-      'vehicle': vehicle?.toJson(),
-      'documents': documents?.map((e) => e.toJson()).toList(),
-      'requests': requests?.map((e) => e.toJson()).toList(),
+      'Vehicle': vehicle?.toJson(),
+      'Document': documents?.map((e) => e.toJson()).toList(),
+      'Request': requests?.map((e) => e.toJson()).toList(),
     };
   }
 }

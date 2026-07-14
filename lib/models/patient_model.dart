@@ -59,7 +59,7 @@ class PatientModel {
       'disease': disease,
       'mobility': mobility,
 
-      'location': location?.toJson(), // 🌟 แปลง Location กลับเป็น JSON
+      'Location': location?.toJson(), // 🌟 แปลง Location กลับเป็น JSON
     };
   }
 }

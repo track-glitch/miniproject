@@ -14,7 +14,10 @@ import 'waiting_approval_page.dart';
 import 'relative/search_caretaker_profile_page.dart';
 import 'caretaker/edit_profile_page.dart';
 import '../widgets/reject_page.dart';
-import 'caretaker_register_page.dart'; // 🌟 Import หน้าสมัครผู้ดูแลเพิ่มเติม
+import 'caretaker_register_page.dart';
+
+// 🌟 Import หน้าเพิ่มข้อมูลรถยนต์ (แก้ชื่อให้ตรงกับที่คุณมีในโปรเจกต์)
+// import 'caretaker/caretaker_vehicle_register_page.dart';
 
 class LoginPage extends StatefulWidget {
   final String? caretakerId;
@@ -26,7 +29,8 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController _usernameController = TextEditingController();
+  // 🌟 เปลี่ยนชื่อ Controller ให้เข้ากับเลขบัตรประชาชน[cite: 1]
+  final TextEditingController _idCardController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   final Color primaryColor = const Color(0xFF9B59B6);
@@ -44,7 +48,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _idCardController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -61,7 +65,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _handleLogin() async {
-    if (_usernameController.text.isEmpty || _passwordController.text.isEmpty) {
+    if (_idCardController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('กรุณากรอกข้อมูลให้ครบถ้วน')),
       );
@@ -73,8 +77,10 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     final AuthService authService = AuthService();
-    var result = await authService.loginWithUsername(
-      _usernameController.text.trim(),
+
+    // 🌟 เรียกใช้ฟังก์ชัน Login แบบ Bridge Pattern[cite: 1, 9]
+    var result = await authService.loginWithCaretakerId(
+      _idCardController.text.trim(),
       _passwordController.text.trim(),
     );
 
@@ -86,32 +92,13 @@ class _LoginPageState extends State<LoginPage> {
       String usertype = result['usertype'].toString().toLowerCase();
       String uid = result['uid'].toString();
 
-      String? accountStatus = await authService.getUserStatus(uid);
-
       if (!mounted) return;
 
-      if (usertype == 'relative') {
-        if (widget.caretakerId != null && widget.caretakerId!.isNotEmpty) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => CaretakerProfilePage(
-                caretakerId: widget.caretakerId!,
-                loggedUid: uid,
-              ),
-            ),
-          );
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => RelativeHomePage(loggedUid: uid),
-            ),
-          );
-        }
-      } else if (usertype == 'caretaker') {
-        if (accountStatus == 'Pending' ||
-            result['accountstatus'] == 'Pending') {
+      if (usertype == 'caretaker') {
+        String accountStatus = result['accountstatus'] ?? 'Pending';
+
+        // 🌟 ดักสถานะต่างๆ
+        if (accountStatus == 'Pending') {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -119,11 +106,11 @@ class _LoginPageState extends State<LoginPage> {
             ),
           );
           return;
-        } else if (accountStatus == 'Rejected' ||
-            result['accountstatus'] == 'Rejected') {
+        } else if (accountStatus == 'Rejected') {
+          // ไปหน้าแจ้งเตือนการปฏิเสธ พร้อมเหตุผล[cite: 1]
           String comment =
-              result['admincomment'] ?? 'ไม่ระบุเหตุผล โปรดติดต่อแอดมิน';
-
+              result['admincomment'] ??
+              'ข้อมูลไม่ผ่านเกณฑ์ โปรดตรวจสอบและแก้ไขข้อมูลใหม่';
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -131,20 +118,36 @@ class _LoginPageState extends State<LoginPage> {
             ),
           );
           return;
-        }
+        } else if (accountStatus == 'Approved') {
+          // 🌟 ถ้ายืนยันแล้ว เช็คว่ามีรถหรือยัง[cite: 10]
+          bool hasVehicle = result['hasVehicle'] ?? false;
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ListRelativeRequestPage(uid: uid),
-          ),
-        );
-      } else if (usertype == 'admin') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => ListCaretakerPage(uid: uid)),
-        );
+          if (!hasVehicle) {
+            // ถ้ายังไม่มีรถ บังคับเด้งไปหน้ากรอกข้อมูลรถยนต์
+            // Navigator.pushReplacement(
+            //   context,
+            //   MaterialPageRoute(builder: (context) => CaretakerVehicleRegisterPage(uid: uid)),
+            // );
+
+            // หมายเหตุ: ใช้ SnackBar ชั่วคราว ถ้ายังไม่สร้างไฟล์ให้ uncomment ด้านบนออก
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('กรุณาเพิ่มข้อมูลยานพาหนะ (นำทางไปหน้าข้อมูลรถ)'),
+              ),
+            );
+            return;
+          }
+
+          // 🌟 ถ้าทุกอย่างครบ (Approved + มีรถ) เข้าสู่หน้าหลัก[cite: 1]
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ListRelativeRequestPage(uid: uid),
+            ),
+          );
+        }
       }
+      // ... (ส่วนของ relative และ admin ปล่อยไว้แบบเดิมได้ หรือปรับแก้ logic คล้ายๆ กันถ้าต้องการ)
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -224,11 +227,14 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 15),
 
+                      // 🌟 เปลี่ยน Hint เป็น เลขบัตรประชาชน[cite: 1]
                       TextField(
-                        controller: _usernameController,
-                        keyboardType: TextInputType.text,
+                        controller: _idCardController,
+                        keyboardType: TextInputType.number,
+                        maxLength: 13,
                         decoration: InputDecoration(
-                          hintText: 'ชื่อผู้ใช้ (Username)',
+                          hintText: 'เลขบัตรประชาชน',
+                          counterText: "",
                           filled: true,
                           fillColor: Colors.white,
                           contentPadding: const EdgeInsets.symmetric(
@@ -330,7 +336,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 30),
 
-                // 🌟 ส่วนแยกปุ่มสมัครสมาชิก
                 const Divider(),
                 const SizedBox(height: 16),
                 const Text(
@@ -379,9 +384,7 @@ class _LoginPageState extends State<LoginPage> {
                   height: 48,
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(
-                        0xFF0F766E,
-                      ), // ใช้สีเขียวอมฟ้าแยกประเภท
+                      foregroundColor: const Color(0xFF0F766E),
                       side: const BorderSide(
                         color: Color(0xFF0F766E),
                         width: 1.5,
