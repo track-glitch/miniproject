@@ -198,7 +198,7 @@ class _TrackStatusNotificationPageState
             ),
             _buildBottomNavItem(
               Icons.support_agent,
-              'ขอใช้บริการ',
+              'รายการคำขอ',
               false,
               onTap: () {
                 Navigator.pushReplacement(
@@ -210,12 +210,7 @@ class _TrackStatusNotificationPageState
                 );
               },
             ),
-            _buildBottomNavItem(
-              Icons.notifications_none,
-              'แจ้งเตือน',
-              true, // ✅ ให้หน้าต่างนี้เป็นหน้าต่าง Active
-              onTap: () {},
-            ),
+            
             _buildBottomNavItem(
               Icons.person_outline,
               'ญาติ',

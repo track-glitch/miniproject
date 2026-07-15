@@ -4,7 +4,7 @@ import 'package:miniproject/services/caretaker_service.dart';
 
 class ViewCaretakerReview extends StatefulWidget {
   final String caretakerId; // 🌟 รับค่า ID เข้ามาเพื่อดึงข้อมูล
-  const ViewCaretakerReview({super.key, required this.caretakerId});
+  const ViewCaretakerReview({super.key, required this.caretakerId, required List<Map<String, dynamic>> reviews});
 
   @override
   State<ViewCaretakerReview> createState() => _ViewCaretakerReviewState();
@@ -260,7 +260,7 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
                                           filteredReviews = allReviews.where((
                                             review,
                                           ) {
-                                            return (review['rating'] as double)
+                                            return (review['ratingscorescorescorescorescorescorescorescore'] as double)
                                                     .floor() ==
                                                 targetStar.floor();
                                           }).toList();
@@ -315,9 +315,9 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
                                       final review = filteredReviews[index];
                                       return _buildReviewItem(
                                         name: review['reviewerName'],
-                                        rating: review['rating'],
+                                        ratingscorescorescorescorescorescorescore: review['ratingscorescorescorescorescorescorescore'],
                                         comment: review['comment'],
-                                        timeAgo: review['timeAgo'],
+                                        reviewdate: review['reviewdate'],
                                         imageUrl: review['reviewerImage'],
                                       );
                                     },
@@ -336,9 +336,9 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
   // 🌟 ฟังก์ชันวาด UI แต่ละรีวิว (ใช้โค้ดเดียวกับหน้าโปรไฟล์เป๊ะๆ)
   Widget _buildReviewItem({
     required String name,
-    required double rating,
+    required double ratingscorescorescorescorescorescorescore,
     required String comment,
-    required String timeAgo,
+    required String reviewdate,
     required String imageUrl,
   }) {
     ImageProvider? imageProvider;
@@ -406,7 +406,7 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
                   Row(
                     children: List.generate(5, (index) {
                       return Icon(
-                        index < rating.floor()
+                        index < ratingscorescorescorescorescorescorescore.floor()
                             ? Icons.star_rounded
                             : Icons.star_border_rounded,
                         color: const Color(0xFFFFC107),
@@ -427,7 +427,7 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
               ),
               const SizedBox(height: 6),
               Text(
-                timeAgo,
+                reviewdate,
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
               ),
             ],

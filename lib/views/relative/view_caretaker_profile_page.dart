@@ -7,6 +7,7 @@ import 'package:miniproject/views/relative/edit_relative_info_page.dart';
 import 'package:miniproject/views/relative/request_caretaker_service_page.dart';
 import 'dart:convert';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:miniproject/views/relative/view_caretaker_review.dart';
 
 class CaretakerProfilePage extends StatefulWidget {
   final String caretakerId;
@@ -861,23 +862,32 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'รีวิวล่าสุด',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: Color(0xFF8763E6),
-            ),
-          ),
           const SizedBox(height: 12),
           Row(
-            children: List.generate(5, (index) {
-              return Icon(
-                index < rating.round() ? Icons.star : Icons.star_border,
-                color: Colors.orange, // คืนค่าสีส้มเดิม
-                size: 16,
-              );
-            }),
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'รีวิวล่าสุด',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Color(0xFF8763E6),
+                ),
+              ),
+
+              
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ViewCaretakerReview(caretakerId: widget.caretakerId, reviews: _reviews),
+                      ),
+                    );
+                  },
+                  child: Text('ดูทั้งหมด (${_reviews.length})'),
+                ),
+            ],
           ),
 
           const SizedBox(height: 16),
