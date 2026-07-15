@@ -293,24 +293,9 @@ class _ListRequestPageState extends State<ListRequestPage> {
             ),
             _buildBottomNavItem(
               Icons.support_agent,
-              'ขอใช้บริการ',
+              'รายการคำขอ',
               true,
               onTap: () {},
-            ),
-            _buildBottomNavItem(
-              Icons.notifications_none,
-              'แจ้งเตือน',
-              false,
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TrackStatusNotificationPage(
-                      loggedUid: widget.loggedUid,
-                    ),
-                  ),
-                );
-              },
             ),
             _buildBottomNavItem(
               Icons.person_outline,
@@ -430,25 +415,9 @@ class _ListRequestPageState extends State<ListRequestPage> {
             value: request.date,
             valueColor: primaryPurple,
           ),
+          
           const SizedBox(height: 10),
-          _buildDetailRow(
-            icon: Icons.hub_outlined,
-            iconColor: Colors.blue,
-            bgColor: const Color(0xFFE3F0FF),
-            label: 'แผนก',
-            value: request.category,
-            valueColor: Colors.blue,
-          ),
-          const SizedBox(height: 10),
-          _buildDetailRow(
-            icon: Icons.person_outline,
-            iconColor: Colors.orange,
-            bgColor: const Color(0xFFFFEFE0),
-            label: 'ถึง',
-            value: request.caregiverName,
-            valueColor: Colors.orange,
-          ),
-          const SizedBox(height: 14),
+        
 
           // 🌟 โซนปุ่มด้านล่าง (แก้ไขให้ตรงตามรูปภาพ)
           Row(

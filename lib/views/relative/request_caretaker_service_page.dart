@@ -44,14 +44,12 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
 
   // สำหรับจุดรับ
   int _pickupOption = 1;
-  final TextEditingController _pickupAddressController =
-      TextEditingController();
+  final TextEditingController _pickupAddressController = TextEditingController();
   LatLng _pickupLocation = const LatLng(13.7563, 100.5018);
   bool _pickupHasPinned = false;
 
   // สำหรับจุดส่ง (🌟 ปรับใหม่ ไม่มี Option แล้ว บังคับปักหมุดเลย)
-  final TextEditingController _dropoffAddressController =
-      TextEditingController();
+  final TextEditingController _dropoffAddressController = TextEditingController();
   LatLng _dropoffLocation = const LatLng(13.7563, 100.5018);
   bool _dropoffHasPinned = false;
 
@@ -59,37 +57,44 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   bool _pickupMapExpanded = false;
   bool _dropoffMapExpanded = false;
 
-  // ข้อมูลที่อยู่จากโปรไฟล์
+  // ข้อมูลจากโปรไฟล์ (เพิ่มการเก็บข้อมูลญาติและผู้ป่วย)
+  Map<String, dynamic>? _relativeData;
+  Map<String, dynamic>? _patientData;
   Map<String, dynamic>? _relativeLocationProfile;
   List<DateTime> _caretakerBusyDates = [];
 
   @override
   void initState() {
     super.initState();
-    _selectedDate =
-        widget.initialSelectedDate ??
+    _selectedDate = widget.initialSelectedDate ??
         DateTime.now().add(const Duration(days: 1));
-    _fetchProfileLocation();
+    _fetchProfileData();
     _fetchCaretakerBusyDates();
   }
 
-  Future<void> _fetchProfileLocation() async {
+  // 🌟 แก้ไขให้ดึงข้อมูลทั้งก้อน Relative เพื่อเอาข้อมูลผู้ป่วยและญาติมาแสดงผล
+  Future<void> _fetchProfileData() async {
     String uid = widget.loggedUid ?? FirebaseAuth.instance.currentUser!.uid;
     try {
-      // 🌟 แก้ path: ที่อยู่จริงๆ อยู่ใต้ Relative/Patient/location
-      // (ดูจาก RelativeModel.toJson() -> 'Patient', PatientModel.toJson() -> 'location')
-      final snapshot = await FirebaseDatabase.instance
-          .ref('Login/$uid/Relative/Patient/location')
-          .get();
+      final snapshot =
+          await FirebaseDatabase.instance.ref('Login/$uid/Relative').get();
       if (snapshot.exists && snapshot.value != null) {
+        final data = Map<String, dynamic>.from(snapshot.value as Map);
         setState(() {
-          _relativeLocationProfile = Map<String, dynamic>.from(
-            snapshot.value as Map,
-          );
+          _relativeData = data;
+          if (data['Patient'] != null) {
+            _patientData = Map<String, dynamic>.from(data['Patient'] as Map);
+            // โอนค่าสถานที่ไปให้ตัวแปรเดิม เพื่อใช้กับจุดรับ (Pick-up)
+            _relativeLocationProfile = {
+              'address': _patientData?['address'] ?? '',
+              'latitude': _patientData?['latitude'] ?? 0.0,
+              'longitude': _patientData?['longitude'] ?? 0.0,
+            };
+          }
         });
       }
     } catch (e) {
-      print("Error fetch profile location: $e");
+      print("Error fetch profile data: $e");
     }
   }
 
@@ -160,18 +165,8 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
 
   String _formatThaiDate(DateTime date) {
     final thaiMonths = [
-      'ม.ค.',
-      'ก.พ.',
-      'มี.ค.',
-      'เม.ย.',
-      'พ.ค.',
-      'มิ.ย.',
-      'ก.ค.',
-      'ส.ค.',
-      'ก.ย.',
-      'ต.ค.',
-      'พ.ย.',
-      'ธ.ค.',
+      'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+      'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
     ];
     return '${date.day} ${thaiMonths[date.month - 1]} ${date.year + 543}';
   }
@@ -195,10 +190,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
           ),
         ),
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Colors.white,
-          ),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -223,15 +215,13 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ── 🌟 1) วันที่นัดหมาย ขึ้นก่อนสุด ──
                 Text('วันที่นัดหมาย', style: _labelStyle()),
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () => _selectDate(context),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
                       border: Border.all(color: borderColor, width: 1.5),
                       borderRadius: BorderRadius.circular(12),
@@ -244,121 +234,25 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                           _formatThaiDate(_selectedDate),
                           style: const TextStyle(fontSize: 14),
                         ),
-                        Icon(
-                          Icons.calendar_today,
-                          color: primaryColor,
-                          size: 20,
-                        ),
+                        Icon(Icons.calendar_today, color: primaryColor, size: 20),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 24),
 
-                // การ์ดผู้ดูแล
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: borderColor, width: 1.5),
-                    color: Colors.white,
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: lightPurple,
-                        backgroundImage:
-                            widget.caretakerData['profilephoto'] != null &&
-                                widget.caretakerData['profilephoto']
-                                    .toString()
-                                    .isNotEmpty
-                            ? MemoryImage(
-                                base64Decode(
-                                  widget.caretakerData['profilephoto']
-                                      .toString()
-                                      .replaceAll('\n', '')
-                                      .trim(),
-                                ),
-                              )
-                            : null,
-                        child:
-                            widget.caretakerData['profilephoto'] == null ||
-                                widget.caretakerData['profilephoto']
-                                    .toString()
-                                    .isEmpty
-                            ? Icon(Icons.person, color: primaryColor, size: 35)
-                            : null,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'ผู้ดูแล',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.black54,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              'นาย ${widget.caretakerData['firstname'] ?? ''} ${widget.caretakerData['lastname'] ?? ''}'
-                                  .trim(),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            Row(
-                              children: [
-                                Row(
-                                  children: List.generate(
-                                    5,
-                                    (index) => const Icon(
-                                      Icons.star,
-                                      color: Colors.orange,
-                                      size: 14,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Text(
-                                  '4.9 - 87 รีวิว',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.phone,
-                                  size: 14,
-                                  color: Colors.black54,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'เบอร์โทร ${widget.caretakerData['phonenumber'] ?? '-'}',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
+                // ── 🌟 2) ข้อมูลผู้ป่วยและญาติ ขึ้นเป็นลำดับถัดมา ──
+                Text('ข้อมูลผู้ป่วยและญาติ', style: _labelStyle()),
+                const SizedBox(height: 8),
+                _buildPatientCard(),
+                _buildRelativeCard(),
+                const SizedBox(height: 12),
+
+                // ── 🌟 3) ข้อมูลผู้ดูแล ย้ายมาไว้ท้ายๆ ก่อนปุ่มยืนยัน ──
+                Text('ผู้ดูแลที่ให้บริการ', style: _labelStyle()),
+                const SizedBox(height: 8),
+                _buildCaretakerCard(),
+                const SizedBox(height: 8),
 
                 Text('ระบุรายละเอียดคำขอ', style: _labelStyle()),
                 const SizedBox(height: 8),
@@ -366,47 +260,30 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                   controller: _detailController,
                   maxLines: 3,
                   style: const TextStyle(fontSize: 14),
-                  decoration: _inputDecoration(
-                    'อาการ หรือ สิ่งที่ต้องการให้ช่วยเหลือ...',
-                  ),
-                  validator: (value) =>
-                      value!.isEmpty ? 'กรุณาระบุรายละเอียด' : null,
+                  decoration: _inputDecoration('อาการ หรือ สิ่งที่ต้องการให้ช่วยเหลือ...'),
+                  validator: (value) => value!.isEmpty ? 'กรุณาระบุรายละเอียด' : null,
                 ),
                 const SizedBox(height: 20),
 
-                // ── 🌟 ส่วนของจุดรับ ──
+                // ── ส่วนของจุดรับ ──
                 Text('ระบุสถานที่จุดรับ (Pick-up)', style: _labelStyle()),
                 RadioListTile(
-                  title: const Text(
-                    'ใช้ที่อยู่ปัจจุบันตามโปรไฟล์',
-                    style: TextStyle(fontSize: 14),
-                  ),
+                  title: const Text('ใช้ที่อยู่ปัจจุบันตามโปรไฟล์', style: TextStyle(fontSize: 14)),
                   value: 1,
                   groupValue: _pickupOption,
                   activeColor: primaryColor,
                   contentPadding: EdgeInsets.zero,
-                  visualDensity: const VisualDensity(
-                    horizontal: -4,
-                    vertical: -4,
-                  ),
-                  onChanged: (val) =>
-                      setState(() => _pickupOption = val as int),
+                  visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                  onChanged: (val) => setState(() => _pickupOption = val as int),
                 ),
                 RadioListTile(
-                  title: const Text(
-                    'ปักหมุดสถานที่รับใหม่',
-                    style: TextStyle(fontSize: 14),
-                  ),
+                  title: const Text('ปักหมุดสถานที่รับใหม่', style: TextStyle(fontSize: 14)),
                   value: 2,
                   groupValue: _pickupOption,
                   activeColor: primaryColor,
                   contentPadding: EdgeInsets.zero,
-                  visualDensity: const VisualDensity(
-                    horizontal: -4,
-                    vertical: -4,
-                  ),
-                  onChanged: (val) =>
-                      setState(() => _pickupOption = val as int),
+                  visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                  onChanged: (val) => setState(() => _pickupOption = val as int),
                 ),
                 if (_pickupOption == 2) ...[
                   const SizedBox(height: 4),
@@ -415,9 +292,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                     addressText: _pickupAddressController.text,
                     placeholder: 'แตะเพื่อปักหมุดสถานที่จุดรับ',
                     isExpanded: _pickupMapExpanded,
-                    onTap: () => setState(
-                      () => _pickupMapExpanded = !_pickupMapExpanded,
-                    ),
+                    onTap: () => setState(() => _pickupMapExpanded = !_pickupMapExpanded),
                   ),
                   AnimatedSize(
                     duration: const Duration(milliseconds: 250),
@@ -431,9 +306,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(
-                                10,
-                              ), // 🌟 ตัดขอบแผนที่ไม่ให้ทะลุกรอบ
+                              borderRadius: BorderRadius.circular(10), // ตัดขอบแผนที่ไม่ให้ทะลุกรอบ
                               child: LocationPickerWidget(
                                 initialLocation: _pickupLocation,
                                 initialAddress: _pickupAddressController.text,
@@ -452,7 +325,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                 ],
                 const SizedBox(height: 20),
 
-                // ── 🌟 ส่วนของจุดส่ง (Drop-off) ──
+                // ── ส่วนของจุดส่ง (Drop-off) ──
                 Text('ระบุสถานที่จุดส่ง (Drop-off)', style: _labelStyle()),
                 const SizedBox(height: 8),
                 _buildMapToggleHeader(
@@ -460,9 +333,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                   addressText: _dropoffAddressController.text,
                   placeholder: 'แตะเพื่อปักหมุดสถานที่จุดส่ง',
                   isExpanded: _dropoffMapExpanded,
-                  onTap: () => setState(
-                    () => _dropoffMapExpanded = !_dropoffMapExpanded,
-                  ),
+                  onTap: () => setState(() => _dropoffMapExpanded = !_dropoffMapExpanded),
                 ),
                 AnimatedSize(
                   duration: const Duration(milliseconds: 250),
@@ -477,9 +348,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                             border: Border.all(color: borderColor, width: 2),
                           ),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(
-                              10,
-                            ), // 🌟 ตัดขอบแผนที่
+                            borderRadius: BorderRadius.circular(10), // ตัดขอบแผนที่
                             child: LocationPickerWidget(
                               initialLocation: _dropoffLocation,
                               initialAddress: _dropoffAddressController.text,
@@ -503,8 +372,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                   controller: _hospitalController,
                   style: const TextStyle(fontSize: 14),
                   decoration: _inputDecoration('ชื่อโรงพยาบาล'),
-                  validator: (value) =>
-                      value!.isEmpty ? 'กรุณาระบุโรงพยาบาล' : null,
+                  validator: (value) => value!.isEmpty ? 'กรุณาระบุโรงพยาบาล' : null,
                 ),
                 const SizedBox(height: 16),
 
@@ -523,10 +391,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                 InkWell(
                   onTap: () => _selectTime(context),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
                       border: Border.all(color: borderColor, width: 1.5),
                       borderRadius: BorderRadius.circular(12),
@@ -540,13 +405,9 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                               ? '--:-- น.'
                               : '${_selectedTime!.format(context)} น.',
                           style: TextStyle(
-                            color: _selectedTime == null
-                                ? Colors.grey
-                                : Colors.black,
+                            color: _selectedTime == null ? Colors.grey : Colors.black,
                             fontSize: 14,
-                            fontWeight: _selectedTime == null
-                                ? FontWeight.normal
-                                : FontWeight.bold,
+                            fontWeight: _selectedTime == null ? FontWeight.normal : FontWeight.bold,
                           ),
                         ),
                         Icon(Icons.access_time, color: primaryColor, size: 20),
@@ -554,7 +415,9 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
+
+                
 
                 // ปุ่มยืนยัน/ยกเลิก
                 Row(
@@ -575,34 +438,25 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                           if (_pickupOption == 2 && !_pickupHasPinned) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text(
-                                  "กรุณาปักหมุดสถานที่จุดรับ (Pick-up)",
-                                ),
+                                content: Text("กรุณาปักหมุดสถานที่จุดรับ (Pick-up)"),
                                 backgroundColor: Colors.red,
                               ),
                             );
                             return;
                           }
                           if (!_dropoffHasPinned) {
-                            // บังคับเช็คว่าปักหมุดจุดส่งหรือยัง
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text(
-                                  "กรุณาปักหมุดสถานที่จุดส่ง (Drop-off) บนแผนที่",
-                                ),
+                                content: Text("กรุณาปักหมุดสถานที่จุดส่ง (Drop-off) บนแผนที่"),
                                 backgroundColor: Colors.red,
                               ),
                             );
                             return;
                           }
 
-                          if (_formKey.currentState!.validate() &&
-                              _selectedTime != null) {
-                            String uid =
-                                widget.loggedUid ??
-                                FirebaseAuth.instance.currentUser!.uid;
-                            DatabaseReference requestRef = FirebaseDatabase
-                                .instance
+                          if (_formKey.currentState!.validate() && _selectedTime != null) {
+                            String uid = widget.loggedUid ?? FirebaseAuth.instance.currentUser!.uid;
+                            DatabaseReference requestRef = FirebaseDatabase.instance
                                 .ref()
                                 .child("Login")
                                 .child(uid)
@@ -622,15 +476,9 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                             Map<String, dynamic> pickupNode = {};
                             if (_pickupOption == 1) {
                               pickupNode = {
-                                'address':
-                                    _relativeLocationProfile?['address'] ??
-                                    'ไม่พบที่อยู่ในโปรไฟล์',
-                                'latitude':
-                                    _relativeLocationProfile?['latitude'] ??
-                                    0.0,
-                                'longitude':
-                                    _relativeLocationProfile?['longitude'] ??
-                                    0.0,
+                                'address': _relativeLocationProfile?['address'] ?? 'ไม่พบที่อยู่ในโปรไฟล์',
+                                'latitude': _relativeLocationProfile?['latitude'] ?? 0.0,
+                                'longitude': _relativeLocationProfile?['longitude'] ?? 0.0,
                               };
                             } else {
                               pickupNode = {
@@ -640,7 +488,6 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                               };
                             }
 
-                            // สำหรับจุดส่ง บันทึกพิกัดที่ปักหมุดเสมอ
                             Map<String, dynamic> dropoffNode = {
                               'address': _dropoffAddressController.text,
                               'latitude': _dropoffLocation.latitude,
@@ -654,10 +501,8 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                               "PickupLocation": pickupNode,
                               "DropoffLocation": dropoffNode,
                               "hospitalname": _hospitalController.text.trim(),
-                              "departmentname": _departmentController.text
-                                  .trim(),
-                              "appointmentdate": _selectedDate
-                                  .toIso8601String(),
+                              "departmentname": _departmentController.text.trim(),
+                              "appointmentdate": _selectedDate.toIso8601String(),
                               "appointmenttime": apptDT.toIso8601String(),
                               "requestdate": DateTime.now().toIso8601String(),
                               "requeststatus": "Pending",
@@ -724,31 +569,147 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
         backgroundColor: darkPurple,
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white70,
-        selectedLabelStyle: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-        ),
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
         unselectedLabelStyle: const TextStyle(fontSize: 12),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'บ้าน'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.support_agent),
-            label: 'ขอใช้บริการ',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: 'แจ้งเตือน',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: 'ญาติ',
+          BottomNavigationBarItem(icon: Icon(Icons.support_agent), label: 'ขอใช้บริการ'),
+          BottomNavigationBarItem(icon: Icon(Icons.notifications), label: 'แจ้งเตือน'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'ญาติ'),
+        ],
+      ),
+    );
+  }
+
+  // ------------------------- Helper Widget: แสดงการ์ดข้อมูล -------------------------
+
+  Widget _buildPatientCard() {
+    if (_patientData == null) return const SizedBox();
+    return _buildInfoCard(
+      title: 'ผู้ป่วย',
+      firstName: _patientData!['firstname'] ?? '',
+      lastName: _patientData!['lastname'] ?? '',
+      phone: _patientData!['phonenumber'] ?? '-',
+      photoBase64: _patientData!['patientphoto'],
+      extraInfo: 'โรคประจำตัว: ${_patientData!['disease'] ?? '-'} | การเดิน: ${_patientData!['mobility'] ?? '-'}',
+    );
+  }
+
+  // 🌟 ญาติไม่มีรูปในระบบ จึงตัด Avatar ออก แสดงเฉพาะข้อความ
+  Widget _buildRelativeCard() {
+    if (_relativeData == null) return const SizedBox();
+    return _buildInfoCard(
+      title: 'ญาติ (ผู้ติดต่อ)',
+      firstName: _relativeData!['firstname'] ?? '',
+      lastName: _relativeData!['lastname'] ?? '',
+      phone: _relativeData!['phonenumber'] ?? '-',
+      extraInfo: 'ความสัมพันธ์: ${_relativeData!['relationship'] ?? '-'}',
+      showAvatar: false,
+    );
+  }
+
+  Widget _buildCaretakerCard() {
+    return _buildInfoCard(
+      title: 'ผู้ดูแล',
+      firstName: widget.caretakerData['firstname'] ?? '',
+      lastName: widget.caretakerData['lastname'] ?? '',
+      phone: widget.caretakerData['phonenumber'] ?? '-',
+      photoBase64: widget.caretakerData['profilephoto'],
+      isCaretaker: true,
+    );
+  }
+
+  Widget _buildInfoCard({
+    required String title,
+    required String firstName,
+    required String lastName,
+    required String phone,
+    String? photoBase64,
+    String? extraInfo,
+    bool isCaretaker = false,
+    bool showAvatar = true, // 🌟 ควบคุมว่าจะแสดงรูป/ไอคอนหรือไม่
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor, width: 1.5),
+        color: Colors.white,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (showAvatar) ...[
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: lightPurple,
+              backgroundImage: photoBase64 != null && photoBase64.isNotEmpty
+                  ? MemoryImage(base64Decode(photoBase64.replaceAll('\n', '').trim()))
+                  : null,
+              child: (photoBase64 == null || photoBase64.isEmpty)
+                  ? Icon(Icons.person, color: primaryColor, size: 35)
+                  : null,
+            ),
+            const SizedBox(width: 12),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.black54,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'คุณ $firstName $lastName'.trim(),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                if (isCaretaker) ...[
+                  Row(
+                    children: [
+                      Row(
+                        children: List.generate(
+                          5,
+                          (index) => const Icon(Icons.star, color: Colors.orange, size: 14),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text('4.9 - 87 รีวิว', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
+                ],
+                if (extraInfo != null) ...[
+                  const SizedBox(height: 4),
+                  Text(extraInfo, style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                ],
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.phone, size: 14, color: Colors.black54),
+                    const SizedBox(width: 4),
+                    Text(
+                      'เบอร์โทร $phone',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  // 🌟 Helper สำหรับหัวข้อแบบแตะเพื่อหุบ/ขยายแผนที่
+  // Helper สำหรับหัวข้อแบบแตะเพื่อหุบ/ขยายแผนที่
   Widget _buildMapToggleHeader({
     required bool hasPinned,
     required String addressText,

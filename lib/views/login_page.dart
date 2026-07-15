@@ -12,7 +12,6 @@ import '../services/auth_service.dart';
 import 'relative/relative_home_page.dart';
 import 'caretaker/caretaker_home_page.dart';
 import 'waiting_approval_page.dart';
-import 'relative/search_caretaker_profile_page.dart';
 import 'caretaker/edit_profile_page.dart';
 import '../widgets/reject_page.dart';
 import 'caretaker_register_page.dart';

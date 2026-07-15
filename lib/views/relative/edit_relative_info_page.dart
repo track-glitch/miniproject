@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:miniproject/views/relative/relative_home_page.dart';
 import 'package:miniproject/widgets/location_picker_widget.dart';
@@ -172,7 +173,16 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
         if (data['birthdate'] != null) {
           setState(() {
-            _patBirthDateController.text = data['birthdate'].toString();
+            try {
+              DateTime parsedDate = DateTime.parse(
+                data['birthdate'].toString(),
+              );
+              _patBirthDateController.text = DateFormat(
+                'dd/MM/yyyy',
+              ).format(parsedDate);
+            } catch (e) {
+              _patBirthDateController.text = data['birthdate'].toString();
+            }
           });
         }
 
@@ -269,8 +279,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                RelativeHomePage(loggedUid: widget.loggedUid),
+            builder: (context) => RelativeHomePage(loggedUid: widget.loggedUid),
           ),
         );
       }

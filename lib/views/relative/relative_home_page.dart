@@ -704,7 +704,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
             // แท็บ "ขอใช้บริการ" กดแล้วเด้งไปหน้ารายการคำขอ (ListRequestPage)
             _buildBottomNavItem(
               Icons.support_agent,
-              'ขอใช้บริการ',
+              'รายการคำขอ',
               false,
               onTap: () {
                 Navigator.pushReplacement(
@@ -717,21 +717,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
               },
             ),
 
-            _buildBottomNavItem(
-              Icons.notifications_none,
-              'แจ้งเตือน',
-              false,
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TrackStatusNotificationPage(
-                      loggedUid: widget.loggedUid,
-                    ),
-                  ),
-                );
-              },
-            ),
+            
 
             _buildBottomNavItem(
               Icons.person_outline,
