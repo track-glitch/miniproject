@@ -79,7 +79,7 @@ class _LoginPageState extends State<LoginPage> {
     final AuthService authService = AuthService();
 
     // 🌟 เรียกใช้ฟังก์ชัน Login แบบ Bridge Pattern[cite: 1, 9]
-    var result = await authService.loginWithCaretakerId(
+    var result = await authService.loginWithIdCard(
       _idCardController.text.trim(),
       _passwordController.text.trim(),
     );
@@ -146,6 +146,15 @@ class _LoginPageState extends State<LoginPage> {
             ),
           );
         }
+      } else if (usertype == 'relative') {
+        // 🌟 เพิ่มเงื่อนไขสำหรับญาติ พาล็อกอินเข้าหน้า Home ของญาติ
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                RelativeHomePage(loggedUid: uid), // เปลี่ยนหน้าปลายทางตามของคุณ
+          ),
+        );
       }
       // ... (ส่วนของ relative และ admin ปล่อยไว้แบบเดิมได้ หรือปรับแก้ logic คล้ายๆ กันถ้าต้องการ)
     } else {
@@ -335,81 +344,80 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 30),
-
                 const Divider(),
                 const SizedBox(height: 16),
-                const Text(
-                  'ยังไม่มีบัญชีใช่หรือไม่?',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black54,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: primaryColor,
-                      side: BorderSide(color: primaryColor, width: 1.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                // ==========================================
+                // 🌟 ส่วนเลือกลิงก์สมัครสมาชิก
+                // ==========================================
+                Column(
+                  children: [
+                    const Text(
+                      'ยังไม่มีบัญชีใช่หรือไม่?',
+                      style: TextStyle(color: Colors.grey, fontSize: 14),
                     ),
-                    icon: const Icon(Icons.family_restroom),
-                    label: const Text(
-                      'สมัครสมาชิกสำหรับญาติ/ผู้ป่วย',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const RelativeRegisterPage(),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        // ลิงก์ญาติ/ผู้ป่วย
+                        InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const RelativeRegisterPage(),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            'สมัครสำหรับญาติ/ผู้ป่วย',
+                            style: TextStyle(
+                              color: primaryColor, // ใช้สีม่วง
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              decoration: TextDecoration
+                                  .underline, // ขีดเส้นใต้ให้ดูเป็นลิงก์
+                            ),
+                          ),
                         ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 12),
 
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF0F766E),
-                      side: const BorderSide(
-                        color: Color(0xFF0F766E),
-                        width: 1.5,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    icon: const Icon(Icons.medical_services),
-                    label: const Text(
-                      'สมัครสมาชิกผู้ให้บริการพาไปหาหมอ',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CaretakerRegisterPage(),
+                        // เส้นคั่นตรงกลาง
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 10),
+                          child: Text(
+                            '|',
+                            style: TextStyle(color: Colors.grey, fontSize: 16),
+                          ),
                         ),
-                      );
-                    },
-                  ),
+
+                        // ลิงก์ผู้ให้บริการ
+                        InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const CaretakerRegisterPage(),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'สมัครสำหรับผู้ให้บริการ',
+                            style: TextStyle(
+                              color: Color(
+                                0xFF0F766E,
+                              ), // ใช้สีเขียวอมฟ้าเดิมของคุณ
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 20),
               ],
