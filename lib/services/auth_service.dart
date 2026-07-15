@@ -175,6 +175,23 @@ class AuthService {
     }
   }
 
+  Future<bool> updateVehicleAndServiceStatus({
+    required String uid,
+    required VehicleModel vehicle,
+  }) async {
+    try {
+      // ใช้ .update() เพื่อแก้ไขและเพิ่มข้อมูลเฉพาะส่วน โดยไม่กระทบข้อมูลอื่น
+      await _dbRef.child('Login').child(uid).child('Caretaker').update({
+        'Vehicle': vehicle.toJson(), // อัปเดตข้อมูลรถ
+        'servicestatus': 'Available', // เปลี่ยนสถานะเป็นพร้อมรับงาน
+      });
+      return true;
+    } catch (e) {
+      print("เกิดข้อผิดพลาดในการอัปเดตรถยนต์: $e");
+      return false;
+    }
+  }
+
   // 🎯 ดึงตำแหน่งสิทธิ์ของผู้ใช้งาน (Role)
   Future<String?> getUserRole(dynamic uid) async {
     //

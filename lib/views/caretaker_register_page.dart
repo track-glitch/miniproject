@@ -284,7 +284,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         if (_doc2File != null)
           DocumentModel(
             documentId: "doc_insurance",
-            documenttype: "สำเนาประกันภัยรถยนตร์",
+            documenttype: "ใบขับขี่",
             filepath: "base64_data",
             uploaddate: DateTime.now(),
           ),
@@ -475,10 +475,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
           _buildSectionContainer(
             title: 'ข้อมูลบัญชี',
             children: [
-              _buildLabelField(
-                'หมายเลขบัตรประชาชน (ใช้เข้าสู่ระบบ)',
-                isRequired: true,
-              ),
+              _buildLabelField('หมายเลขบัตรประชาชน', isRequired: true),
               _buildTextField(
                 controller: _idCardController,
                 hint: 'ตัวเลข 13 หลัก',
@@ -505,7 +502,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                   return null;
                 },
               ),
-              _buildLabelField('อีเมล (ใช้กู้คืนรหัสผ่าน)', isRequired: true),
+              _buildLabelField('อีเมล', isRequired: true),
               _buildTextField(
                 controller: _emailController,
                 hint: 'เช่น example@gmail.com',

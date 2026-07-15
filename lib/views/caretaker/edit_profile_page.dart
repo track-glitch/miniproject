@@ -1,10 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:miniproject/views/caretaker/view_review_page.dart';
 
-import '../../widgets/location_picker_widget.dart';
 import '../../services/caretaker_service.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import '../caretaker/list_relative_request_page.dart';
@@ -22,7 +20,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final CaretakerService _service = CaretakerService();
   bool _isLoading = true;
 
-  // 🎨 Theme ใหม่ - อ้างอิงจาก edit_relative_info_page (โทนม่วง)
   final Color primaryColor = const Color(0xFF7C5CFC);
   final Color darkPurple = const Color(0xFF6E5ABF);
   final Color lightPurple = const Color(0xFFF3E5F5);
@@ -34,12 +31,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final Color bgGradientBottom = const Color.fromARGB(255, 225, 202, 255);
   final Color cardColor = Colors.white;
 
-  // สถานะและพิกัด
   bool isServiceOn = false;
-  LatLng selectedLocation = const LatLng(18.2881, 99.4921);
   int _selectedIndex = 1;
 
-  // ข้อมูลที่ดึงมา
   String profileImageUrl = '';
   String citizenId = '';
   String vehicleType = '';
@@ -55,13 +49,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
   DateTime? birthDate;
   final List<String> genderOptions = ['ชาย', 'หญิง', 'อื่นๆ'];
 
-  // Controllers สำหรับฟิลด์ที่แก้ได้
+  // 🌟 1. เปลี่ยนตัวแปรมารับ Experience แทน
   TextEditingController fnameController = TextEditingController();
   TextEditingController lnameController = TextEditingController();
   TextEditingController phoneController = TextEditingController();
-  TextEditingController aboutmeController = TextEditingController();
-  TextEditingController equipmentController = TextEditingController();
-  TextEditingController addressController = TextEditingController();
+  TextEditingController experienceController = TextEditingController();
+  TextEditingController serviceAreaController = TextEditingController();
 
   @override
   void initState() {
@@ -109,14 +102,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
     if (data != null) {
       setState(() {
         recentReviews = reviewsData;
-        isServiceOn = (data['servicestatus'] == 'ON');
+        isServiceOn =
+            (data['servicestatus'] == 'ON' ||
+            data['servicestatus'] == 'Available');
         fnameController.text = data['firstname'] ?? '';
         lnameController.text = data['lastname'] ?? '';
         phoneController.text = data['phonenumber'] ?? '';
-        aboutmeController.text = data['aboutme'] ?? '';
-        equipmentController.text = data['equipmentdetails'] ?? '';
-        addressController.text = data['Location'] != null
-            ? (data['Location']['address'] ?? '')
+
+        // 🌟 2. ดึงข้อมูล Experience
+        experienceController.text = data['experience'] ?? '';
+
+        // 🌟 3. ดักจับที่อยู่ทั้งแบบ Location (ใหม่) และ location (เก่า)
+        var locData = data['Location'] ?? data['location'];
+        serviceAreaController.text = locData != null
+            ? (locData['address'] ?? '')
             : '';
 
         selectedGender = data['gender'];
@@ -126,15 +125,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
         profileImageUrl = data['profilephoto'] ?? '';
         citizenId = data['caretakerId'] ?? 'ไม่พบข้อมูล';
-
-        if (data['Location'] != null &&
-            data['Location']['latitude'] != null &&
-            data['Location']['longitude'] != null) {
-          selectedLocation = LatLng(
-            double.parse(data['Location']['latitude'].toString()),
-            double.parse(data['Location']['longitude'].toString()),
-          );
-        }
 
         if (data['Vehicle'] != null) {
           vehicleType = data['Vehicle']['vehicletype'] ?? '';
@@ -160,18 +150,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   void _saveProfile() async {
+    // 🌟 4. อัปเดตข้อมูลที่จะส่งไปเซฟให้ตรงกับ Model
     Map<String, dynamic> updateData = {
       'firstname': fnameController.text,
       'lastname': lnameController.text,
       'phonenumber': phoneController.text,
-      'aboutme': aboutmeController.text,
-      'equipmentdetails': equipmentController.text,
+      'experience': experienceController.text,
       'gender': selectedGender,
       'birthdate': birthDate?.toIso8601String(),
-      'location': {
-        'address': addressController.text,
-        'latitude': selectedLocation.latitude,
-        'longitude': selectedLocation.longitude,
+      'Location': {
+        'address': serviceAreaController.text,
+        'latitude': 0.0,
+        'longitude': 0.0,
       },
     };
     try {
@@ -188,7 +178,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   void _toggleServiceStatus(bool val) async {
     setState(() => isServiceOn = val);
-    String statusStr = val ? 'ON' : 'OFF';
+    String statusStr = val ? 'Available' : 'Unavailable';
     await _service.updateServiceStatus(widget.uid, statusStr);
     ScaffoldMessenger.of(
       context,
@@ -213,7 +203,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgGradientBottom,
-      // 🌟 ใช้ AppBar แบบ Gradient เหมือน Edit Relative
       appBar: AppBar(
         title: const Text(
           'แก้ไขข้อมูลอาสา',
@@ -258,11 +247,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   ),
                   child: Column(
                     children: [
-                      // 🌟 ส่วนรูปโปรไฟล์และสถานะ (แยกอิสระจาก Card)
                       _buildProfileImageSection(),
                       const SizedBox(height: 20),
 
-                      // 🌟 ส่วนของแบบฟอร์ม
                       _buildSectionContainer(
                         title: 'ข้อมูลส่วนตัว',
                         children: [
@@ -301,33 +288,25 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             controller: phoneController,
                             keyboardType: TextInputType.phone,
                           ),
+
+                          // 🌟 5. ฟิลด์ประสบการณ์การทำงาน
                           _buildInputField(
-                            'เกี่ยวกับฉัน',
-                            controller: aboutmeController,
-                            maxLines: 2,
-                            maxLength: 500,
-                          ),
-                          _buildInputField(
-                            'อุปกรณ์ช่วยเหลือ',
-                            controller: equipmentController,
-                            maxLines: 2,
+                            'ประสบการณ์การทำงาน (ถ้ามี)',
+                            controller: experienceController,
+                            maxLines: 3,
                             maxLength: 500,
                           ),
                         ],
                       ),
 
                       _buildSectionContainer(
-                        title: 'ที่อยู่ปัจจุบัน',
+                        title: 'พื้นที่ที่ให้บริการ',
                         children: [
-                          LocationPickerWidget(
-                            initialLocation: selectedLocation,
-                            initialAddress: addressController.text,
-                            onLocationChanged: (newLocation, newAddress) {
-                              setState(() {
-                                selectedLocation = newLocation;
-                                addressController.text = newAddress;
-                              });
-                            },
+                          _buildInputField(
+                            'เขตอำเภอ/พื้นที่ ที่สะดวกให้บริการ',
+                            controller: serviceAreaController,
+                            maxLines: 3,
+                            maxLength: 500,
                           ),
                         ],
                       ),
@@ -445,7 +424,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       const SizedBox(height: 10),
                       const SizedBox(height: 15),
 
-                      // 🌟 ปุ่มบันทึก และ ออกจากระบบ (Side-by-side)
                       Row(
                         children: [
                           Expanded(
@@ -499,7 +477,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-
                                 onPressed: _showLogoutConfirmation,
                               ),
                             ),
@@ -519,10 +496,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
       ),
     );
   }
-
-  // ==========================================
-  // 🌟 Widget Builders
-  // ==========================================
 
   Widget _buildProfileImageSection() {
     return Column(
@@ -563,7 +536,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ),
               ),
             ),
-            // ไอคอนสถานะ Online/Offline
             Container(
               width: 22,
               height: 22,
@@ -814,9 +786,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  // ==========================================
-  // 🌟 ส่วนแสดงรีวิวล่าสุด
-  // ==========================================
   Widget _buildReviewSection() {
     return Container(
       width: double.infinity,
@@ -852,7 +821,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      // ส่ง widget.uid (ID ของอาสา) ข้ามไปให้หน้า ViewReviewPage ด้วย
                       builder: (context) =>
                           ViewReviewPage(caretakerId: widget.uid),
                     ),
@@ -873,7 +841,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
           const SizedBox(height: 16),
 
-          // 🌟 เช็คว่าถ้าดึงข้อมูลมาแล้วเป็น List ว่างเปล่า ให้โชว์ "ไม่พบข้อมูล review"
           if (recentReviews.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
@@ -899,7 +866,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
             )
           else
-            // 🌟 ถ้ามีข้อมูล ก็วนลูปแสดงรีวิวปกติ (จำกัด 2 row ตามตัวแปร limit ตอนดึงมา)
             ...recentReviews.asMap().entries.map((entry) {
               int index = entry.key;
               var review = entry.value;
@@ -908,7 +874,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
               return Column(
                 children: [
                   _buildReviewItem(
-                    // 💡 แก้ไข Key ด้านล่างนี้ให้ตรงกับ Database Review จริงของคุณนะครับ
                     name: review['reviewerName'] ?? 'ไม่ระบุชื่อ',
                     rating: (review['rating'] ?? 5).toDouble(),
                     comment: review['comment'] ?? 'ไม่มีข้อความ',
@@ -928,12 +893,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  // ==========================================
-  // 🌟 ส่วนแสดงรีวิวแต่ละ Row
-  // ==========================================
-  // ==========================================
-  // 🌟 ส่วนแสดงรีวิวแต่ละ Row (รองรับ Base64)
-  // ==========================================
   Widget _buildReviewItem({
     required String name,
     required double rating,
@@ -951,7 +910,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
           }
           cleanBase64 = cleanBase64.replaceAll(RegExp(r'\s+'), '');
 
-          // 🌟 1. เติมเครื่องหมาย = (Padding) ให้ครบตามสูตร Base64 เพื่อกัน Error
           int padding = cleanBase64.length % 4;
           if (padding > 0) {
             cleanBase64 += '=' * (4 - padding);
@@ -969,7 +927,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 🌟 2. เปลี่ยนมาใช้ ClipOval + errorBuilder เพื่อดัก Error รูปพัง
         Container(
           width: 48,
           height: 48,
@@ -982,7 +939,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ? Image(
                     image: imageProvider!,
                     fit: BoxFit.cover,
-                    // 🌟 ถ้ารูปโหลดไม่ได้ หรือ Invalid Image มันจะโชว์ไอคอนคนแทน ไม่แครช!
                     errorBuilder: (context, error, stackTrace) {
                       print('Image rendering error: $error');
                       return Icon(
@@ -997,7 +953,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ),
         const SizedBox(width: 14),
 
-        // ข้อมูลรีวิว
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

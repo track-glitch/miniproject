@@ -227,11 +227,22 @@ class AdminService {
     }
   }
 
-  Future<void> addRequest() async {
+  Future<void> addMockupRequestForRelative() async {
     DateTime currentTime = DateTime.now();
 
     // ===============================================
-    // 🌟 1. Mockup: สถานะ "อยู่ระหว่างรอ(ตอบรับ)" -> Pending
+    // 🌟 1. ตั้งค่า UID ของญาติ และ ID ของอาสา
+    // ===============================================
+
+    // UID ของญาติจำลอง (เอาไอดีที่คุณใช้เทสต์มาใส่ได้เลย)
+    String relativeUid = "3HFu0p120SU021mZ8nH6tYuYLtr2";
+
+    // ⚠️ ต้องแก้เลขนี้ให้ตรงกับ "เลขบัตรประชาชน (caretakerId)" ของอาสาที่คุณกำลังล็อกอินอยู่นะครับ
+    // ไม่งั้นระบบหน้า List จะหาไม่เจอเพราะมันแมตช์ ID ไม่ตรงกัน
+    String myCaretakerId = "1234567891011";
+
+    // ===============================================
+    // 🌟 Mockup 1: สถานะ "อยู่ระหว่างรอ(ตอบรับ)" -> pending
     // งานเพิ่งเด้งเข้ามา อาสายังไม่ได้กดตกลงหรือปฏิเสธ
     // ===============================================
     RequestModel reqPending = RequestModel(
@@ -239,31 +250,29 @@ class AdminService {
           "REQ-PEND-${currentTime.millisecondsSinceEpoch.toString().substring(7)}",
       requestdetail: "พาผู้ป่วยไปทำกายภาพบำบัดและรอรับกลับ",
       pickuplocation: LocationModel(
-        locationId: "LOC-${_dbRef.push().key}",
+        locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
         address: "บ้านพัก ต.พระบาท จ.ลำปาง",
         latitude: 18.2750,
         longitude: 99.5050,
       ),
       dropofflocation: LocationModel(
-        locationId: "LOC-${_dbRef.push().key}",
+        locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
         address: "โรงพยาบาลเขลางค์นคร-ราม",
         latitude: 18.2865,
         longitude: 99.4855,
       ),
       hospitalname: "โรงพยาบาลเขลางค์นคร-ราม",
       departmentname: "แผนกเวชศาสตร์ฟื้นฟู",
-      appointmentdate: currentTime.add(
-        const Duration(days: 3),
-      ), // นัดหมายในอีก 3 วันข้างหน้า
+      appointmentdate: currentTime.add(const Duration(days: 3)),
       appointmenttime: currentTime.add(const Duration(days: 3)),
-      requestdate: currentTime, // ส่งคำขอวันนี้
-      requeststatus: "Pending", // 🌟 สถานะ รอตอบรับ
-      caretakerId: '1111111111119',
-      isReadCaretaker: false, // ยังไม่ได้เปิดอ่าน (จุดแดงเด้ง)
+      requestdate: currentTime,
+      requeststatus: "pending", // 🌟 สถานะตัวพิมพ์เล็ก
+      caretakerId: myCaretakerId, // 🌟 ผูกกับบัตร ปชช. อาสา
+      isReadCaretaker: false,
     );
 
     // ===============================================
-    // 🌟 2. Mockup: สถานะ "อยู่ระหว่างรอ(ถึงเวลานัด)" -> Accepted
+    // 🌟 Mockup 2: สถานะ "อยู่ระหว่างรอ(ถึงเวลานัด)" -> accepted
     // อาสากดตอบรับแล้ว แต่วันนัดหมายยังมาไม่ถึง
     // ===============================================
     RequestModel reqAccepted = RequestModel(
@@ -271,45 +280,41 @@ class AdminService {
           "REQ-WAIT-${currentTime.millisecondsSinceEpoch.toString().substring(7)}",
       requestdetail: "พาผู้ป่วยไปพบแพทย์เพื่อติดตามอาการเบาหวาน",
       pickuplocation: LocationModel(
-        locationId: "LOC-${_dbRef.push().key}",
+        locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
         address: "หมู่บ้านค่ายพระร่วง ต.หัวเวียง จ.ลำปาง",
         latitude: 18.2905,
         longitude: 99.5010,
       ),
       dropofflocation: LocationModel(
-        locationId: "LOC-${_dbRef.push().key}",
+        locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
         address: "โรงพยาบาลศูนย์ลำปาง",
         latitude: 18.2900,
         longitude: 99.5000,
       ),
       hospitalname: "โรงพยาบาลศูนย์ลำปาง",
       departmentname: "อายุรกรรม",
-      appointmentdate: currentTime.add(
-        const Duration(days: 1),
-      ), // นัดหมายในวันพรุ่งนี้
+      appointmentdate: currentTime.add(const Duration(days: 1)),
       appointmenttime: currentTime.add(const Duration(days: 1)),
-      requestdate: currentTime.subtract(
-        const Duration(days: 1),
-      ), // ส่งคำขอตั้งแต่เมื่อวาน
-      requeststatus: "accepted", // 🌟 สถานะ ตอบรับแล้ว
-      caretakerId: '1111111111119',
-      isReadCaretaker: true, // เปิดอ่านรายละเอียดตอนกดรับงานไปแล้ว
+      requestdate: currentTime.subtract(const Duration(days: 1)),
+      requeststatus: "accepted", // 🌟 สถานะตัวพิมพ์เล็ก
+      caretakerId: myCaretakerId, // 🌟 ผูกกับบัตร ปชช. อาสา
+      isReadCaretaker: true,
     );
 
-    // นำคำขอใส่ใน List เพื่อเตรียมส่งขึ้น Firebase
     List<RequestModel> allRequests = [reqPending, reqAccepted];
 
-    // วนลูปบันทึกทีละตัว
+    // 🌟 2. วนลูปบันทึกเข้าโหนด Relative -> Request
     for (var req in allRequests) {
-      await _dbRef
+      await FirebaseDatabase.instance
+          .ref()
           .child('Login')
-          .child(
-            "23yM1I0mQMOusy74CQsu4t6FaPs1",
-          ) // เปลี่ยน UID ญาติตามที่คุณใช้เทสต์[cite: 17]
+          .child(relativeUid)
           .child('Relative')
           .child('Request')
           .child(req.requestId!)
           .set(req.toJson());
     }
+
+    print("✅ เพิ่ม Mockup ข้อมูลลงโหนด Relative เสร็จเรียบร้อย!");
   }
 }

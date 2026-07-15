@@ -8,7 +8,7 @@ class TestAddRelative extends StatelessWidget {
   Widget build(BuildContext context) {
     AdminService adminService = AdminService();
     void addRequest() {
-      adminService.addRequest();
+      adminService.addMockupRequestForRelative();
     }
 
     void addRelative() {

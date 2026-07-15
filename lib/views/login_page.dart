@@ -7,6 +7,7 @@ import 'package:miniproject/views/admin/list_caretaker_page.dart';
 import 'package:miniproject/views/caretaker/list_relative_request_page.dart';
 import 'package:miniproject/views/relative/view_caretaker_profile_page.dart';
 import 'package:miniproject/views/relative_register_page.dart';
+import 'package:miniproject/views/vehicle_register_page.dart';
 import '../services/auth_service.dart';
 import 'relative/relative_home_page.dart';
 import 'caretaker/caretaker_home_page.dart';
@@ -123,12 +124,12 @@ class _LoginPageState extends State<LoginPage> {
           bool hasVehicle = result['hasVehicle'] ?? false;
 
           if (!hasVehicle) {
-            // ถ้ายังไม่มีรถ บังคับเด้งไปหน้ากรอกข้อมูลรถยนต์
-            // Navigator.pushReplacement(
-            //   context,
-            //   MaterialPageRoute(builder: (context) => CaretakerVehicleRegisterPage(uid: uid)),
-            // );
-
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => VehicleRegisterPage(uid: uid),
+              ),
+            );
             // หมายเหตุ: ใช้ SnackBar ชั่วคราว ถ้ายังไม่สร้างไฟล์ให้ uncomment ด้านบนออก
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
