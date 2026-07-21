@@ -19,11 +19,22 @@ class RelativeRegisterPage extends StatefulWidget {
   State<RelativeRegisterPage> createState() => _RelativeRegisterPageState();
 }
 
+final List<String> _relationOptions = [
+  'บิดา/มารดา',
+  'บุตร',
+  'คู่สมรส',
+  'พี่น้อง',
+  'ญาติ',
+  'ผู้ปกครอง',
+  'เพื่อน',
+];
+
 class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
   final AuthService _authService = AuthService();
 
-  final _step1FormKey = GlobalKey<FormState>();
-  final _step2FormKey = GlobalKey<FormState>();
+  // 🌟 เปลี่ยนชื่อ FormKey ให้ตรงกับเนื้อหา
+  final _patientFormKey = GlobalKey<FormState>();
+  final _relativeFormKey = GlobalKey<FormState>();
 
   final ImagePicker _picker = ImagePicker();
 
@@ -35,7 +46,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
   bool _isPolicyAccepted = false;
 
   String _selectedPatGender = "";
-  String _selectedPatMobility = ""; // เพิ่มตัวนี้
+  String _selectedPatMobility = "";
   DateTime? _patBirthDate;
 
   LatLng _selectedLocation = const LatLng(18.2881, 99.4921);
@@ -50,7 +61,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
   final Color lightPurple = const Color(0xFFF3E5F5);
   final Color greyBorder = const Color(0xFFE1BEE7);
 
-  // 🌟 ลบ _patUsernameController ออกทั้งหมด
   final TextEditingController _patPasswordController = TextEditingController();
   final TextEditingController _patIdCardController = TextEditingController();
   final TextEditingController _patFirstNameController = TextEditingController();
@@ -113,7 +123,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         _hasPinned;
   }
 
-  // 🌟 ฟังก์ชันแจ้งเตือนก่อนออก (ถ้ามีข้อมูลค้าง)
   Future<bool> _onWillPop() async {
     if (!_hasAnyData) return true;
     final bool? confirm = await showDialog<bool>(
@@ -138,7 +147,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     return confirm ?? false;
   }
 
-  // --- ฟังก์ชันเกี่ยวกับรูปภาพและวันที่ ---
   Future<void> _pickImageReal() async {
     final XFile? pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -246,13 +254,16 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     );
   }
 
+  // 🌟 ปรับปรุงการตรวจสอบของแต่ละหน้า
   void _nextStep() {
     if (_currentStep == 1) {
-      if (_step1FormKey.currentState!.validate()) {
-        setState(() => _currentStep = 2);
+      if (!_isPolicyAccepted) {
+        _showErrorSnackBar('กรุณายอมรับเงื่อนไขการให้บริการก่อนดำเนินการต่อ');
+        return;
       }
+      setState(() => _currentStep = 2);
     } else if (_currentStep == 2) {
-      if (_step2FormKey.currentState!.validate()) {
+      if (_patientFormKey.currentState!.validate()) {
         if (_profilePhotoBase64 == null) {
           _showErrorSnackBar('กรุณาเลือกรูปโปรไฟล์ผู้ป่วย');
           return;
@@ -272,17 +283,14 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     }
   }
 
-  // 🌟 ฟังก์ชันจัดการการสมัคร (อัปเดตตรงตาม Model ใหม่)
   void _handleRegister() async {
-    if (!_isPolicyAccepted) {
-      _showErrorSnackBar('กรุณายอมรับเงื่อนไขการให้บริการก่อนกดยืนยัน');
-      return;
-    }
+    // 🌟 หน้า 3 ต้องผ่านการ Validate ฟอร์มของญาติก่อน
+    if (!_relativeFormKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
+    setState(() => _submitErrorMessage = null);
 
     try {
-      // 1. สร้างก้อนข้อมูล Patient
       PatientModel patientData = PatientModel(
         patientId: _patIdCardController.text.trim(),
         patientphoto: _profilePhotoBase64!,
@@ -292,18 +300,16 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         gender: _selectedPatGender,
         birthdate: _patBirthDate,
         disease: _patDiseaseController.text.trim(),
-        mobility: _selectedPatMobility, // 🌟 ใช้ตัวแปรจาก Dropdown
+        mobility: _selectedPatMobility,
         location: LocationModel(
           address: _patAddressController.text.trim(),
           latitude: _hasPinned ? _selectedLocation.latitude : 0.0,
           longitude: _hasPinned ? _selectedLocation.longitude : 0.0,
-        ), // 🌟 ไม่ต้องกังวลเรื่องชื่อ Key เพราะ Model จะแปลงเป็น 'Location' ให้เองตอน toJson[cite: 6]
+        ),
       );
 
-      // 2. สร้างก้อนข้อมูล Relative
       RelativeModel relativeData = RelativeModel(
-        relativeId: _patIdCardController.text
-            .trim(), // 🌟 สำคัญ: ยัดเลขบัตรประชาชนผู้ป่วยลงใน relativeId เพื่อใช้ Login
+        relativeId: _patIdCardController.text.trim(), // ผูกกับรหัสผู้ป่วย
         password: _patPasswordController.text.trim(),
         usertype: 'relative',
         firstname: _relFirstNameController.text.trim(),
@@ -312,12 +318,12 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         phonenumber: _relPhoneController.text.trim(),
         lineId: _relLineIdController.text.trim(),
         relationship: _relRelationController.text.trim(),
-        patient: patientData, // ประกอบร่าง Patient เข้าไป
+        patient: patientData,
       );
 
       UserCredential? userCredential = await _authService.registerRelative(
         password: _patPasswordController.text.trim(),
-        relative: relativeData, // 🌟 ส่งไปก้อนเดียวจบ
+        relative: relativeData,
       );
 
       if (userCredential != null) {
@@ -347,7 +353,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 🌟 หุ้มด้วย PopScope เพื่อดักการกด Back กลับ (ของระบบ Android / Swipe)
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) async {
@@ -388,9 +393,10 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                   ),
                   child: Column(
                     children: [
-                      if (_currentStep == 1) _buildStep1(),
-                      if (_currentStep == 2) _buildStep2(),
-                      if (_currentStep == 3) _buildStep3(),
+                      // 🌟 เรียงลำดับหน้าใหม่ที่นี่
+                      if (_currentStep == 1) _buildStep1(), // เงื่อนไข
+                      if (_currentStep == 2) _buildStep2(), // ข้อมูลผู้ป่วย
+                      if (_currentStep == 3) _buildStep3(), // ข้อมูลญาติ
                     ],
                   ),
                 ),
@@ -405,15 +411,15 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
 
   Widget _buildStepIndicator() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildStepCircle(1, 'ข้อมูลบัญชี'),
+          _buildStepCircle(1, 'เงื่อนไข'),
           _buildStepLine(),
           _buildStepCircle(2, 'ข้อมูลผู้ป่วย'),
           _buildStepLine(),
-          _buildStepCircle(3, 'ยืนยัน'),
+          _buildStepCircle(3, 'ข้อมูลญาติ'),
         ],
       ),
     );
@@ -452,164 +458,90 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
       child: Container(
         height: 2,
         color: Colors.grey.shade300,
-        margin: const EdgeInsets.symmetric(horizontal: 8).copyWith(bottom: 15),
+        margin: const EdgeInsets.symmetric(horizontal: 5).copyWith(bottom: 15),
       ),
     );
   }
 
-  // 🌟 Step 1: ย้ายเลขบัตรประชาชนมาไว้เป็นบัญชีเข้าสู่ระบบ (แทน Username)
+  // 🌟 Step 1: ข้อตกลงและเงื่อนไข (ดึงมาจาก Step 3 เดิม)
   Widget _buildStep1() {
-    return Form(
-      key: _step1FormKey,
-      child: Column(
-        children: [
-          _buildSectionContainer(
-            title: 'บัญชีเข้าสู่ระบบ',
-            children: [
-              _buildLabelField(
-                'หมายเลขบัตรประชาชนผู้ป่วย (ใช้เข้าสู่ระบบ)',
-                isRequired: true,
+    // แยกรายการข้อตกลงเพื่อให้จัดการ Spacing และ UI ได้ง่ายขึ้น
+    final List<String> terms = [
+      '1. ผู้ใช้บริการต้องลงทะเบียนและให้ข้อมูลส่วนบุคคลของตนเองและผู้สูงอายุที่ถูกต้อง ครบถ้วน และเป็นปัจจุบัน',
+      '2. ผู้ใช้บริการต้องแจ้งข้อมูลสภาพร่างกาย โรคประจำตัว เพื่อความปลอดภัยในการให้บริการ',
+      '3. ผู้ใช้บริการต้องตรวจสอบรายละเอียดการจอง เช่น วัน เวลา สถานที่รับ–ส่ง และข้อมูลผู้ดูแล ก่อนยืนยันการใช้บริการ',
+      '4. ผู้ใช้บริการต้องชำระค่าบริการและค่าใช้จ่ายอื่น ๆ (ถ้ามี) ตามอัตราที่กำหนด',
+      '5. หากต้องการยกเลิกหรือเปลี่ยนแปลงการจอง ควรดำเนินการผ่านระบบก่อนเวลานัดหมายตามเงื่อนไขที่กำหนด',
+      '6. ผู้ใช้บริการต้องปฏิบัติต่อผู้ดูแลด้วยความสุภาพ และไม่กระทำการที่ก่อให้เกิดความเสียหายหรืออันตรายต่อผู้ดูแล',
+      '7. ผู้ใช้บริการรับทราบว่าผู้ดูแลมีหน้าที่อำนวยความสะดวกในการเดินทางและดูแลผู้สูงอายุระหว่างการใช้บริการเท่านั้น ไม่สามารถวินิจฉัยโรคหรือให้การรักษาทางการแพทย์ได้',
+      '8. ผู้ใช้บริการยินยอมให้ระบบจัดเก็บและใช้ข้อมูลที่จำเป็นสำหรับการจอง การให้บริการ และการติดต่อ ตามนโยบายคุ้มครองข้อมูลส่วนบุคคล',
+      '9. ผู้ใช้บริการสามารถให้คะแนนและแสดงความคิดเห็นหลังเสร็จสิ้นการใช้บริการ โดยข้อมูลดังกล่าวต้องเป็นความจริงและไม่เป็นการหมิ่นประมาทผู้อื่น',
+      '10. การกดยอมรับข้อตกลงและเงื่อนไขนี้ ถือว่าผู้ใช้บริการได้อ่าน ทำความเข้าใจ และยินยอมปฏิบัติตามเงื่อนไขทั้งหมด',
+    ];
+
+    return Column(
+      children: [
+        _buildSectionContainer(
+          title: 'ข้อตกลงและเงื่อนไขการใช้บริการ',
+          children: [
+            Container(
+              height: 400,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
               ),
-              _buildInputField(
-                hint: 'ตัวเลข 13 หลัก',
-                controller: _patIdCardController,
-                keyboardType: TextInputType.number,
-                maxLength: 13,
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty)
-                    return 'กรุณากรอกเลขบัตรประชาชน';
-                  if (val.length != 13 || !RegExp(r'^[0-9]+$').hasMatch(val))
-                    return 'ต้องเป็นตัวเลข 13 หลัก';
-                  return null;
-                },
-              ),
-              _buildLabelField('รหัสผ่าน', isRequired: true),
-              _buildInputField(
-                hint: 'รหัสผ่าน',
-                controller: _patPasswordController,
-                isPassword: true,
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty)
-                    return 'กรุณากรอกรหัสผ่าน';
-                  if (val.contains(' ')) return 'ต้องไม่มีเว้นวรรคหรือช่องว่าง';
-                  if (val.length < 8 || val.length > 16)
-                    return 'ความยาวต้องอยู่ระหว่าง 8-16 ตัวอักษร';
-                  return null;
-                },
-              ),
-              _buildLabelField(
-                'อีเมลญาติ (ใช้กู้คืนรหัสผ่าน)',
-                isRequired: true,
-              ),
-              _buildInputField(
-                hint: 'เช่น example@gmail.com',
-                controller: _relEmailController,
-                keyboardType: TextInputType.emailAddress,
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty)
-                    return 'กรุณากรอกอีเมล';
-                  if (!RegExp(
-                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                  ).hasMatch(val))
-                    return 'รูปแบบอีเมลไม่ถูกต้อง';
-                  return null;
-                },
-              ),
-            ],
-          ),
-          _buildSectionContainer(
-            title: 'ข้อมูลติดต่อญาติ',
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildLabelField('ชื่อจริง', isRequired: true),
-                        _buildInputField(
-                          hint: 'ชื่อจริง',
-                          controller: _relFirstNameController,
-                          validator: (val) =>
-                              val!.isEmpty ? 'กรุณากรอกชื่อ' : null,
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: terms.map((term) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: Text(
+                        term,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black87,
+                          height: 1.6,
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildLabelField('นามสกุล', isRequired: true),
-                        _buildInputField(
-                          hint: 'นามสกุล',
-                          controller: _relLastNameController,
-                          validator: (val) =>
-                              val!.isEmpty ? 'กรุณากรอกนามสกุล' : null,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildLabelField('เบอร์โทรศัพท์', isRequired: true),
-                        _buildInputField(
-                          hint: 'เบอร์โทรศัพท์',
-                          controller: _relPhoneController,
-                          keyboardType: TextInputType.phone,
-                          validator: (val) =>
-                              val!.isEmpty ? 'กรุณากรอกเบอร์โทรศัพท์' : null,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // 🌟 ปลดล็อคไม่บังคับกรอก Line ID
-                        _buildLabelField('ไอดีไลน์'),
-                        _buildInputField(
-                          hint: 'ไอดีไลน์ (ถ้ามี)',
-                          controller: _relLineIdController,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+            ),
+            const SizedBox(height: 10),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'ฉันได้อ่านและยอมรับข้อตกลงและเงื่อนไขการใช้บริการ',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
               ),
-              _buildLabelField('ความสัมพันธ์กับผู้ป่วย', isRequired: true),
-              _buildInputField(
-                hint: 'เช่น บุตร, หลาน, พี่น้อง',
-                controller: _relRelationController,
-                validator: (val) =>
-                    val!.isEmpty ? 'กรุณาระบุความสัมพันธ์' : null,
-              ),
-            ],
-          ),
-        ],
-      ),
+              value: _isPolicyAccepted,
+              activeColor: primaryColor,
+              controlAffinity: ListTileControlAffinity.leading,
+              onChanged: (bool? value) {
+                setState(() => _isPolicyAccepted = value ?? false);
+              },
+            ),
+          ],
+        ),
+      ],
     );
   }
 
-  // 🌟 Step 2: ข้อมูลส่วนตัวผู้ป่วย (เอาเลขบัตรประชาชนออกไป Step 1 แล้ว)
+  // 🌟 Step 2: ข้อมูลผู้ป่วย (สลับข้อมูลส่วนตัวขึ้นก่อนบัญชี และใช้ Radio เลือกเพศ)
   Widget _buildStep2() {
     return Form(
-      key: _step2FormKey,
+      key: _patientFormKey,
       child: Column(
         children: [
           _buildProfileUploadWidget(),
           const SizedBox(height: 20),
+
+          // 🌟 1. นำข้อมูลส่วนตัวผู้ป่วยขึ้นมาก่อน
           _buildSectionContainer(
             title: 'ข้อมูลส่วนตัวผู้ป่วย',
             children: [
@@ -707,62 +639,66 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                   ),
                 ],
               ),
+
+              // 🌟 2. เปลี่ยนการเลือกเพศเป็น Radio Buttons
               _buildLabelField('เพศ', isRequired: true),
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: DropdownButtonFormField<String>(
-                  value: _selectedPatGender.isEmpty ? null : _selectedPatGender,
-                  decoration: InputDecoration(
-                    hintText: 'เลือกเพศ',
-                    hintStyle: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey,
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: greyBorder),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: greyBorder),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: primaryColor, width: 1.5),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    errorStyle: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 11,
-                    ),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'ชาย',
-                      child: Text('ชาย', style: TextStyle(fontSize: 14)),
-                    ),
-                    DropdownMenuItem(
-                      value: 'หญิง',
-                      child: Text('หญิง', style: TextStyle(fontSize: 14)),
-                    ),
-                  ],
-                  onChanged: (value) =>
-                      setState(() => _selectedPatGender = value ?? ''),
+                child: FormField<String>(
                   validator: (value) =>
-                      (value == null || value.isEmpty) ? 'กรุณาเลือกเพศ' : null,
+                      _selectedPatGender.isEmpty ? 'กรุณาเลือกเพศ' : null,
+                  builder: (FormFieldState<String> state) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Radio<String>(
+                              value: 'ชาย',
+                              groupValue: _selectedPatGender,
+                              activeColor: primaryColor,
+                              onChanged: (value) {
+                                setState(() => _selectedPatGender = value!);
+                                state.didChange(value);
+                              },
+                            ),
+                            const Text('ชาย', style: TextStyle(fontSize: 14)),
+                            const SizedBox(width: 20),
+                            Radio<String>(
+                              value: 'หญิง',
+                              groupValue: _selectedPatGender,
+                              activeColor: primaryColor,
+                              onChanged: (value) {
+                                setState(() => _selectedPatGender = value!);
+                                state.didChange(value);
+                              },
+                            ),
+                            const Text('หญิง', style: TextStyle(fontSize: 14)),
+                          ],
+                        ),
+                        if (state.hasError)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 12, top: 4),
+                            child: Text(
+                              state.errorText!,
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ),
+
               _buildLabelField('โรคประจำตัว'),
               _buildInputField(
                 hint: 'เช่น เบาหวาน, ความดัน (ถ้าไม่มีให้เว้นว่าง)',
                 controller: _patDiseaseController,
               ),
-              _buildLabelField('ความคล่องตัวในการเคลื่อนไหว', isRequired: true),
+              _buildLabelField('สภาพร่างกายในการเคลื่อนไหว', isRequired: true),
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: DropdownButtonFormField<String>(
@@ -770,7 +706,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                       ? null
                       : _selectedPatMobility,
                   decoration: InputDecoration(
-                    hintText: 'เลือกระดับความคล่องตัว',
+                    hintText: 'เลือกระดับสภาพร่างกาย',
                     hintStyle: const TextStyle(
                       fontSize: 13,
                       color: Colors.grey,
@@ -825,7 +761,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                   onChanged: (value) =>
                       setState(() => _selectedPatMobility = value ?? ''),
                   validator: (value) => (value == null || value.isEmpty)
-                      ? 'กรุณาระบุความคล่องตัว'
+                      ? 'กรุณาระบุสภาพร่างกาย'
                       : null,
                 ),
               ),
@@ -837,7 +773,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                 validator: (val) =>
                     val!.isEmpty ? 'กรุณากรอกเบอร์โทรศัพท์' : null,
               ),
-              // 🌟 ปลดล็อคไม่บังคับกรอก Line ID
               _buildLabelField('ไอดีไลน์'),
               _buildInputField(
                 hint: 'ไอดีไลน์ (ถ้ามี)',
@@ -845,6 +780,46 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
               ),
             ],
           ),
+
+          // 🌟 3. นำบัญชีเข้าสู่ระบบเลื่อนลงมาไว้ตรงนี้
+          _buildSectionContainer(
+            title: 'บัญชีเข้าสู่ระบบของผู้ป่วย',
+            children: [
+              _buildLabelField('หมายเลขบัตรประชาชนผู้ป่วย', isRequired: true),
+              _buildInputField(
+                hint: 'ตัวเลข 13 หลัก',
+                controller: _patIdCardController,
+                keyboardType: TextInputType.number,
+                maxLength: 13,
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'กรุณากรอกเลขบัตรประชาชน';
+                  }
+                  if (val.length != 13 || !RegExp(r'^[0-9]+$').hasMatch(val)) {
+                    return 'ต้องเป็นตัวเลข 13 หลัก';
+                  }
+                  return null;
+                },
+              ),
+              _buildLabelField('รหัสผ่าน', isRequired: true),
+              _buildInputField(
+                hint: 'รหัสผ่าน',
+                controller: _patPasswordController,
+                isPassword: true,
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'กรุณากรอกรหัสผ่าน';
+                  }
+                  if (val.contains(' ')) return 'ต้องไม่มีเว้นวรรคหรือช่องว่าง';
+                  if (val.length < 8 || val.length > 16) {
+                    return 'ความยาวต้องอยู่ระหว่าง 8-16 ตัวอักษร';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+
           _buildSectionContainer(
             title: 'ข้อมูลที่อยู่ผู้ป่วย',
             children: [
@@ -866,80 +841,202 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     );
   }
 
+  // 🌟 Step 3: ข้อมูลญาติ (ปรับปรุงการจัดวางเรียงลำดับให้กระชับและชัดเจน)
   Widget _buildStep3() {
-    return Column(
-      children: [
-        _buildSectionContainer(
-          title: 'ข้อตกลงและเงื่อนไขการใช้บริการ',
-          children: [
-            Container(
-              height: 300,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: const SingleChildScrollView(
-                child: Text(
-                  "อัตราค่าบริการสำหรับแพ็กเกจครึ่งวัน 4 ชั่วโมง คิดราคา 800 บาท และแพ็กเกจเต็มวัน 8 ชั่วโมง คิดราคา 1,350 บาท กรณีการใช้บริการเกินเวลาที่กำหนดจะคิดเพิ่มชั่วโมงละ 200 บาท\n\nหากจุดรับส่งหรือพื้นที่ใช้บริการอยู่นอกเหนือเขตอำเภอที่ผู้ดูแลแต่ละท่านกำหนดว่าสะดวกให้บริการในระบบ จะมีการคิดค่าเดินทางเพิ่มเติมกิโลเมตรละ 10 บาท โดยคำนวณตามระยะทางจริงจากระบบแอปพลิเคชัน",
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.black87,
-                    height: 1.5,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text(
-                'ฉันได้อ่านและยอมรับข้อตกลงและเงื่อนไขการใช้บริการ',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-              ),
-              value: _isPolicyAccepted,
-              activeColor: primaryColor,
-              controlAffinity: ListTileControlAffinity.leading,
-              onChanged: (bool? value) {
-                setState(() => _isPolicyAccepted = value ?? false);
-              },
-            ),
-          ],
-        ),
-        if (_submitErrorMessage != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFEBEE),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+    return Form(
+      key: _relativeFormKey,
+      child: Column(
+        children: [
+          _buildSectionContainer(
+            title: 'ข้อมูลญาติผู้ดูแล',
+            children: [
+              // 1. ชื่อ - นามสกุล
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
-                    Icons.error_outline,
-                    color: Color(0xFFF44336),
-                    size: 20,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildLabelField('ชื่อจริง', isRequired: true),
+                        _buildInputField(
+                          hint: 'ชื่อจริง',
+                          controller: _relFirstNameController,
+                          validator: (val) =>
+                              val!.isEmpty ? 'กรุณากรอกชื่อ' : null,
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      _submitErrorMessage!,
-                      style: const TextStyle(
-                        color: Color(0xFFF44336),
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildLabelField('นามสกุล', isRequired: true),
+                        _buildInputField(
+                          hint: 'นามสกุล',
+                          controller: _relLastNameController,
+                          validator: (val) =>
+                              val!.isEmpty ? 'กรุณากรอกนามสกุล' : null,
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
+
+              // 2. เบอร์โทรศัพท์ & ไอดีไลน์
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildLabelField(
+                          'เบอร์โทรศัพท์ติดต่อ',
+                          isRequired: true,
+                        ),
+                        _buildInputField(
+                          hint: 'เบอร์โทรศัพท์ 10 หลัก',
+                          controller: _relPhoneController,
+                          keyboardType: TextInputType.phone,
+                          validator: (val) =>
+                              val!.isEmpty ? 'กรุณากรอกเบอร์โทรศัพท์' : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildLabelField('ไอดีไลน์'),
+                        _buildInputField(
+                          hint: 'ไอดีไลน์ (ถ้ามี)',
+                          controller: _relLineIdController,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              // 3. อีเมล
+              _buildLabelField('อีเมล', isRequired: true),
+              _buildInputField(
+                hint: 'เช่น example@gmail.com',
+                controller: _relEmailController,
+                keyboardType: TextInputType.emailAddress,
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'กรุณากรอกอีเมล';
+                  }
+                  if (!RegExp(
+                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                  ).hasMatch(val)) {
+                    return 'รูปแบบอีเมลไม่ถูกต้อง';
+                  }
+                  return null;
+                },
+              ),
+
+              // 4. ความสัมพันธ์กับผู้ป่วย
+              _buildLabelField('ความสัมพันธ์กับผู้ป่วย', isRequired: true),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    hintText: 'กรุณาเลือกความสัมพันธ์',
+                    hintStyle: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: greyBorder),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: greyBorder),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: primaryColor, width: 1.5),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    errorStyle: const TextStyle(
+                      color: Colors.red,
+                      fontSize: 11,
+                    ),
+                  ),
+                  value: _relRelationController.text.isNotEmpty
+                      ? _relRelationController.text
+                      : null,
+                  items: _relationOptions.map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value, style: const TextStyle(fontSize: 14)),
+                    );
+                  }).toList(),
+                  onChanged: (newValue) {
+                    setState(() {
+                      _relRelationController.text = newValue ?? '';
+                    });
+                  },
+                  validator: (val) => (val == null || val.isEmpty)
+                      ? 'กรุณาระบุความสัมพันธ์'
+                      : null,
+                ),
+              ),
+            ],
           ),
-      ],
+
+          // แสดงข้อความแจ้งเตือนเมื่อเกิด Error ตอนกดสมัคร
+          if (_submitErrorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFEBEE),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Color(0xFFF44336),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        _submitErrorMessage!,
+                        style: const TextStyle(
+                          color: Color(0xFFF44336),
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -1018,7 +1115,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     );
   }
 
-  // --- Helper Widgets ที่เหลือ ---
   Widget _buildProfileUploadWidget() {
     return Column(
       children: [

@@ -390,8 +390,6 @@ class CaretakerService {
     required String relativeUid,
     required String requestId,
     required String status,
-    required double? lat,
-    required double? lng,
   }) async {
     try {
       // เพิ่มประวัติแจ้งเตือน
@@ -406,14 +404,9 @@ class CaretakerService {
       await ref.set({
         'status': status,
         'timestamp': DateTime.now().toIso8601String(),
-        'latitude': lat,
-        'longitude': lng,
       });
 
       // ถ้ามีพิกัด ให้เซฟพิกัดล่าสุดแยกไว้ เพื่อให้ญาติดูแบบ Real-time ง่ายๆ
-      if (lat != null && lng != null) {
-        await updateRealtimeLocation(relativeUid, requestId, lat, lng);
-      }
     } catch (e) {
       print("Error adding notification: $e");
     }
