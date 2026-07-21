@@ -147,6 +147,17 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     return confirm ?? false;
   }
 
+  int? _calculateAge(DateTime? birthDate) {
+    if (birthDate == null) return null;
+    DateTime today = DateTime.now();
+    int age = today.year - birthDate.year;
+    if (today.month < birthDate.month ||
+        (today.month == birthDate.month && today.day < birthDate.day)) {
+      age--;
+    }
+    return age;
+  }
+
   Future<void> _pickImageReal() async {
     final XFile? pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -169,20 +180,26 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
   }
 
   Future<void> _selectPatBirthDate() async {
-    DateTime? selectedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime(2000),
-      firstDate: DateTime(1920),
-      lastDate: DateTime.now(),
-    );
-    if (selectedDate != null) {
-      setState(() {
-        _patBirthDate = selectedDate;
-        _patBirthDateController.text =
-            "${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.year + 543}";
-      });
-    }
+  DateTime? selectedDate = await showDatePicker(
+    context: context,
+    initialDate: DateTime(2000),
+    firstDate: DateTime(1920),
+    lastDate: DateTime.now(),
+  );
+  if (selectedDate != null) {
+    setState(() {
+      _patBirthDate = selectedDate;
+      
+      // คำนวณอายุ
+      int? age = _calculateAge(selectedDate);
+      String ageText = age != null ? " (อายุ $age ปี)" : "";
+
+      // ใส่ข้อความวันเกิดพร้อมอายุลงใน Controller
+      _patBirthDateController.text =
+          "${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.year + 543}$ageText";
+    });
   }
+}
 
   void _showImageSourceActionSheet() {
     showModalBottomSheet(

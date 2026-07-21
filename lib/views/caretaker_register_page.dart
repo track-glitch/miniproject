@@ -23,13 +23,13 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   final AuthService _authService = AuthService();
   final ImagePicker _picker = ImagePicker();
 
-  // 🌟 ปรับ _currentStep เริ่มต้นที่ 1 (เหมือนหน้า Relative)
+  int? _age;
   int _currentStep = 1;
   bool _isLoading = false;
   bool _isRegistrationSuccess = false;
   String? _submitErrorMessage;
 
-  // --- Step 1: ข้อมูลส่วนตัว ---
+  // --- Step 2 (เดิม Step 1): ข้อมูลส่วนตัว ---
   final _step1FormKey = GlobalKey<FormState>();
   final TextEditingController _idCardController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -49,13 +49,13 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   double _currentLat = 0.0;
   double _currentLng = 0.0;
 
-  // --- Step 2: เอกสาร ---
+  // --- Step 3 (เดิม Step 2): เอกสาร ---
   File? _doc1File;
   File? _doc2File;
   File? _doc3File;
   File? _resumeFile;
 
-  // --- Step 3: เงื่อนไขการให้บริการ ---
+  // --- Step 1 (เดิม Step 3): เงื่อนไขการให้บริการ ---
   bool _isPolicyAccepted = false;
   bool _isObscure = true;
 
@@ -84,7 +84,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     super.dispose();
   }
 
-  // 🌟 เช็คว่ามีการกรอกข้อมูลค้างไว้หรือไม่ (เพื่อเตือนตอนกดออก)
   bool get _hasAnyData {
     return [
           _idCardController,
@@ -102,10 +101,10 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         _doc1File != null ||
         _doc2File != null ||
         _doc3File != null ||
-        _resumeFile != null;
+        _resumeFile != null ||
+        _isPolicyAccepted;
   }
 
-  // 🌟 ฟังก์ชันเตือนก่อนออก
   Future<bool> _onWillPop() async {
     if (!_hasAnyData) return true;
     final bool? confirm = await showDialog<bool>(
@@ -128,6 +127,19 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
       ),
     );
     return confirm ?? false;
+  }
+
+  int _calculateAge(DateTime birthDate) {
+    final today = DateTime.now();
+
+    int age = today.year - birthDate.year;
+
+    if (today.month < birthDate.month ||
+        (today.month == birthDate.month && today.day < birthDate.day)) {
+      age--;
+    }
+
+    return age;
   }
 
   Future<void> _fetchCurrentLocation() async {
@@ -186,11 +198,16 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
       firstDate: DateTime(1920),
       lastDate: DateTime.now(),
     );
+
     if (selectedDate != null) {
       setState(() {
         _birthDate = selectedDate;
+        _age = _calculateAge(selectedDate);
+
         _birthDateController.text =
-            "${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.year + 543}";
+            "${selectedDate.day.toString().padLeft(2, '0')}/"
+            "${selectedDate.month.toString().padLeft(2, '0')}/"
+            "${selectedDate.year + 543}";
       });
     }
   }
@@ -235,6 +252,14 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   // 🌟 ฟังก์ชันจัดการ Step ถัดไป
   void _nextStep() {
     if (_currentStep == 1) {
+      // Step 1: เงื่อนไขการให้บริการ
+      if (!_isPolicyAccepted) {
+        _showErrorSnackBar('กรุณายอมรับเงื่อนไขการให้บริการก่อนดำเนินการต่อ');
+        return;
+      }
+      setState(() => _currentStep = 2);
+    } else if (_currentStep == 2) {
+      // Step 2: ข้อมูลส่วนตัว
       if (_step1FormKey.currentState!.validate()) {
         if (_profilePhotoBase64 == null) {
           _showErrorSnackBar('กรุณาเลือกรูปโปรไฟล์ของคุณ');
@@ -244,16 +269,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
           _showErrorSnackBar('กรุณาเลือกเพศ');
           return;
         }
-        setState(() => _currentStep = 2);
-      }
-    } else if (_currentStep == 2) {
-      if (_doc1File != null &&
-          _doc2File != null &&
-          _doc3File != null &&
-          _resumeFile != null) {
         setState(() => _currentStep = 3);
-      } else {
-        _showErrorSnackBar('กรุณาอัปโหลดเอกสารให้ครบทุกช่องเพื่อดำเนินการต่อ');
       }
     }
   }
@@ -265,8 +281,12 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   }
 
   void _submitRegistration() async {
-    if (!_isPolicyAccepted) {
-      _showErrorSnackBar('กรุณายอมรับเงื่อนไขการให้บริการก่อนกดยืนยัน');
+    // Step 3: เอกสาร
+    if (_doc1File == null ||
+        _doc2File == null ||
+        _doc3File == null ||
+        _resumeFile == null) {
+      _showErrorSnackBar('กรุณาอัปโหลดเอกสารให้ครบทุกช่องเพื่อดำเนินการต่อ');
       return;
     }
 
@@ -274,34 +294,30 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
 
     try {
       List<DocumentModel> documentsList = [
-        if (_doc1File != null)
-          DocumentModel(
-            documentId: "doc_idcard",
-            documenttype: "สำเนาบัตรประชาชน",
-            filepath: "base64_data",
-            uploaddate: DateTime.now(),
-          ),
-        if (_doc2File != null)
-          DocumentModel(
-            documentId: "doc_insurance",
-            documenttype: "ใบขับขี่",
-            filepath: "base64_data",
-            uploaddate: DateTime.now(),
-          ),
-        if (_doc3File != null)
-          DocumentModel(
-            documentId: "doc_training",
-            documenttype: "เอกสารการฝึกอบรม",
-            filepath: "base64_data",
-            uploaddate: DateTime.now(),
-          ),
-        if (_resumeFile != null)
-          DocumentModel(
-            documentId: "doc_resume",
-            documenttype: "Resume",
-            filepath: "base64_data",
-            uploaddate: DateTime.now(),
-          ),
+        DocumentModel(
+          documentId: "doc_idcard",
+          documenttype: "สำเนาบัตรประชาชน",
+          filepath: "base64_data",
+          uploaddate: DateTime.now(),
+        ),
+        DocumentModel(
+          documentId: "doc_insurance",
+          documenttype: "ใบขับขี่",
+          filepath: "base64_data",
+          uploaddate: DateTime.now(),
+        ),
+        DocumentModel(
+          documentId: "doc_training",
+          documenttype: "เอกสารการฝึกอบรม",
+          filepath: "base64_data",
+          uploaddate: DateTime.now(),
+        ),
+        DocumentModel(
+          documentId: "doc_resume",
+          documenttype: "Resume",
+          filepath: "base64_data",
+          uploaddate: DateTime.now(),
+        ),
       ];
       CaretakerModel caretaker = CaretakerModel(
         caretakerId: _idCardController.text.trim(),
@@ -386,7 +402,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
-  // 🌟 แบบฟอร์มหลักที่มี Step Indicator และปุ่มแบบเดียวกับญาติ
   Widget _buildRegistrationForm() {
     return Column(
       children: [
@@ -408,18 +423,17 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
-  // 🌟 แถบ Step Indicator (Custom)
   Widget _buildStepIndicator() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildStepCircle(1, 'ข้อมูลส่วนตัว'),
+          _buildStepCircle(1, 'เงื่อนไข'),
           _buildStepLine(),
-          _buildStepCircle(2, 'เอกสาร'),
+          _buildStepCircle(2, 'ข้อมูลส่วนตัว'),
           _buildStepLine(),
-          _buildStepCircle(3, 'ยืนยัน'),
+          _buildStepCircle(3, 'เอกสาร'),
         ],
       ),
     );
@@ -463,8 +477,77 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
-  // ================= STEP 1 : ข้อมูลส่วนตัว =================
+  // ================= STEP 1 : เงื่อนไขการให้บริการ =================
   Widget _buildStep1() {
+    // ข้อตกลงและเงื่อนไขสำหรับผู้ดูแล
+    final List<String> terms = [
+      '1. ผู้ดูแลต้องลงทะเบียนด้วยข้อมูลที่ถูกต้อง ครบถ้วน และเป็นจริง พร้อมแนบเอกสารตามที่ระบบกำหนด',
+      '2. ผู้ดูแลต้องปฏิบัติหน้าที่ด้วยความสุภาพ ซื่อสัตย์ และคำนึงถึงความปลอดภัยของผู้สูงอายุเป็นสำคัญ',
+      '3. ผู้ดูแลต้องเดินทางไปรับ–ส่งผู้สูงอายุตามวัน เวลา และสถานที่ที่ได้รับมอบหมาย พร้อมอัปเดตสถานะผ่านระบบ',
+      '4. ผู้ดูแลไม่มีอำนาจวินิจฉัยโรค สั่งยา หรือให้การรักษาทางการแพทย์ มีหน้าที่เพียงอำนวยความสะดวกและดูแลระหว่างใช้บริการ',
+      '5. ผู้ดูแลต้องรักษาความลับของข้อมูลส่วนบุคคลและสุขภาพ ห้ามเปิดเผยแก่บุคคลภายนอก เว้นแต่ได้รับการยินยอมหรือตามกฎหมาย (PDPA)',
+      '6. ผู้ดูแลต้องไม่เรียกรับค่าบริการหรือผลประโยชน์อื่นใด นอกเหนือจากที่ระบบกำหนด เว้นแต่เป็นค่าใช้จ่ายจริงที่ตกลงกันไว้',
+      '7. หากได้รับการรายงาน (Report) ตั้งแต่ 3 ครั้งขึ้นไป และตรวจสอบพบว่ามีมูล ระบบขอสงวนสิทธิ์ในการระงับหรือยกเลิกบัญชีโดยไม่ต้องแจ้งล่วงหน้า',
+      '8. ผู้ดูแลต้องปฏิบัติตามกฎหมาย และไม่กระทำการใด ๆ ที่ก่อให้เกิดความเสียหายต่อผู้ใช้บริการ ผู้สูงอายุ หรือชื่อเสียงของระบบ',
+      '9. ผู้ให้บริการมีสิทธิ์ตรวจสอบข้อร้องเรียน หลักฐาน และประวัติการให้บริการ เพื่อประกอบการพิจารณาระงับหรือยกเลิกสิทธิ์ใช้งาน',
+      '10. การกดยอมรับข้อตกลงนี้ ถือว่าผู้ดูแลได้อ่าน ทำความเข้าใจ และยินยอมปฏิบัติตามเงื่อนไขทั้งหมด',
+    ];
+
+    return Column(
+      children: [
+        _buildSectionContainer(
+          title: 'ข้อตกลงและเงื่อนไขการให้บริการ (สำหรับผู้ดูแล)',
+          children: [
+            Container(
+              height: 400,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: terms.map((term) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: Text(
+                        term,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black87,
+                          height: 1.6,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'ฉันได้อ่านและยอมรับข้อตกลงและเงื่อนไขการให้บริการ',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              value: _isPolicyAccepted,
+              activeColor: primaryColor,
+              controlAffinity: ListTileControlAffinity.leading,
+              onChanged: (bool? value) {
+                setState(() => _isPolicyAccepted = value ?? false);
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ================= STEP 2 : ข้อมูลส่วนตัว =================
+  Widget _buildStep2() {
     return Form(
       key: _step1FormKey,
       child: Column(
@@ -480,7 +563,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                 controller: _idCardController,
                 hint: 'ตัวเลข 13 หลัก',
                 keyboardType: TextInputType.number,
-                maxLength: 13, // 🌟 จำกัดความยาว 13 ตัว
+                maxLength: 13,
                 validator: (val) {
                   if (val == null || val.trim().isEmpty)
                     return 'กรุณากรอกเลขบัตรประชาชน';
@@ -580,8 +663,9 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildLabelField('วันเกิด', isRequired: true),
+
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.only(bottom: 6),
                           child: TextFormField(
                             controller: _birthDateController,
                             readOnly: true,
@@ -627,59 +711,95 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                                 val!.isEmpty ? 'กรุณาระบุวันเกิด' : null,
                           ),
                         ),
+
+                        if (_age != null)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4, bottom: 12),
+                            child: Row(
+                              children: [
+                                Icon(Icons.cake, size: 16, color: primaryColor),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'อายุ $_age ปี',
+                                  style: TextStyle(
+                                    color: primaryColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
                   ),
                 ],
               ),
               _buildLabelField('เพศ', isRequired: true),
+
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: DropdownButtonFormField<String>(
-                  value: _selectedGender.isEmpty ? null : _selectedGender,
-                  decoration: InputDecoration(
-                    hintText: 'เลือกเพศ',
-                    hintStyle: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey,
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: greyBorder),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: greyBorder),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: primaryColor, width: 1.5),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    errorStyle: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 11,
-                    ),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'ชาย',
-                      child: Text('ชาย', style: TextStyle(fontSize: 14)),
-                    ),
-                    DropdownMenuItem(
-                      value: 'หญิง',
-                      child: Text('หญิง', style: TextStyle(fontSize: 14)),
-                    ),
-                  ],
-                  onChanged: (val) =>
-                      setState(() => _selectedGender = val ?? ''),
-                  validator: (val) =>
-                      (val == null || val.isEmpty) ? 'กรุณาเลือกเพศ' : null,
+                child: FormField<String>(
+                  validator: (value) {
+                    if (_selectedGender.isEmpty) {
+                      return 'กรุณาเลือกเพศ';
+                    }
+                    return null;
+                  },
+                  builder: (FormFieldState<String> state) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: RadioListTile<String>(
+                                title: const Text('ชาย'),
+                                value: 'ชาย',
+                                groupValue: _selectedGender,
+                                activeColor: primaryColor,
+                                contentPadding: EdgeInsets.zero,
+                                dense: true,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedGender = value!;
+                                  });
+                                  state.didChange(value);
+                                },
+                              ),
+                            ),
+                            Expanded(
+                              child: RadioListTile<String>(
+                                title: const Text('หญิง'),
+                                value: 'หญิง',
+                                groupValue: _selectedGender,
+                                activeColor: primaryColor,
+                                contentPadding: EdgeInsets.zero,
+                                dense: true,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedGender = value!;
+                                  });
+                                  state.didChange(value);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (state.hasError)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 12),
+                            child: Text(
+                              state.errorText!,
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ),
               _buildLabelField('ประสบการณ์การทำงาน (ถ้ามี)'),
@@ -691,32 +811,13 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
               ),
             ],
           ),
-
-          _buildSectionContainer(
-            title: 'พื้นที่ให้บริการ',
-            children: [
-              _buildLabelField(
-                'เขตอำเภอ/พื้นที่ ที่สะดวกให้บริการ',
-                isRequired: true,
-              ),
-              _buildTextField(
-                controller: _serviceAreaController,
-                hint:
-                    'ตัวอย่าง: สะดวกให้บริการเฉพาะในเขตอำเภอเมือง และอำเภอแม่ริม',
-                maxLength: 500,
-                maxLines: 3,
-                validator: (val) =>
-                    val!.isEmpty ? 'กรุณาระบุเขตอำเภอที่สะดวกให้บริการ' : null,
-              ),
-            ],
-          ),
         ],
       ),
     );
   }
 
-  // ================= STEP 2 : เอกสาร =================
-  Widget _buildStep2() {
+  // ================= STEP 3 : เอกสาร =================
+  Widget _buildStep3() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -724,83 +825,37 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
           title: 'อัปโหลดเอกสารประกอบ',
           children: [
             const Text(
-              'กรุณาอัปโหลดเอกสารต่อไปนี้ให้ครบถ้วนเพื่อประกอบการพิจารณาอนุมัติบัญชี',
+              'กรุณาอัปโหลดเอกสารต่อไปนี้ให้ครบถ้วนเพื่อประกอบการพิจารณาอนุมัติบัญชี\n(ไฟล์ที่รองรับ: PDF หรือ PNG)',
               style: TextStyle(fontSize: 13, color: Colors.grey),
             ),
             const SizedBox(height: 15),
             _buildDocumentUploadWidget(
-              "1. สำเนาบัตรประชาชน",
+              "1. สำเนาบัตรประชาชน (PDF หรือ PNG)",
               _doc1File,
               true,
               () => _pickImage((f) => setState(() => _doc1File = f)),
               () => setState(() => _doc1File = null),
             ),
             _buildDocumentUploadWidget(
-              "2. สำเนาประกันภัยรถยนตร์",
+              "2. สำเนาประกันภัยรถยนตร์ (PDF หรือ PNG)",
               _doc2File,
               true,
               () => _pickImage((f) => setState(() => _doc2File = f)),
               () => setState(() => _doc2File = null),
             ),
             _buildDocumentUploadWidget(
-              "3. เอกสารการฝึกอบรม",
+              "3. เอกสารการฝึกอบรม (PDF หรือ PNG)",
               _doc3File,
               true,
               () => _pickImage((f) => setState(() => _doc3File = f)),
               () => setState(() => _doc3File = null),
             ),
             _buildDocumentUploadWidget(
-              "4. Resume",
+              "4. Resume (PDF หรือ PNG)",
               _resumeFile,
               true,
               () => _pickImage((f) => setState(() => _resumeFile = f)),
               () => setState(() => _resumeFile = null),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // ================= STEP 3 : เงื่อนไข =================
-  Widget _buildStep3() {
-    return Column(
-      children: [
-        _buildSectionContainer(
-          title: 'เงื่อนไขการให้บริการพาไปหาหมอ',
-          children: [
-            Container(
-              height: 150,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: const SingleChildScrollView(
-                child: Text(
-                  "ผู้ดูแลจะได้รับค่าตอบแทนจากค่าบริการหลังจากหักค่าธรรมเนียมการใช้ระบบของแอปพลิเคชัน โดยผู้ดูแลจะได้รับ 85% ของค่าบริการ และแอปพลิเคชันจะได้รับ 15% เพื่อใช้ในการพัฒนาและดูแลระบบ ทั้งนี้ หากจุดรับส่งหรือพื้นที่ใช้บริการอยู่นอกเหนือเขตอำเภอที่ผู้ดูแลแต่ละท่านกำหนดว่าสะดวกให้บริการในระบบ จะมอบค่าเดินทางเพิ่มเติมให้ผู้ดูแลเต็มจำนวน",
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.black87,
-                    height: 1.5,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text(
-                'ข้าพเจ้าได้อ่านและยอมรับเงื่อนไขในการให้บริการ',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-              ),
-              value: _isPolicyAccepted,
-              activeColor: primaryColor,
-              controlAffinity: ListTileControlAffinity.leading,
-              onChanged: (bool? value) {
-                setState(() => _isPolicyAccepted = value ?? false);
-              },
             ),
           ],
         ),
@@ -840,7 +895,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
-  // 🌟 ปุ่มควบคุมด้านล่าง (ย้อนกลับ / ถัดไป / สมัคร) แบบเดียวกับหน้า Relative
   Widget _buildBottomControls() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -916,7 +970,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
-  // 🌟 หน้าจอเมื่อสมัครสำเร็จ[cite: 7]
   Widget _buildWaitingApprovalView() {
     return Center(
       child: Padding(
@@ -972,7 +1025,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
-  // --- Helper Widgets ---
   Widget _buildSectionContainer({
     required String title,
     required List<Widget> children,
@@ -1202,7 +1254,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                   Icon(Icons.upload_file, color: primaryColor, size: 28),
                   const SizedBox(height: 8),
                   Text(
-                    'แตะเพื่อเลือกรูปภาพ',
+                    'แตะเพื่อเลือกไฟล์ หรือ รูปภาพ',
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                   ),
                 ],
