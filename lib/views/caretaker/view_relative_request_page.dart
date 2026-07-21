@@ -319,7 +319,6 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     }
     String patGender = pat['gender'] ?? 'ไม่ระบุเพศ';
 
-    // 🌟 ดึงข้อมูลชื่อผู้ป่วยออกมาตรงนี้เลย จะได้หาเจอง่ายๆ และมีคำนำหน้า
     String patPrefix = patGender == 'ชาย'
         ? 'นาย '
         : (patGender == 'หญิง' ? 'นาง ' : 'คุณ ');
@@ -347,7 +346,6 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     String pickupAddress = reqModel.pickuplocation?.address ?? 'ไม่ระบุจุดรับ';
     String dropoffAddress =
         reqModel.dropofflocation?.address ?? 'ไม่ระบุจุดส่ง';
-
     String countdownText = '';
     if (reqModel.appointmentdate != null) {
       final now = DateTime.now();
@@ -362,23 +360,37 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
       }
     }
 
+    // 🌟 1. ดึงชุดสีเดียวกับหน้า List มาใช้
     String statusText = 'อยู่ระหว่างรอ';
-    Color statusColor = const Color(0xFFFF8C00);
-    Color statusBgColor = const Color(0xFFFFF3E0);
+    Color statusColor = Colors.grey;
+    Color statusBgColor = Colors.grey.shade200;
 
-    if (currentStatus == RequestStatus.acceptedEarly ||
-        currentStatus == RequestStatus.acceptedReady) {
-      statusText = 'ตอบรับแล้ว';
-      statusColor = const Color(0xFF00B14F);
-      statusBgColor = const Color(0xFFB9F6CA);
-    } else if (currentStatus == RequestStatus.completed) {
-      statusText = 'สิ้นสุดบริการ';
-      statusColor = const Color(0xFF00B14F);
-      statusBgColor = const Color(0xFFB9F6CA);
-    } else if (currentStatus == RequestStatus.cancelled) {
-      statusText = 'ยกเลิกบริการ';
-      statusColor = const Color(0xFFF44336);
-      statusBgColor = const Color(0xFFFFEBEE);
+    switch (currentStatus) {
+      case RequestStatus.pending:
+        statusColor = const Color(0xFF757BFF); // สีน้ำเงิน
+        statusBgColor = const Color(0xFFB4BEFF).withOpacity(0.3);
+        statusText = 'รอตอบรับ';
+        break;
+      case RequestStatus.acceptedEarly:
+      case RequestStatus.acceptedReady:
+        statusColor = const Color(0xFF00C853); // สีเขียว
+        statusBgColor = const Color(0xFFB9F6CA);
+        statusText = 'ตอบรับแล้ว';
+        break;
+      case RequestStatus.completed:
+        statusColor = const Color(0xFF00B14F);
+        statusBgColor = const Color(0xFFB9F6CA);
+        statusText = 'สิ้นสุดบริการ';
+        break;
+      case RequestStatus.cancelled:
+        statusColor = const Color(0xFFFF5C5C); // สีแดง
+        statusBgColor = const Color(0xFFFFB6B6).withOpacity(0.3);
+        statusText = 'ยกเลิกบริการ';
+        break;
+      default:
+        statusColor = Colors.grey;
+        statusBgColor = Colors.grey.shade200;
+        statusText = 'ไม่ทราบสถานะ';
     }
 
     List<String> dateParts = widget.requestData.date.split('·');
@@ -411,6 +423,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 🌟 2. ข้อมูลหลัก (Header) คงโครงสร้างเดิม แต่เปลี่ยนสี
                   _buildSectionBox(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -422,13 +435,13 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                             children: [
                               Text(
                                 widget.requestData.serviceName,
-                                maxLines:
-                                    2, // 🌟 เผื่อชื่อ รพ. ยาว ให้ลงมาได้ 2 บรรทัด
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
+                                  // 🌟 เอา const ออก
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.black,
+                                  color: statusColor, // 🌟 ใช้สีเดียวกับสถานะ
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -463,14 +476,16 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: statusBgColor,
+                                color: statusBgColor, // 🌟 สีพื้นหลังป้าย
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: statusColor),
+                                border: Border.all(
+                                  color: statusColor,
+                                ), // 🌟 สีขอบป้าย
                               ),
                               child: Text(
                                 statusText,
                                 style: TextStyle(
-                                  color: statusColor,
+                                  color: statusColor, // 🌟 สีตัวหนังสือป้าย
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -491,6 +506,363 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                     ),
                   ),
 
+                  // 🌟 2. รายละเอียดคำร้อง (ย้ายมาไว้ด้านบน และเน้นสีพื้นหลังให้ชัดเจน)
+                  _buildSectionTitle('รายละเอียดคำร้อง (งานที่ต้องทำ)'),
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF8E1), // สีเหลืองนวลให้สะดุดตา
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFFFFD54F),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Text(
+                      requestDetail,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        height: 1.5,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+
+                  // 🌟 3. วันและเวลานัดหมาย
+                  _buildSectionTitle('วันและเวลานัดหมาย'),
+                  _buildSectionBox(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF3E5F5),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.calendar_today,
+                                  color: Color(0xFFA052BE),
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      dateOnly,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'เวลา $timeOnly',
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (currentStatus != RequestStatus.completed &&
+                            currentStatus != RequestStatus.cancelled &&
+                            countdownText.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF3E0),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.timer_outlined,
+                                  color: Color(0xFFFF8C00),
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  countdownText,
+                                  style: const TextStyle(
+                                    color: Color(0xFFFF8C00),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  // 🌟 4. จุดรับจุดส่ง และ แผนที่
+                  _buildSectionTitle('จุดรับจุดส่ง'),
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => FullScreenMapPage(
+                                  pointA: pointA,
+                                  pointB: pointB,
+                                  routePoints: routePoints,
+                                  distanceText: _distanceText,
+                                  maptilerApiKey: maptilerApiKey,
+                                ),
+                              ),
+                            );
+                          },
+                          child: SizedBox(
+                            height: 180,
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(16),
+                              ),
+                              child: Stack(
+                                children: [
+                                  IgnorePointer(
+                                    child: FlutterMap(
+                                      options: MapOptions(
+                                        initialCameraFit: CameraFit.bounds(
+                                          bounds: LatLngBounds.fromPoints([
+                                            pointA,
+                                            pointB,
+                                          ]),
+                                          padding: const EdgeInsets.all(40.0),
+                                        ),
+                                        interactionOptions:
+                                            const InteractionOptions(
+                                              flags: InteractiveFlag.none,
+                                            ),
+                                      ),
+                                      children: [
+                                        TileLayer(
+                                          urlTemplate:
+                                              'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=$maptilerApiKey',
+                                          userAgentPackageName:
+                                              'com.example.app',
+                                        ),
+                                        PolylineLayer(
+                                          polylines: [
+                                            Polyline(
+                                              points: routePoints,
+                                              color: Colors.blue.shade400,
+                                              strokeWidth: 4.0,
+                                            ),
+                                          ],
+                                        ),
+                                        MarkerLayer(
+                                          markers: [
+                                            Marker(
+                                              point: pointA,
+                                              width: 32,
+                                              height: 32,
+                                              alignment: Alignment.center,
+                                              // 🌟 เปลี่ยนหมุด A ให้เป็นสีฟ้า
+                                              child: _buildMapPin(
+                                                'A',
+                                                const Color(0xFF2196F3),
+                                              ),
+                                            ),
+                                            Marker(
+                                              point: pointB,
+                                              width: 32,
+                                              height: 32,
+                                              alignment: Alignment.center,
+                                              // 🌟 เปลี่ยนหมุด B ให้เป็นสีแดง
+                                              child: _buildMapPin(
+                                                'B',
+                                                const Color(0xFFF44336),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 10,
+                                    right: 10,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.95),
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: const [
+                                          BoxShadow(
+                                            color: Colors.black12,
+                                            blurRadius: 4,
+                                          ),
+                                        ],
+                                      ),
+                                      child: Text(
+                                        _distanceText,
+                                        style: const TextStyle(
+                                          color: Color(0xFFA052BE),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 10,
+                                    right: 10,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.6),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: const Row(
+                                        children: [
+                                          Icon(
+                                            Icons.zoom_out_map,
+                                            color: Colors.white,
+                                            size: 14,
+                                          ),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'กดเพื่อขยายแผนที่',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // 🌟 ปรับสีวงกลมให้ตรงกับหมุดในแผนที่
+                                  _buildHollowCircle(const Color(0xFF2196F3)),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'A จุดรับ',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Color(0xFF2196F3),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          pickupAddress,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                margin: const EdgeInsets.only(
+                                  left: 7,
+                                  top: 4,
+                                  bottom: 4,
+                                ),
+                                height: 20,
+                                width: 2,
+                                color: Colors.grey.shade300,
+                              ),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // 🌟 ปรับสีวงกลมให้ตรงกับหมุดในแผนที่
+                                  _buildHollowCircle(const Color(0xFFF44336)),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'B จุดส่ง',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Color(0xFFF44336),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          dropoffAddress,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // 🌟 5. ข้อมูลผู้ป่วย
                   _buildSectionTitle('ข้อมูลผู้ป่วย'),
                   _buildSectionBox(
                     child: Column(
@@ -518,8 +890,8 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    patName, // 🌟 เปลี่ยนมาใช้ตัวแปรนี้แทน
-                                    maxLines: 1, // 🌟 กันชื่อยาวทะลุจอ
+                                    patName,
+                                    maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
@@ -545,8 +917,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Row(
-                                      mainAxisSize: MainAxisSize
-                                          .min, // 🌟 หดกรอบให้พอดีข้อความ
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
                                         const Icon(
                                           Icons.favorite,
@@ -554,7 +925,6 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                                           size: 14,
                                         ),
                                         const SizedBox(width: 4),
-                                        // 🌟 ใช้ Flexible เพื่อให้ข้อความตัดจบเมื่อยาวเกิน โดยกรอบไม่แตก
                                         Flexible(
                                           child: Text(
                                             patDisease,
@@ -596,7 +966,6 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              // 🌟 ใช้ Expanded ครอบ
                               child: Text(
                                 patPhone,
                                 style: const TextStyle(
@@ -614,7 +983,8 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                     ),
                   ),
 
-                  _buildSectionTitle('ญาติ'),
+                  // 🌟 6. ข้อมูลญาติ (ย้ายมาล่างสุด)
+                  _buildSectionTitle('ข้อมูลญาติผู้ติดต่อ'),
                   _buildSectionBox(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,7 +992,6 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                         Row(
                           children: [
                             Expanded(
-                              // 🌟 ใช้ Expanded ครอบไว้เผื่อชื่อญาติยาวมาก
                               child: Text(
                                 relName,
                                 maxLines: 1,
@@ -698,7 +1067,6 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                             ),
                             const SizedBox(width: 16),
                             Expanded(
-                              // 🌟 ใช้ Expanded ครอบ
                               child: Text(
                                 relLine,
                                 style: const TextStyle(
@@ -712,361 +1080,6 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                           ],
                         ),
                       ],
-                    ),
-                  ),
-
-                  _buildSectionTitle('วันและเวลานัดหมาย'),
-                  _buildSectionBox(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment
-                          .center, // จัดให้อยู่กึ่งกลางแนวตั้ง
-                      children: [
-                        // 🌟 1. ใช้ Expanded ครอบฝั่งซ้าย (ไอคอน + วันที่) ทั้งหมด
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF3E5F5),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(
-                                  Icons.calendar_today,
-                                  color: Color(0xFFA052BE),
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              // 🌟 2. ใช้ Expanded ครอบ Column ตัวหนังสืออีกชั้น
-                              // เพื่อให้มันยอมหดตัวหรือตัดคำ (...) ถ้ายาวเกิน
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      dateOnly,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                      ),
-                                      maxLines:
-                                          2, // เผื่อยาวไปให้ลงมาบรรทัด 2 ได้
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'เวลา $timeOnly',
-                                      style: TextStyle(
-                                        color: Colors.grey.shade600,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(
-                          width: 8,
-                        ), // 🌟 เว้นระยะห่างนิดนึงไม่ให้ชิดกันเกินไป
-                        // 🌟 3. ฝั่งขวา (ป้ายเวลานับถอยหลัง) ปล่อยไว้เหมือนเดิม มันจะไม่โดนดันตกจอแล้วครับ
-                        if (currentStatus != RequestStatus.completed &&
-                            currentStatus != RequestStatus.cancelled &&
-                            countdownText.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFF3E0),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize:
-                                  MainAxisSize.min, // ให้กล่องหดพอดีข้อความ
-                              children: [
-                                const Icon(
-                                  Icons.timer_outlined,
-                                  color: Color(0xFFFF8C00),
-                                  size: 14,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  countdownText,
-                                  style: const TextStyle(
-                                    color: Color(0xFFFF8C00),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-
-                  _buildSectionTitle('จุดรับจุดส่ง'),
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => FullScreenMapPage(
-                                  pointA: pointA,
-                                  pointB: pointB,
-                                  routePoints: routePoints,
-                                  distanceText:
-                                      _distanceText, // 🌟 ส่งข้อมูลระยะทางไปหน้าแผนที่ใหญ่
-                                  maptilerApiKey: maptilerApiKey,
-                                ),
-                              ),
-                            );
-                          },
-                          child: SizedBox(
-                            height: 180,
-                            child: ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(16),
-                              ),
-                              child: Stack(
-                                children: [
-                                  IgnorePointer(
-                                    child: FlutterMap(
-                                      options: MapOptions(
-                                        initialCameraFit: CameraFit.bounds(
-                                          bounds: LatLngBounds.fromPoints([
-                                            pointA,
-                                            pointB,
-                                          ]),
-                                          padding: const EdgeInsets.all(
-                                            40.0,
-                                          ), // ระยะเว้นขอบไม่ให้หมุดชิดขอบจอเกินไป
-                                        ),
-                                        interactionOptions:
-                                            const InteractionOptions(
-                                              flags: InteractiveFlag.none,
-                                            ),
-                                      ),
-                                      children: [
-                                        TileLayer(
-                                          urlTemplate:
-                                              'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=$maptilerApiKey',
-                                          userAgentPackageName:
-                                              'com.example.app',
-                                        ),
-                                        PolylineLayer(
-                                          polylines: [
-                                            Polyline(
-                                              points: routePoints,
-                                              color: Colors.blue.shade400,
-                                              strokeWidth: 4.0,
-                                            ),
-                                          ],
-                                        ),
-                                        MarkerLayer(
-                                          markers: [
-                                            Marker(
-                                              point: pointA,
-                                              width: 28,
-                                              height: 28,
-                                              alignment: Alignment.center,
-                                              child: _buildMapPin(
-                                                'A',
-                                                const Color(0xFFA052BE),
-                                              ), // 🌟 เปลี่ยนหมุด A เป็นสีม่วง
-                                            ),
-                                            Marker(
-                                              point: pointB,
-                                              width: 28,
-                                              height: 28,
-                                              alignment: Alignment.center,
-                                              child: _buildMapPin(
-                                                'B',
-                                                Colors.black,
-                                              ), // 🌟 เปลี่ยนหมุด B เป็นสีดำ
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  // 🌟 3. ป้ายบอกระยะทาง มุมขวาบนของแผนที่เล็ก
-                                  Positioned(
-                                    top: 10,
-                                    right: 10,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.95),
-                                        borderRadius: BorderRadius.circular(12),
-                                        boxShadow: const [
-                                          BoxShadow(
-                                            color: Colors.black12,
-                                            blurRadius: 4,
-                                          ),
-                                        ],
-                                      ),
-                                      child: Text(
-                                        _distanceText,
-                                        style: const TextStyle(
-                                          color: Color(0xFFA052BE),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-
-                                  // ปุ่มขยาย
-                                  Positioned(
-                                    bottom: 10,
-                                    right: 10,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.6),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: const Row(
-                                        children: [
-                                          Icon(
-                                            Icons.zoom_out_map,
-                                            color: Colors.white,
-                                            size: 14,
-                                          ),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            'กดเพื่อขยายแผนที่',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 11,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildHollowCircle(const Color(0xFFA052BE)),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'A จุดรับ',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            color: Color(0xFFA052BE),
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Text(
-                                          pickupAddress,
-                                          maxLines:
-                                              2, // 🌟 ให้ที่อยู่ยาวสุดได้ 2 บรรทัด
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Container(
-                                margin: const EdgeInsets.only(
-                                  left: 7,
-                                  top: 4,
-                                  bottom: 4,
-                                ),
-                                height: 20,
-                                width: 2,
-                                color: Colors.grey.shade300,
-                              ),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildHollowCircle(Colors.black),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'B จุดส่ง',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            color: Colors.black,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Text(
-                                          dropoffAddress,
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  _buildSectionTitle('รายละเอียดคำร้อง'),
-                  _buildSectionBox(
-                    child: Text(
-                      requestDetail,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        height: 1.5,
-                        color: Colors.black87,
-                      ),
                     ),
                   ),
 
@@ -1089,8 +1102,9 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
 
   Widget _buildBottomActionButtons() {
     if (currentStatus == RequestStatus.completed ||
-        currentStatus == RequestStatus.cancelled)
+        currentStatus == RequestStatus.cancelled) {
       return const SizedBox.shrink();
+    }
 
     if (currentStatus == RequestStatus.pending) {
       return Row(
@@ -1217,33 +1231,35 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
   }
 
   Widget _buildMapPin(String label, Color color) {
-    return Center(
+    // 🌟 เปลี่ยนจากการแสดงเงาเฉยๆ เป็นกรอบวงกลมสีสันสวยงามคล้ายหมุด
+    return Container(
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 2.5),
+        boxShadow: const [
+          BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+        ],
+      ),
+      alignment: Alignment.center,
       child: Text(
         label,
-        style: TextStyle(
-          color: color,
-          fontSize: 22, // 🌟 ขนาดตัวหนังสือสำหรับแผนที่เล็ก
-          fontWeight: FontWeight.w900, // หนาพิเศษ
-          shadows: const [
-            // 🌟 เงาสีขาวช่วยให้ตัวหนังสือไม่จมไปกับพื้นหลังแผนที่
-            Shadow(color: Colors.white, blurRadius: 6, offset: Offset(0, 0)),
-            Shadow(color: Colors.white, blurRadius: 6, offset: Offset(0, 0)),
-            Shadow(color: Colors.white, blurRadius: 6, offset: Offset(0, 0)),
-          ],
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );
   }
 }
 
-// =========================================================
-// 🌟 หน้าต่างใหม่สำหรับขยายแผนที่
-// =========================================================
+// 🌟 อย่าลืมอัปเดต FullScreenMapPage ด้านล่างนี้ด้วยนะครับ
 class FullScreenMapPage extends StatelessWidget {
   final LatLng pointA;
   final LatLng pointB;
   final List<LatLng> routePoints;
-  final String distanceText; // 🌟 4. ตัวรับข้อมูลระยะทาง
+  final String distanceText;
   final String maptilerApiKey;
 
   const FullScreenMapPage({
@@ -1257,11 +1273,6 @@ class FullScreenMapPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    LatLng centerPoint = LatLng(
-      (pointA.latitude + pointB.latitude) / 2,
-      (pointA.longitude + pointB.longitude) / 2,
-    );
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -1275,16 +1286,13 @@ class FullScreenMapPage extends StatelessWidget {
         backgroundColor: const Color(0xFFA052BE),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      // 🌟 ใช้ Stack ครอบเพื่อแสดงป้ายระยะทางทับบนแผนที่ใหญ่
       body: Stack(
         children: [
           FlutterMap(
             options: MapOptions(
               initialCameraFit: CameraFit.bounds(
                 bounds: LatLngBounds.fromPoints([pointA, pointB]),
-                padding: const EdgeInsets.all(
-                  60.0,
-                ), // เผื่อขอบหน้าจอใหญ่เยอะหน่อย
+                padding: const EdgeInsets.all(60.0),
               ),
               interactionOptions: const InteractionOptions(
                 flags: InteractiveFlag.all,
@@ -1309,30 +1317,28 @@ class FullScreenMapPage extends StatelessWidget {
                 markers: [
                   Marker(
                     point: pointA,
-                    width: 40,
-                    height: 40,
-                    alignment: Alignment.topCenter,
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
                     child: _buildLargeMapPin(
                       'A',
-                      const Color(0xFFA052BE),
-                    ), // 🌟 หมุด A สีม่วง
+                      const Color(0xFF2196F3),
+                    ), // 🌟 สีฟ้า
                   ),
                   Marker(
                     point: pointB,
-                    width: 40,
-                    height: 40,
-                    alignment: Alignment.topCenter,
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
                     child: _buildLargeMapPin(
                       'B',
-                      Colors.black,
-                    ), // 🌟 หมุด B สีดำ
+                      const Color(0xFFF44336),
+                    ), // 🌟 สีแดง
                   ),
                 ],
               ),
             ],
           ),
-
-          // 🌟 5. ป้ายแสดงระยะทางบนมุมซ้ายบนของแผนที่ใหญ่
           Positioned(
             top: 20,
             left: 20,
@@ -1377,19 +1383,23 @@ class FullScreenMapPage extends StatelessWidget {
   }
 
   Widget _buildLargeMapPin(String label, Color color) {
-    return Center(
+    // 🌟 เปลี่ยนหมุดแผนที่ใหญ่ให้เป็นวงกลมสวยๆ เหมือนกัน
+    return Container(
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 3.5),
+        boxShadow: const [
+          BoxShadow(color: Colors.black38, blurRadius: 6, offset: Offset(0, 3)),
+        ],
+      ),
+      alignment: Alignment.center,
       child: Text(
         label,
-        style: TextStyle(
-          color: color,
-          fontSize:
-              28, // 🌟 ขนาดตัวหนังสือสำหรับแผนที่ใหญ่ (ใหญ่ขึ้นให้เห็นชัด)
-          fontWeight: FontWeight.w900,
-          shadows: const [
-            Shadow(color: Colors.white, blurRadius: 8, offset: Offset(0, 0)),
-            Shadow(color: Colors.white, blurRadius: 8, offset: Offset(0, 0)),
-            Shadow(color: Colors.white, blurRadius: 8, offset: Offset(0, 0)),
-          ],
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );

@@ -281,303 +281,326 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
   }
 
   Widget _buildRequestCard(RequestCard request) {
-    Color titleColor;
+    Color mainColor;
     Color statusBgColor;
-    Color statusTextColor;
     String statusText;
 
+    // 🌟 ชุดสีเหมือนเดิม
     switch (request.statusType) {
       case 'pending':
-        titleColor = const Color(0xFFFF8C00);
-        statusBgColor = const Color(0xFFFFE0B2);
-        statusTextColor = const Color(0xFFFF8C00);
+        mainColor = const Color(0xFF757BFF);
+        statusBgColor = const Color(0xFFB4BEFF).withOpacity(0.8);
         statusText = 'รอตอบรับ';
         break;
       case 'accepted':
-        titleColor = const Color(0xFF00B14F);
+        mainColor = const Color(0xFF00C853);
         statusBgColor = const Color(0xFFB9F6CA);
-        statusTextColor = const Color(0xFF00B14F);
         statusText = 'ตอบรับแล้ว';
         break;
       case 'pending_advice':
-        titleColor = const Color(0xFFE67E22);
+        mainColor = const Color(0xFFF2994A);
         statusBgColor = const Color(0xFFFDEBD0);
-        statusTextColor = const Color(0xFFE67E22);
-        statusText = 'รอเพิ่มคำแนะนำ';
+        statusText = 'รอคำแนะนำ';
         break;
       case 'completed':
-        titleColor = const Color(0xFF00B14F);
+        mainColor = const Color(0xFF00B14F);
         statusBgColor = const Color(0xFFB9F6CA);
-        statusTextColor = const Color(0xFF00B14F);
         statusText = 'สิ้นสุดบริการ';
         break;
       case 'cancelled':
-        titleColor = const Color(0xFFF44336);
-        statusBgColor = const Color(0xFFFFEBEE);
-        statusTextColor = const Color(0xFFF44336);
-        statusText = 'ยกเลิกบริการ';
+        mainColor = const Color(0xFFFF5C5C);
+        statusBgColor = const Color(0xFFFFB6B6).withOpacity(0.7);
+        statusText = 'ยกเลิก';
         break;
       default:
-        titleColor = Colors.grey;
+        mainColor = Colors.grey;
         statusBgColor = Colors.grey.shade200;
-        statusTextColor = Colors.grey;
         statusText = 'ไม่ทราบสถานะ';
     }
 
     bool isInProgressTab = _currentTabIndex == 0;
 
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 🌟 1. ส่วนหัวการ์ด (รหัสงาน + ชื่อโรงพยาบาลสีๆ + ป้ายสถานะ)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          '# ${request.id}',
-                          style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // ป้าย NEW แดงๆ ถืองานเพิ่งเข้าหรือมีสถานะค้างและยังไม่ได้อ่าน
-                        if (!request.isRead && isInProgressTab)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.redAccent,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              'NEW',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      request.serviceName, // ชื่อโรงพยาบาลกลับมาแล้ว!
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: titleColor, // สีตามสถานะ
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: statusBgColor,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: statusTextColor, width: 1),
-                ),
-                child: Text(
-                  statusText,
-                  style: TextStyle(
-                    color: statusTextColor,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // 🌟 2. ส่วนแสดงรายละเอียดตรงกลาง
-          _buildDetailRow(
-            icon: Icons.calendar_today,
-            iconColor: const Color(0xFFA052BE),
-            bgColor: const Color(0xFFF4EDFB),
-            label: 'วัน-เวลานัดหมาย',
-            value: request.date,
-            valueColor: const Color(0xFFA052BE),
-          ),
-          const SizedBox(height: 12),
-          _buildDetailRow(
-            icon: Icons.hub,
-            iconColor: const Color(0xFF2196F3),
-            bgColor: const Color(0xFFE3F2FD),
-            label: 'แผนก',
-            value: request.category,
-            valueColor: const Color(0xFF2196F3),
-          ),
-          const SizedBox(height: 12),
-          _buildDetailRow(
-            icon: Icons.person_outline,
-            iconColor: const Color(0xFFFF8C00),
-            bgColor: const Color(0xFFFFF3E0),
-            label: _currentTabIndex == 1 ? 'ถึง' : 'ผู้ป่วย',
-            value: request.patient,
-            valueColor: const Color(0xFFFF8C00),
-          ),
-          const SizedBox(height: 16),
-
-          // 🌟 3. ส่วนปุ่มกดด้านล่าง (รวมลอจิก pending_advice)
-          Row(
-            mainAxisAlignment: isInProgressTab
-                ? MainAxisAlignment.spaceBetween
-                : MainAxisAlignment.end,
-            children: [
-              if (isInProgressTab)
-                GestureDetector(
-                  onTap: request.hasAlert
-                      ? () {
-                          // ดักเช็คสถานะ! ถ้าเป็น pending_advice ให้ดีดไปหน้า AddDoctor
-                          if (request.statusType == 'pending_advice') {
-                            Map<String, dynamic> reqInfo = {
-                              'patientName': request.patient,
-                              'dateTime': request.date,
-                              'hospital': request.serviceName,
-                              'department': request.category,
-                            };
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => AddDoctorAdvicePage(
-                                  relativeUid: request.relativeUid,
-                                  requestId: request.id,
-                                  requestInfo: reqInfo,
-                                ),
-                              ),
-                            ).then((_) => _fetchRequests());
-                          } else {
-                            // ถ้าเป็น accepted ไปหน้าแผนที่ปกติ
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => AddStatusNotificationPage(
-                                  requestData: request,
-                                  uid: widget.uid,
-                                ),
-                              ),
-                            ).then((_) => _fetchRequests());
-                          }
-                        }
-                      : null,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: request.hasAlert
-                          ? const Color(0xFFFFEBEE)
-                          : Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          request.statusType == 'pending_advice'
-                              ? Icons.note_add_rounded
-                              : Icons.notifications,
-                          color: request.hasAlert
-                              ? const Color(0xFFF44336)
-                              : Colors.grey.shade500,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          request.statusType == 'pending_advice'
-                              ? 'เพิ่มคำแนะนำแพทย์'
-                              : 'ส่งการแจ้งเตือน',
-                          style: TextStyle(
-                            color: request.hasAlert
-                                ? const Color(0xFFF44336)
-                                : Colors.grey.shade500,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            decoration: TextDecoration.underline,
-                            decorationColor: request.hasAlert
-                                ? const Color(0xFFF44336)
-                                : Colors.grey.shade500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              TextButton(
-                onPressed: () async {
-                  if (!request.isRead) {
-                    await _service.markRequestAsRead(
-                      request.relativeUid,
-                      request.id,
-                    );
-                  }
-
-                  // ดัก "View More" ถ้าเป็น pending_advice
-                  if (request.statusType == 'pending_advice') {
-                    Map<String, dynamic> reqInfo = {
-                      'patientName': request.patient,
-                      'dateTime': request.date,
-                      'hospital': request.serviceName,
-                      'department': request.category,
-                    };
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AddDoctorAdvicePage(
-                          relativeUid: request.relativeUid,
-                          requestId: request.id,
-                          requestInfo: reqInfo,
-                        ),
-                      ),
-                    );
-                  } else {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ViewRelativeRequestPage(
-                          requestData: request,
-                          uid: widget.uid,
-                        ),
-                      ),
-                    );
-                  }
-
-                  _fetchRequests();
-                },
-                child: const Text(
-                  'View More',
-                  style: TextStyle(
-                    color: Color(0xFF7D3C98),
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
+      // 🔽 1. ลดระยะห่างระหว่างการ์ด (Margin)
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10), // ปรับขอบให้มนน้อยลงนิดนึง
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(color: mainColor, width: 6),
+            ), // 🔽 ลดความหนาแถบสี
+          ),
+          // 🔽 2. ลดระยะห่างภายในกรอบ (Padding)
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- แถวที่ 1: รหัสคำขอ + สถานะ ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        '# ${request.id}',
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ), // 🔽 ลดฟอนต์
+                      ),
+                      const SizedBox(width: 6),
+                      if (!request.isRead && isInProgressTab)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'NEW',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  Container(
+                    // 🔽 ย่อปุ่มสถานะ
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusBgColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: TextStyle(
+                        color: mainColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8), // 🔽 ลด SizedBox
+              // --- แถวที่ 2: ชื่อโรงพยาบาล ---
+              Text(
+                request.serviceName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: mainColor,
+                ), // 🔽 ลดจาก 20 เหลือ 16
+              ),
+              const SizedBox(height: 10), // 🔽 ลด SizedBox
+              // --- แถวที่ 3: วันและเวลา ---
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6), // 🔽 ย่อไอคอน
+                    decoration: BoxDecoration(
+                      color: mainColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(
+                      Icons.calendar_today,
+                      size: 16,
+                      color: mainColor,
+                    ), // 🔽 ไอคอนเล็กลง
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'วัน-เวลานัดหมาย',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        request.date,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: mainColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12), // 🔽 ลดช่องว่างก่อนถึงปุ่ม
+              // --- แถวที่ 4: ปุ่มกด ---
+              Row(
+                mainAxisAlignment: isInProgressTab
+                    ? MainAxisAlignment.spaceBetween
+                    : MainAxisAlignment.end,
+                children: [
+                  if (isInProgressTab)
+                    GestureDetector(
+                      onTap: (request.hasAlert && isInProgressTab)
+                          ? () {
+                              if (request.statusType == 'pending_advice') {
+                                Map<String, dynamic> reqInfo = {
+                                  'patientName': request.patient,
+                                  'dateTime': request.date,
+                                  'hospital': request.serviceName,
+                                  'department': request.category,
+                                };
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => AddDoctorAdvicePage(
+                                      relativeUid: request.relativeUid,
+                                      requestId: request.id,
+                                      requestInfo: reqInfo,
+                                    ),
+                                  ),
+                                ).then((_) => _fetchRequests());
+                              } else {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        AddStatusNotificationPage(
+                                          requestData: request,
+                                          uid: widget.uid,
+                                        ),
+                                  ),
+                                ).then((_) => _fetchRequests());
+                              }
+                            }
+                          : null,
+                      child: Container(
+                        // 🔽 บีบปุ่มให้บางลง
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: (request.hasAlert && isInProgressTab)
+                              ? const Color(0xFFFFEBEE)
+                              : Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              request.statusType == 'pending_advice'
+                                  ? Icons.note_add_rounded
+                                  : Icons.notifications,
+                              color: (request.hasAlert && isInProgressTab)
+                                  ? const Color(0xFFF44336)
+                                  : Colors.grey.shade500,
+                              size: 16, // 🔽 ลดขนาด
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              request.statusType == 'pending_advice'
+                                  ? 'เพิ่มคำแนะนำ'
+                                  : 'ส่งแจ้งเตือน',
+                              style: TextStyle(
+                                color: (request.hasAlert && isInProgressTab)
+                                    ? const Color(0xFFF44336)
+                                    : Colors.grey.shade500,
+                                fontSize: 12, // 🔽 ลดขนาด
+                                fontWeight: FontWeight.bold,
+                                decoration:
+                                    (request.hasAlert && isInProgressTab)
+                                    ? TextDecoration.underline
+                                    : TextDecoration.none,
+                                decorationColor: const Color(0xFFF44336),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  GestureDetector(
+                    onTap: () async {
+                      if (!request.isRead) {
+                        await _service.markRequestAsRead(
+                          request.relativeUid,
+                          request.id,
+                        );
+                      }
+
+                      if (request.statusType == 'pending_advice') {
+                        Map<String, dynamic> reqInfo = {
+                          'patientName': request.patient,
+                          'dateTime': request.date,
+                          'hospital': request.serviceName,
+                          'department': request.category,
+                        };
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AddDoctorAdvicePage(
+                              relativeUid: request.relativeUid,
+                              requestId: request.id,
+                              requestInfo: reqInfo,
+                            ),
+                          ),
+                        );
+                      } else {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ViewRelativeRequestPage(
+                              requestData: request,
+                              uid: widget.uid,
+                            ),
+                          ),
+                        );
+                      }
+                      _fetchRequests();
+                    },
+                    child: const Text(
+                      'ดูรายละเอียด',
+                      style: TextStyle(
+                        color: Color(0xFF9B59B6),
+                        fontSize: 13, // 🔽 ลดขนาดตัวอักษร
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.underline,
+                        decorationColor: Color(0xFF9B59B6),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

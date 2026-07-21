@@ -245,31 +245,31 @@ class AdminService {
     // 🌟 Mockup 1: สถานะ "อยู่ระหว่างรอ(ตอบรับ)" -> pending
     // งานเพิ่งเด้งเข้ามา อาสายังไม่ได้กดตกลงหรือปฏิเสธ
     // ===============================================
-    RequestModel reqPending = RequestModel(
-      requestId:
-          "REQ-PEND-${currentTime.millisecondsSinceEpoch.toString().substring(7)}",
-      requestdetail: "พาผู้ป่วยไปทำกายภาพบำบัดและรอรับกลับ",
-      pickuplocation: LocationModel(
-        locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
-        address: "บ้านพัก ต.พระบาท จ.ลำปาง",
-        latitude: 18.2750,
-        longitude: 99.5050,
-      ),
-      dropofflocation: LocationModel(
-        locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
-        address: "โรงพยาบาลเขลางค์นคร-ราม",
-        latitude: 18.2865,
-        longitude: 99.4855,
-      ),
-      hospitalname: "โรงพยาบาลเขลางค์นคร-ราม",
-      departmentname: "แผนกเวชศาสตร์ฟื้นฟู",
-      appointmentdate: currentTime.add(const Duration(days: 3)),
-      appointmenttime: currentTime.add(const Duration(days: 3)),
-      requestdate: currentTime,
-      requeststatus: "pending", // 🌟 สถานะตัวพิมพ์เล็ก
-      caretakerId: myCaretakerId, // 🌟 ผูกกับบัตร ปชช. อาสา
-      isReadCaretaker: false,
-    );
+    // RequestModel reqPending = RequestModel(
+    //   requestId:
+    //       "REQ-PEND-${currentTime.millisecondsSinceEpoch.toString().substring(7)}",
+    //   requestdetail: "พาผู้ป่วยไปทำกายภาพบำบัดและรอรับกลับ",
+    //   pickuplocation: LocationModel(
+    //     locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
+    //     address: "บ้านพัก ต.พระบาท จ.ลำปาง",
+    //     latitude: 18.2750,
+    //     longitude: 99.5050,
+    //   ),
+    //   dropofflocation: LocationModel(
+    //     locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
+    //     address: "โรงพยาบาลเขลางค์นคร-ราม",
+    //     latitude: 18.2865,
+    //     longitude: 99.4855,
+    //   ),
+    //   hospitalname: "โรงพยาบาลเขลางค์นคร-ราม",
+    //   departmentname: "แผนกเวชศาสตร์ฟื้นฟู",
+    //   appointmentdate: currentTime.add(const Duration(days: 3)),
+    //   appointmenttime: currentTime.add(const Duration(days: 3)),
+    //   requestdate: currentTime,
+    //   requeststatus: "pending", // 🌟 สถานะตัวพิมพ์เล็ก
+    //   caretakerId: myCaretakerId, // 🌟 ผูกกับบัตร ปชช. อาสา
+    //   isReadCaretaker: false,
+    // );
 
     // ===============================================
     // 🌟 Mockup 2: สถานะ "อยู่ระหว่างรอ(ถึงเวลานัด)" -> accepted
@@ -301,7 +301,7 @@ class AdminService {
       isReadCaretaker: true,
     );
 
-    List<RequestModel> allRequests = [reqPending, reqAccepted];
+    List<RequestModel> allRequests = [reqAccepted];
 
     // 🌟 2. วนลูปบันทึกเข้าโหนด Relative -> Request
     for (var req in allRequests) {

@@ -372,7 +372,7 @@ class _LoginPageState extends State<LoginPage> {
                             );
                           },
                           child: Text(
-                            'สมัครสำหรับญาติ/ผู้ป่วย',
+                            'สมัครสำหรับญาติ',
                             style: TextStyle(
                               color: primaryColor, // ใช้สีม่วง
                               fontWeight: FontWeight.bold,

@@ -4,6 +4,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:miniproject/views/caretaker/add_doctor_advice_page.dart';
 import 'dart:async';
+import 'dart:convert'; // 🌟 เพิ่ม import
+import 'package:http/http.dart' as http; // 🌟 เพิ่ม import
 
 import '../../widgets/custom_header_nav.dart';
 import '../../widgets/custom_bottom_nav.dart';
@@ -49,11 +51,18 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
   String? _selectedStatus;
 
   LatLng? _currentLocation;
+  List<LatLng> _routePoints = []; // 🌟 เก็บจุดวาดเส้นถนนจริง
   StreamSubscription<Position>? _positionStreamSubscription;
+  Timer? _trackingTimer; // 🌟 Timer สำหรับอัปเดตทุก 10 วิ
 
   LatLng pointA = const LatLng(18.8055, 98.9950);
   LatLng pointB = const LatLng(18.8236, 99.0068);
   final String maptilerApiKey = 'JCT1H6ehzlMaKZyrC5mp';
+
+  // 🌟 ฟังก์ชันหาว่าตอนนี้อยู่ในสถานะไหน
+  String get _activeStatus => _currentStepIndex > 0
+      ? _statusList[_currentStepIndex - 1]
+      : 'ยังไม่เริ่ม';
 
   @override
   void initState() {
@@ -96,6 +105,63 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     });
   }
 
+  // 🌟 ฟังก์ชันตัวช่วยสำหรับคำนวณว่าตอนนี้ต้องลากเส้นไปหาหมุด A หรือ B
+  Future<void> _updateRouteTarget() async {
+    if (_currentLocation == null) return;
+
+    LatLng? targetPoint;
+    if (['กำลังเดินทางไปรับ', 'กำลังเดินทางกลับ'].contains(_activeStatus)) {
+      targetPoint = pointA; // ลากเส้นเป้าหมายไปที่จุดรับ (A)
+    } else if (_activeStatus == 'กำลังเดินทางไปโรงพยาบาล') {
+      targetPoint = pointB; // ลากเส้นเป้าหมายไปที่โรงพยาบาล (B)
+    }
+
+    // ถ้ามีจุดหมาย ให้เรียก API ลากเส้นทาง
+    if (targetPoint != null) {
+      await _fetchRoute(_currentLocation!, targetPoint);
+    }
+  }
+
+  // 🌟 ดึงเส้นทางจากถนนจริง (อัปเดตให้เสถียรและเร็วขึ้น)
+  Future<void> _fetchRoute(LatLng start, LatLng end) async {
+    try {
+      // 🌟 1. เปลี่ยนมาใช้ Server หลักของ OSRM ที่เสถียรที่สุด (รองรับ HTTPS)
+      final url =
+          'https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?geometries=geojson';
+
+      // 🌟 2. แนบ Header (User-Agent) เพื่อไม่ให้ Server มองว่าเราเป็น Bot และบล็อกการขอข้อมูล
+      final response = await http
+          .get(
+            Uri.parse(url),
+            headers: {
+              'User-Agent': 'MiniProjectApp/1.0 (Flutter Mobile App)',
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(
+            const Duration(seconds: 10),
+          ); // 🌟 3. ตั้งเวลา Time-out ป้องกันแอปรอนานเกินไป
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['routes'] != null && data['routes'].isNotEmpty) {
+          final List coords = data['routes'][0]['geometry']['coordinates'];
+          if (mounted) {
+            setState(() {
+              // ล้างเส้นเก่าทิ้ง แล้ววาดเส้นถนนจริงใหม่
+              _routePoints = coords.map((c) => LatLng(c[1], c[0])).toList();
+            });
+          }
+        }
+      } else {
+        print('OSRM API Error: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Error fetching route: $e');
+    }
+  }
+
+  // 🌟 ปรับให้ดึงเส้นทางแค่ครั้งแรก และอัปเดตแค่ตำแหน่งพิกัดใน Timer
   Future<void> _startLocationTracking() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return;
@@ -107,15 +173,21 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     }
     if (permission == LocationPermission.deniedForever) return;
 
-    Position pos = await Geolocator.getCurrentPosition();
-    if (mounted)
-      setState(() => _currentLocation = LatLng(pos.latitude, pos.longitude));
+    // 1. หาตำแหน่งเริ่มต้น แล้ววาดเส้นถนน "แค่ครั้งเดียว" ตอนเปิดจอ
+    Position initialPos = await Geolocator.getCurrentPosition();
+    if (mounted) {
+      setState(() {
+        _currentLocation = LatLng(initialPos.latitude, initialPos.longitude);
+      });
+      await _updateRouteTarget(); // 🌟 วาดเส้นทางครั้งแรก
+    }
 
+    // 2. ดักจับพิกัดให้หมุดขยับ (รันอยู่เบื้องหลัง)
     _positionStreamSubscription =
         Geolocator.getPositionStream(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.high,
-            distanceFilter: 10,
+            distanceFilter: 5, // ขยับ 5 เมตรถึงจะอัปเดตพิกัดบนจอ
           ),
         ).listen((Position position) {
           if (mounted) {
@@ -125,19 +197,27 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                 position.longitude,
               ),
             );
-            _service.updateRealtimeLocation(
-              widget.requestData.relativeUid,
-              widget.requestData.id,
-              position.latitude,
-              position.longitude,
-            );
           }
         });
+
+    // 3. 🌟 ส่งพิกัดขึ้น Firebase ทุก 10 วินาที (ไม่มีการเรียก API วาดเส้นทางตรงนี้แล้ว!)
+    _trackingTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
+      if (_currentLocation != null) {
+        // อัปเดตแค่ตำแหน่ง GPS ลงฐานข้อมูลเพื่อให้ญาติดู
+        await _service.updateRealtimeLocation(
+          widget.requestData.relativeUid,
+          widget.requestData.id,
+          _currentLocation!.latitude,
+          _currentLocation!.longitude,
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
     _positionStreamSubscription?.cancel();
+    _trackingTimer?.cancel(); // 🌟 อย่าลืมล้าง Timer ทิ้งตอนออกหน้าจอ
     super.dispose();
   }
 
@@ -170,16 +250,15 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
           lng: _currentLocation?.longitude,
         );
 
-        // 🌟 เมื่อถึงสถานะสุดท้าย 'เสร็จสิ้นการให้บริการ'
         if (_selectedStatus == 'เสร็จสิ้นการให้บริการ') {
           await _service.updateRequestStatus(
             widget.requestData.relativeUid,
             widget.requestData.id,
-            'pending_advice', // 🚨 แก้บรรทัดนี้ จาก 'completed' เป็น 'pending_advice'
+            'pending_advice',
           );
-          _positionStreamSubscription?.cancel(); // ปิดบริการ GPS
+          _positionStreamSubscription?.cancel();
+          _trackingTimer?.cancel();
 
-          // 💡 มัดรวมข้อมูลปัจจุบันส่งต่อให้หน้า AddDoctorAdvicePage โชว์บน Card ด้านบน
           List<String> dateParts = widget.requestData.date.split('·');
           String dateOnly = dateParts[0].trim();
           String timeOnly = dateParts.length > 1 ? dateParts[1].trim() : '';
@@ -197,7 +276,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
               builder: (context) => AddDoctorAdvicePage(
                 relativeUid: widget.requestData.relativeUid,
                 requestId: widget.requestData.id,
-                requestInfo: reqInfo, // 🌟 ส่งข้อมูลที่แพ็คไว้ไปใช้งาน
+                requestInfo: reqInfo,
               ),
             ),
           );
@@ -213,6 +292,22 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
             _selectedStatus = null;
           }
         });
+
+        // 🌟 รีเฟรชเส้นทางทันทีเมื่อเปลี่ยนสถานะ โดยไม่ต้องรอ 10 วิ
+        if (_currentLocation != null) {
+          LatLng? targetPoint;
+          if ([
+            'กำลังเดินทางไปรับ',
+            'กำลังเดินทางกลับ',
+          ].contains(_activeStatus)) {
+            targetPoint = pointA;
+          } else if (_activeStatus == 'กำลังเดินทางไปโรงพยาบาล') {
+            targetPoint = pointB;
+          }
+          if (targetPoint != null) {
+            await _fetchRoute(_currentLocation!, targetPoint);
+          }
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -294,14 +389,14 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                 Container(
                   width: 12,
                   height: 12,
-                  decoration: const BoxDecoration(
-                    color: Colors.green,
+                  decoration: BoxDecoration(
+                    color: _hasStarted ? Colors.green : Colors.grey,
                     shape: BoxShape.circle,
                   ),
                 ),
                 const SizedBox(width: 8),
                 const Text(
-                  'ตำแหน่งปัจจุบัน',
+                  'ระบบติดตามสถานะ',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -454,6 +549,48 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
       );
     }
 
+    // 🌟 ถ้อยู่ในกระบวนการรักษาที่โรงพยาบาล ให้ซ่อนแผนที่และโชว์ UI นี้แทน
+    if ([
+      'ถึงโรงพยาบาล',
+      'รอคิวพบแพทย์',
+      'กำลังรักษา',
+      'ตรวจรักษาเสร็จสิ้น',
+    ].contains(_activeStatus)) {
+      return Container(
+        height: 180,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF8E1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFFFD54F), width: 2),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.local_hospital_rounded,
+              size: 50,
+              color: Color(0xFFFFB300),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _activeStatus,
+              style: const TextStyle(
+                color: Color(0xFFF57F17),
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'ผู้ป่วยกำลังอยู่ระหว่างดำเนินการที่โรงพยาบาล',
+              style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (_currentLocation == null) {
       return Container(
         height: 180,
@@ -478,6 +615,20 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
       );
     }
 
+    // 🌟 หาจุดหมายปลายทางตามสถานะ เพื่อเอาไปปักหมุด
+    LatLng? targetMarker;
+    String targetLabel = '';
+    Color targetColor = Colors.grey;
+    if (['กำลังเดินทางไปรับ', 'กำลังเดินทางกลับ'].contains(_activeStatus)) {
+      targetMarker = pointA;
+      targetLabel = 'A';
+      targetColor = const Color(0xFF2196F3);
+    } else if (_activeStatus == 'กำลังเดินทางไปโรงพยาบาล') {
+      targetMarker = pointB;
+      targetLabel = 'B';
+      targetColor = const Color(0xFFF44336);
+    }
+
     return Container(
       height: 180,
       decoration: BoxDecoration(
@@ -494,7 +645,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
             initialCenter: _currentLocation!,
             initialZoom: 15.0,
             interactionOptions: const InteractionOptions(
-              flags: InteractiveFlag.none,
+              flags: InteractiveFlag.all, // 🌟 เปิดให้เลื่อนแผนที่ดูเส้นทางได้
             ),
           ),
           children: [
@@ -506,36 +657,61 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
             PolylineLayer(
               polylines: [
                 Polyline(
-                  points: [pointA, _currentLocation!, pointB],
+                  points: _routePoints.isNotEmpty
+                      ? _routePoints
+                      : [
+                          _currentLocation!,
+                          targetMarker ?? _currentLocation!,
+                        ], // ถ้าโหลดไม่ทันให้ตีเส้นตรงไปก่อน
                   color: Colors.blue.shade400,
-                  strokeWidth: 4.0,
+                  strokeWidth: 5.0,
                 ),
               ],
             ),
             MarkerLayer(
               markers: [
-                Marker(
-                  point: pointA,
-                  width: 30,
-                  height: 30,
-                  child: _buildMapPin('A', const Color(0xFF2196F3)),
-                ),
-                Marker(
-                  point: pointB,
-                  width: 30,
-                  height: 30,
-                  child: _buildMapPin('B', Colors.grey),
-                ),
+                // หมุดเป้าหมายที่จะไป
+                if (targetMarker != null)
+                  Marker(
+                    point: targetMarker,
+                    width: 34,
+                    height: 34,
+                    child: _buildMapPin(targetLabel, targetColor),
+                  ),
+                // หมุดรถปัจจุบัน (อาสาสมัคร)
                 Marker(
                   point: _currentLocation!,
-                  width: 20,
-                  height: 20,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
+                  width: 40,
+                  height: 40,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: const [
+                            BoxShadow(color: Colors.black26, blurRadius: 4),
+                          ],
+                        ),
+                      ),
+                      const Positioned(
+                        top: 0,
+                        child: Text(
+                          'คุณ',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            shadows: [
+                              Shadow(color: Colors.white, blurRadius: 2),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -574,22 +750,24 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
   }
 
   Widget _buildMapPin(String label, Color color) {
-    return Stack(
+    return Container(
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 2.5),
+        boxShadow: const [
+          BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+        ],
+      ),
       alignment: Alignment.center,
-      children: [
-        Icon(Icons.location_on, color: color, size: 30),
-        Positioned(
-          top: 4,
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
         ),
-      ],
+      ),
     );
   }
 }

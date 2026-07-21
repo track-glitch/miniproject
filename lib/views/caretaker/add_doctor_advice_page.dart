@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart'; // 🌟 เพิ่ม package สำหรับจัดการรูปแบบวันที่
+import 'package:miniproject/views/caretaker/list_relative_request_page.dart';
 import '../../services/caretaker_service.dart';
 import '../../widgets/custom_header_nav.dart';
 
@@ -328,7 +330,6 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                               widget.requestId,
                               'completed',
                             );
-
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -338,9 +339,20 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                                   backgroundColor: Colors.green,
                                 ),
                               );
-                              Navigator.of(
+
+                              // 🌟 ลบของเก่าออก: Navigator.of(context).popUntil((route) => route.isFirst);
+
+                              // 🌟 ใช้โค้ดใหม่นี้แทน: ล้าง Stack แล้วบังคับโหลดหน้า List ใหม่ทั้งหมด
+                              Navigator.pushAndRemoveUntil(
                                 context,
-                              ).popUntil((route) => route.isFirst);
+                                MaterialPageRoute(
+                                  builder: (context) => ListRelativeRequestPage(
+                                    uid: FirebaseAuth.instance.currentUser!.uid,
+                                  ),
+                                ),
+                                (route) =>
+                                    false, // false คือลบประวัติการย้อนกลับออกทั้งหมด
+                              );
                             }
                           } catch (e) {
                             print("Error saving doctor advice: $e");
