@@ -405,7 +405,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   Widget _buildRegistrationForm() {
     return Column(
       children: [
-        _buildStepIndicator(),
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -420,60 +419,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         ),
         _buildBottomControls(),
       ],
-    );
-  }
-
-  Widget _buildStepIndicator() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 30),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildStepCircle(1, 'เงื่อนไข'),
-          _buildStepLine(),
-          _buildStepCircle(2, 'ข้อมูลส่วนตัว'),
-          _buildStepLine(),
-          _buildStepCircle(3, 'เอกสาร'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStepCircle(int step, String title) {
-    bool isActive = _currentStep >= step;
-    return Column(
-      children: [
-        CircleAvatar(
-          radius: 16,
-          backgroundColor: isActive ? primaryColor : Colors.grey.shade300,
-          child: Text(
-            step.toString(),
-            style: TextStyle(
-              color: isActive ? Colors.white : Colors.grey.shade600,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 10,
-            color: isActive ? primaryColor : Colors.grey,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStepLine() {
-    return Expanded(
-      child: Container(
-        height: 2,
-        color: Colors.grey.shade300,
-        margin: const EdgeInsets.symmetric(horizontal: 8).copyWith(bottom: 15),
-      ),
     );
   }
 
@@ -495,6 +440,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
 
     return Column(
       children: [
+        const SizedBox(height: 20),
         _buildSectionContainer(
           title: 'ข้อตกลงและเงื่อนไขการให้บริการ (สำหรับผู้ดูแล)',
           children: [

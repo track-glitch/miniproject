@@ -48,6 +48,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
   String _selectedPatGender = "";
   String _selectedPatMobility = "";
   DateTime? _patBirthDate;
+  int? _patAge; // 🌟 เพิ่มตัวแปรเก็บอายุของผู้ป่วย
 
   LatLng _selectedLocation = const LatLng(18.2881, 99.4921);
   bool _hasPinned = false;
@@ -179,27 +180,24 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     }
   }
 
+  // 🌟 ปรับปรุงการเลือกวันเกิดผู้ป่วย ให้แสดงแค่วันเกิดใน Controller และคำนวณลงตัวแปร _patAge
   Future<void> _selectPatBirthDate() async {
-  DateTime? selectedDate = await showDatePicker(
-    context: context,
-    initialDate: DateTime(2000),
-    firstDate: DateTime(1920),
-    lastDate: DateTime.now(),
-  );
-  if (selectedDate != null) {
-    setState(() {
-      _patBirthDate = selectedDate;
-      
-      // คำนวณอายุ
-      int? age = _calculateAge(selectedDate);
-      String ageText = age != null ? " (อายุ $age ปี)" : "";
+    DateTime? selectedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime(2000),
+      firstDate: DateTime(1920),
+      lastDate: DateTime.now(),
+    );
+    if (selectedDate != null) {
+      setState(() {
+        _patBirthDate = selectedDate;
+        _patAge = _calculateAge(selectedDate);
 
-      // ใส่ข้อความวันเกิดพร้อมอายุลงใน Controller
-      _patBirthDateController.text =
-          "${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.year + 543}$ageText";
-    });
+        _patBirthDateController.text =
+            "${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.year + 543}";
+      });
+    }
   }
-}
 
   void _showImageSourceActionSheet() {
     showModalBottomSheet(
@@ -271,7 +269,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     );
   }
 
-  // 🌟 ปรับปรุงการตรวจสอบของแต่ละหน้า
   void _nextStep() {
     if (_currentStep == 1) {
       if (!_isPolicyAccepted) {
@@ -301,7 +298,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
   }
 
   void _handleRegister() async {
-    // 🌟 หน้า 3 ต้องผ่านการ Validate ฟอร์มของญาติก่อน
     if (!_relativeFormKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -326,7 +322,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
       );
 
       RelativeModel relativeData = RelativeModel(
-        relativeId: _patIdCardController.text.trim(), // ผูกกับรหัสผู้ป่วย
+        relativeId: _patIdCardController.text.trim(),
         password: _patPasswordController.text.trim(),
         usertype: 'relative',
         firstname: _relFirstNameController.text.trim(),
@@ -401,7 +397,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         body: SafeArea(
           child: Column(
             children: [
-              _buildStepIndicator(),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(
@@ -410,10 +405,9 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                   ),
                   child: Column(
                     children: [
-                      // 🌟 เรียงลำดับหน้าใหม่ที่นี่
-                      if (_currentStep == 1) _buildStep1(), // เงื่อนไข
-                      if (_currentStep == 2) _buildStep2(), // ข้อมูลผู้ป่วย
-                      if (_currentStep == 3) _buildStep3(), // ข้อมูลญาติ
+                      if (_currentStep == 1) _buildStep1(),
+                      if (_currentStep == 2) _buildStep2(),
+                      if (_currentStep == 3) _buildStep3(),
                     ],
                   ),
                 ),
@@ -426,63 +420,8 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     );
   }
 
-  Widget _buildStepIndicator() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildStepCircle(1, 'เงื่อนไข'),
-          _buildStepLine(),
-          _buildStepCircle(2, 'ข้อมูลผู้ป่วย'),
-          _buildStepLine(),
-          _buildStepCircle(3, 'ข้อมูลญาติ'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStepCircle(int step, String title) {
-    bool isActive = _currentStep >= step;
-    return Column(
-      children: [
-        CircleAvatar(
-          radius: 16,
-          backgroundColor: isActive ? primaryColor : Colors.grey.shade300,
-          child: Text(
-            step.toString(),
-            style: TextStyle(
-              color: isActive ? Colors.white : Colors.grey.shade600,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 10,
-            color: isActive ? primaryColor : Colors.grey,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStepLine() {
-    return Expanded(
-      child: Container(
-        height: 2,
-        color: Colors.grey.shade300,
-        margin: const EdgeInsets.symmetric(horizontal: 5).copyWith(bottom: 15),
-      ),
-    );
-  }
-
-  // 🌟 Step 1: ข้อตกลงและเงื่อนไข (ดึงมาจาก Step 3 เดิม)
+  // 🌟 Step 1: ข้อตกลงและเงื่อนไข
   Widget _buildStep1() {
-    // แยกรายการข้อตกลงเพื่อให้จัดการ Spacing และ UI ได้ง่ายขึ้น
     final List<String> terms = [
       '1. ผู้ใช้บริการต้องลงทะเบียนและให้ข้อมูลส่วนบุคคลของตนเองและผู้สูงอายุที่ถูกต้อง ครบถ้วน และเป็นปัจจุบัน',
       '2. ผู้ใช้บริการต้องแจ้งข้อมูลสภาพร่างกาย โรคประจำตัว เพื่อความปลอดภัยในการให้บริการ',
@@ -495,9 +434,10 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
       '9. ผู้ใช้บริการสามารถให้คะแนนและแสดงความคิดเห็นหลังเสร็จสิ้นการใช้บริการ โดยข้อมูลดังกล่าวต้องเป็นความจริงและไม่เป็นการหมิ่นประมาทผู้อื่น',
       '10. การกดยอมรับข้อตกลงและเงื่อนไขนี้ ถือว่าผู้ใช้บริการได้อ่าน ทำความเข้าใจ และยินยอมปฏิบัติตามเงื่อนไขทั้งหมด',
     ];
-
+    
     return Column(
       children: [
+        const SizedBox(height: 20),
         _buildSectionContainer(
           title: 'ข้อตกลงและเงื่อนไขการใช้บริการ',
           children: [
@@ -549,7 +489,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     );
   }
 
-  // 🌟 Step 2: ข้อมูลผู้ป่วย (สลับข้อมูลส่วนตัวขึ้นก่อนบัญชี และใช้ Radio เลือกเพศ)
+  // 🌟 Step 2: ข้อมูลผู้ป่วย
   Widget _buildStep2() {
     return Form(
       key: _patientFormKey,
@@ -558,7 +498,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
           _buildProfileUploadWidget(),
           const SizedBox(height: 20),
 
-          // 🌟 1. นำข้อมูลส่วนตัวผู้ป่วยขึ้นมาก่อน
           _buildSectionContainer(
             title: 'ข้อมูลส่วนตัวผู้ป่วย',
             children: [
@@ -605,7 +544,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                       children: [
                         _buildLabelField('วันเกิด', isRequired: true),
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.only(bottom: 6),
                           child: TextFormField(
                             controller: _patBirthDateController,
                             readOnly: true,
@@ -651,13 +590,32 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                                 val!.isEmpty ? 'กรุณาระบุวันเกิด' : null,
                           ),
                         ),
+
+                        // 🌟 เพิ่มการแสดงผลป้ายอายุของผู้ป่วยตามสไตล์หน้าผู้ดูแล
+                        if (_patAge != null)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4, bottom: 12),
+                            child: Row(
+                              children: [
+                                Icon(Icons.cake, size: 16, color: primaryColor),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'อายุ $_patAge ปี',
+                                  style: TextStyle(
+                                    color: primaryColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
                   ),
                 ],
               ),
 
-              // 🌟 2. เปลี่ยนการเลือกเพศเป็น Radio Buttons
               _buildLabelField('เพศ', isRequired: true),
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
@@ -798,7 +756,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
             ],
           ),
 
-          // 🌟 3. นำบัญชีเข้าสู่ระบบเลื่อนลงมาไว้ตรงนี้
           _buildSectionContainer(
             title: 'บัญชีเข้าสู่ระบบของผู้ป่วย',
             children: [
@@ -858,7 +815,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     );
   }
 
-  // 🌟 Step 3: ข้อมูลญาติ (ปรับปรุงการจัดวางเรียงลำดับให้กระชับและชัดเจน)
+  // 🌟 Step 3: ข้อมูลญาติ
   Widget _buildStep3() {
     return Form(
       key: _relativeFormKey,
@@ -867,7 +824,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
           _buildSectionContainer(
             title: 'ข้อมูลญาติผู้ดูแล',
             children: [
-              // 1. ชื่อ - นามสกุล
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -903,7 +859,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                 ],
               ),
 
-              // 2. เบอร์โทรศัพท์ & ไอดีไลน์
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -941,7 +896,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                 ],
               ),
 
-              // 3. อีเมล
               _buildLabelField('อีเมล', isRequired: true),
               _buildInputField(
                 hint: 'เช่น example@gmail.com',
@@ -960,7 +914,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                 },
               ),
 
-              // 4. ความสัมพันธ์กับผู้ป่วย
               _buildLabelField('ความสัมพันธ์กับผู้ป่วย', isRequired: true),
               Padding(
                 padding: const EdgeInsets.only(bottom: 12.0),
@@ -1016,7 +969,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
             ],
           ),
 
-          // แสดงข้อความแจ้งเตือนเมื่อเกิด Error ตอนกดสมัคร
           if (_submitErrorMessage != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
