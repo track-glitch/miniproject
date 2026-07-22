@@ -6,6 +6,7 @@ class VehicleModel {
   String? brand;
   String? model;
   String? licenseplate;
+  String? province;
   String? color;
 
   // ความสัมพันธ์ 1 : 1..n
@@ -17,6 +18,7 @@ class VehicleModel {
     this.brand,
     this.model,
     this.licenseplate,
+    this.province,
     this.color,
     this.vehiclephotos,
   });
@@ -28,11 +30,12 @@ class VehicleModel {
       brand: json['brand'],
       model: json['model'],
       licenseplate: json['licenseplate'],
+      province: json['province'],
       color: json['color'],
       vehiclephotos: json['vehiclephotos'] != null
           ? (json['vehiclephotos'] as List)
-              .map((e) => VehiclePhotoModel.fromJson(e))
-              .toList()
+                .map((e) => VehiclePhotoModel.fromJson(e))
+                .toList()
           : null,
     );
   }
@@ -44,8 +47,9 @@ class VehicleModel {
       'brand': brand,
       'model': model,
       'licenseplate': licenseplate,
+      'province': province,
       'color': color,
-      'vehiclephotos': vehiclephotos?.map((e) => e.toJson()).toList(),
+      'VehiclePhoto': vehiclephotos?.map((e) => e.toJson()).toList(),
     };
   }
 }

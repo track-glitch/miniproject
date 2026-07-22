@@ -117,24 +117,39 @@ class AuthService {
 
           email = userData['Relative']['email'];
           role = 'relative';
+        } else {
+          // 3. 🔍 ถ้ายังไม่เจออีก ให้ลองค้นหาในโหนด Admin
+          // หมายเหตุ: หาก Admin ในฐานข้อมูลใช้ key อื่นที่ไม่ใช่ 'adminId' (เช่น username) ให้เปลี่ยนตรงนี้ครับ
+          DatabaseEvent adminEvent = await _dbRef
+              .child('Login')
+              .orderByChild('Admin/adminId')
+              .equalTo(idCard)
+              .once();
+
+          if (adminEvent.snapshot.exists) {
+            Map<dynamic, dynamic> users =
+                adminEvent.snapshot.value as Map<dynamic, dynamic>;
+            uid = users.keys.first.toString();
+            userData = Map<dynamic, dynamic>.from(users[uid] as Map);
+
+            email = userData['Admin']['email'];
+            role = 'admin';
+          }
         }
       }
 
-      // 3. ถ้าหาไม่เจอทั้งคู่ แปลว่าไม่มีเลขบัตรนี้ในระบบ
+      // 4. ถ้าหาไม่เจอทั้ง 3 โหนด แปลว่าไม่มีบัญชีนี้ในระบบ
       if (email == null || role == null) {
-        return {
-          'success': false,
-          'message': 'ไม่พบหมายเลขบัตรประชาชนนี้ในระบบ',
-        };
+        return {'success': false, 'message': 'ไม่พบข้อมูลผู้ใช้งานนี้ในระบบ'};
       }
 
-      // 4. ล็อกอินด้วย Firebase Auth จริงๆ
+      // 5. ล็อกอินด้วย Firebase Auth จริงๆ
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // 5. จัดเตรียมข้อมูลส่งกลับให้หน้า Login แยกตามประเภทผู้ใช้
+      // 6. จัดเตรียมข้อมูลส่งกลับให้หน้า Login แยกตามประเภทผู้ใช้
       if (role == 'caretaker') {
         String status = userData!['Caretaker']['accountstatus'] ?? 'Pending';
         String reason = userData['Caretaker']['admincomment'] ?? '';
@@ -153,6 +168,13 @@ class AuthService {
           'accountstatus': status,
           'admincomment': reason,
           'hasVehicle': hasVehicle,
+        };
+      } else if (role == 'admin') {
+        // กรณีเป็นแอดมิน (Admin)
+        return {
+          'success': true,
+          'uid': userCredential.user!.uid,
+          'usertype': 'admin',
         };
       } else {
         // กรณีเป็นญาติ (Relative)

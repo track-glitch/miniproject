@@ -15,6 +15,7 @@ class CaretakerModel {
   String? phonenumber;
   String? email;
   String? experience;
+  String? servicedesc;
   String? admincomment;
   String? servicestatus;
   String? accountstatus;
@@ -37,6 +38,7 @@ class CaretakerModel {
     this.phonenumber,
     this.email,
     this.experience,
+    this.servicedesc,
     this.admincomment,
     this.servicestatus,
     this.accountstatus,
@@ -61,6 +63,7 @@ class CaretakerModel {
       phonenumber: json['phonenumber'],
       email: json['email'],
       experience: json['experience'],
+      servicedesc: json['servicedesc'],
       admincomment: json['admincomment'],
       servicestatus: json['servicestatus'],
       accountstatus: json['accountstatus'],
@@ -100,6 +103,7 @@ class CaretakerModel {
       'phonenumber': phonenumber,
       'email': email,
       'experience': experience,
+      'servicedesc': servicedesc,
       'admincomment': admincomment,
       'servicestatus': servicestatus,
       'accountstatus': accountstatus,

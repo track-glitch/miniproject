@@ -9,7 +9,7 @@ import '../../widgets/custom_bottom_nav.dart';
 import '../caretaker/add_status_notification_page.dart';
 import '../../views/caretaker/list_relative_request_page.dart';
 import '../caretaker/edit_profile_page.dart';
-import '../../services/caretaker_service.dart'; // 🌟 เพิ่มไว้บนสุด
+import '../../services/caretaker_service.dart';
 
 enum RequestStatus {
   pending,
@@ -43,7 +43,6 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
   LatLng pointB = const LatLng(18.8236, 99.0068);
   List<LatLng> routePoints = [];
 
-  // 🌟 1. เพิ่มตัวแปรเก็บข้อความระยะทาง
   String _distanceText = 'กำลังคำนวณ...';
 
   final String maptilerApiKey = 'JCT1H6ehzlMaKZyrC5mp';
@@ -107,7 +106,6 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     _getRoute();
   }
 
-  // 🌟 ดึงข้อมูลพิกัดและระยะทางจาก API
   Future<void> _getRoute() async {
     try {
       final url =
@@ -118,13 +116,11 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
         final data = json.decode(response.body);
         final List coords = data['routes'][0]['geometry']['coordinates'];
 
-        // 🌟 2. ดึงข้อมูลระยะทาง (หน่วยเป็นเมตร)
         final double distanceInMeters = data['routes'][0]['distance']
             .toDouble();
 
         setState(() {
           routePoints = coords.map((c) => LatLng(c[1], c[0])).toList();
-          // แปลงเป็นกิโลเมตรและทศนิยม 1 ตำแหน่ง
           _distanceText =
               'ระยะทาง ${(distanceInMeters / 1000).toStringAsFixed(1)} กม.';
           _isLoading = false;
@@ -233,22 +229,18 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
 
                           setState(() {
                             if (isAccept) {
-                              // 🌟 1. เช็คเวลานัดหมายว่าถึงหรือยัง ณ ตอนที่กดอนุมัติ
                               bool isTimeArrived = false;
                               final appt = widget
                                   .requestData
                                   .requestModel
                                   .appointmentdate;
                               if (appt != null) {
-                                // ถ้าเวลาปัจจุบัน เลยเวลานัด หรือถึงเวลานัดพอดี
                                 if (DateTime.now().isAfter(appt) ||
                                     DateTime.now().isAtSameMomentAs(appt)) {
                                   isTimeArrived = true;
                                 }
                               }
 
-                              // 🌟 2. ถ้าถึงเวลาแล้ว ให้สถานะเป็น acceptedReady เลย (ปุ่มกดได้ทันที แจ้งเตือนสีแดงหายไป)
-                              // ถ้ายังไม่ถึง ให้เป็น acceptedEarly
                               currentStatus =
                                   isTimeArrived || widget.requestData.hasAlert
                                   ? RequestStatus.acceptedReady
@@ -282,7 +274,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: Colors.grey.shade50,
+        backgroundColor: const Color(0xFFF7F8FA),
         appBar: const CustomHeader(
           title: 'รายละเอียดคำขอ',
           showBackButton: true,
@@ -313,9 +305,27 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     var reqModel = widget.requestData.requestModel;
 
     String patAge = 'ไม่ระบุอายุ';
-    if (pat['birthdate'] != null) {
-      DateTime dob = DateTime.tryParse(pat['birthdate']) ?? DateTime.now();
-      patAge = '${DateTime.now().year - dob.year} ปี';
+    if (pat['birthdate'] != null && pat['birthdate'].toString().isNotEmpty) {
+      String dobStr = pat['birthdate'].toString();
+      try {
+        if (dobStr.contains('/')) {
+          List<String> parts = dobStr.split('/');
+          if (parts.length == 3) {
+            int birthYear = int.parse(parts[2].trim());
+            if (birthYear > 2400) {
+              birthYear -= 543;
+            }
+            patAge = '${DateTime.now().year - birthYear} ปี';
+          }
+        } else {
+          DateTime? dob = DateTime.tryParse(dobStr);
+          if (dob != null) {
+            patAge = '${DateTime.now().year - dob.year} ปี';
+          }
+        }
+      } catch (e) {
+        patAge = 'ระบุอายุไม่ได้';
+      }
     }
     String patGender = pat['gender'] ?? 'ไม่ระบุเพศ';
 
@@ -326,7 +336,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
         "$patPrefix${pat['firstname'] ?? ''} ${pat['lastname'] ?? ''}".trim();
     if (patName == 'คุณ' || patName.isEmpty) patName = 'ไม่ระบุชื่อผู้ป่วย';
 
-    String patMobility = pat['mobility'] ?? 'ไม่ระบุการเคลื่อนไหว';
+    String patMobility = pat['mobility'] ?? 'ไม่ระบุ';
     String patDisease = pat['disease'] ?? 'ไม่มีโรคประจำตัว';
     String patPhone = pat['phonenumber'] ?? 'ไม่มีเบอร์โทรศัพท์';
     String patImage = pat['patientphoto'] ?? '';
@@ -346,50 +356,35 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     String pickupAddress = reqModel.pickuplocation?.address ?? 'ไม่ระบุจุดรับ';
     String dropoffAddress =
         reqModel.dropofflocation?.address ?? 'ไม่ระบุจุดส่ง';
-    String countdownText = '';
-    if (reqModel.appointmentdate != null) {
-      final now = DateTime.now();
-      final appt = reqModel.appointmentdate!;
-      final difference = appt.difference(now).inDays;
-      if (difference > 0) {
-        countdownText = 'อีก $difference วัน';
-      } else if (difference == 0) {
-        countdownText = 'วันนี้';
-      } else {
-        countdownText = 'ผ่านมาแล้ว';
-      }
-    }
 
-    // 🌟 1. ดึงชุดสีเดียวกับหน้า List มาใช้
     String statusText = 'อยู่ระหว่างรอ';
     Color statusColor = Colors.grey;
-    Color statusBgColor = Colors.grey.shade200;
+    Color statusBgColor = Colors.white;
 
     switch (currentStatus) {
       case RequestStatus.pending:
-        statusColor = const Color(0xFF757BFF); // สีน้ำเงิน
-        statusBgColor = const Color(0xFFB4BEFF).withOpacity(0.3);
+        statusColor = const Color(0xFF757BFF);
+        statusBgColor = Colors.white;
         statusText = 'รอตอบรับ';
         break;
       case RequestStatus.acceptedEarly:
       case RequestStatus.acceptedReady:
-        statusColor = const Color(0xFF00C853); // สีเขียว
-        statusBgColor = const Color(0xFFB9F6CA);
+        statusColor = const Color(0xFF00B14F);
+        statusBgColor = Colors.white;
         statusText = 'ตอบรับแล้ว';
         break;
       case RequestStatus.completed:
         statusColor = const Color(0xFF00B14F);
-        statusBgColor = const Color(0xFFB9F6CA);
+        statusBgColor = Colors.white;
         statusText = 'สิ้นสุดบริการ';
         break;
       case RequestStatus.cancelled:
-        statusColor = const Color(0xFFFF5C5C); // สีแดง
-        statusBgColor = const Color(0xFFFFB6B6).withOpacity(0.3);
+        statusColor = const Color(0xFFFF5C5C);
+        statusBgColor = Colors.white;
         statusText = 'ยกเลิกบริการ';
         break;
       default:
         statusColor = Colors.grey;
-        statusBgColor = Colors.grey.shade200;
         statusText = 'ไม่ทราบสถานะ';
     }
 
@@ -398,7 +393,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     String timeOnly = dateParts.length > 1 ? dateParts[1].trim() : '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4EDFB),
+      backgroundColor: const Color(0xFFF7F8FA),
       appBar: const CustomHeader(title: 'รายละเอียดคำขอ', showBackButton: true),
       body: Column(
         children: [
@@ -421,661 +416,329 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 🌟 2. ข้อมูลหลัก (Header) คงโครงสร้างเดิม แต่เปลี่ยนสี
-                  _buildSectionBox(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24.0),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300, width: 1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.requestData.serviceName,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  // 🌟 เอา const ออก
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: statusColor, // 🌟 ใช้สีเดียวกับสถานะ
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF3E5F5),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  widget.requestData.category,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFFA052BE),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                        // 🌟 ส่วนหัวฟอร์ม (ดัดแปลงรูปแบบมาจากฝั่ง Relative เพื่อความเรียบร้อย)[cite: 6]
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'ใบคำขอรับบริการ',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade500,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '#REQ-${widget.requestData.id}',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'ส่งคำขอเมื่อ: ${widget.requestData.submitDate}', // 🌟 วันที่ถูกดันขึ้นมาอยู่ส่วนหัว
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
+                                horizontal: 14,
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: statusBgColor, // 🌟 สีพื้นหลังป้าย
+                                color: statusBgColor,
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: statusColor,
-                                ), // 🌟 สีขอบป้าย
+                                  width: 1.5,
+                                ),
                               ),
                               child: Text(
                                 statusText,
                                 style: TextStyle(
-                                  color: statusColor, // 🌟 สีตัวหนังสือป้าย
+                                  color: statusColor,
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '# ${widget.requestData.id}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                                fontWeight: FontWeight.w600,
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                        // --- ข้อมูลบริการ ---
+                        // 🌟 ใช้เส้น Divider ที่เป็นสไตล์ของฝั่ง Caretaker[cite: 5]
+                        _buildSectionDivider('ข้อมูลการนัดหมาย'),
+
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _buildInfoField('วันที่นัดหมาย', dateOnly),
+                            ),
+                            Expanded(
+                              child: _buildInfoField('เวลานัดหมาย', timeOnly),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _buildInfoField(
+                                'สถานพยาบาล',
+                                widget.requestData.serviceName,
+                                maxLines: 2,
+                              ),
+                            ),
+                            Expanded(
+                              child: _buildInfoField(
+                                'แผนก',
+                                widget.requestData.category,
                               ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-
-                  // 🌟 2. รายละเอียดคำร้อง (ย้ายมาไว้ด้านบน และเน้นสีพื้นหลังให้ชัดเจน)
-                  _buildSectionTitle('รายละเอียดคำร้อง (งานที่ต้องทำ)'),
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF8E1), // สีเหลืองนวลให้สะดุดตา
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: const Color(0xFFFFD54F),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Text(
-                      requestDetail,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        height: 1.5,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-
-                  // 🌟 3. วันและเวลานัดหมาย
-                  _buildSectionTitle('วันและเวลานัดหมาย'),
-                  _buildSectionBox(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF3E5F5),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Icon(
-                                  Icons.calendar_today,
-                                  color: Color(0xFFA052BE),
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      dateOnly,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'เวลา $timeOnly',
-                                      style: TextStyle(
-                                        color: Colors.grey.shade600,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                        const SizedBox(height: 16),
+                        _buildInfoField(
+                          'รายละเอียดคำขอ',
+                          requestDetail,
+                          maxLines: 5,
                         ),
-                        const SizedBox(width: 8),
-                        if (currentStatus != RequestStatus.completed &&
-                            currentStatus != RequestStatus.cancelled &&
-                            countdownText.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFF3E0),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.timer_outlined,
-                                  color: Color(0xFFFF8C00),
-                                  size: 14,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  countdownText,
-                                  style: const TextStyle(
-                                    color: Color(0xFFFF8C00),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
+                        const SizedBox(height: 16),
 
-                  // 🌟 4. จุดรับจุดส่ง และ แผนที่
-                  _buildSectionTitle('จุดรับจุดส่ง'),
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => FullScreenMapPage(
-                                  pointA: pointA,
-                                  pointB: pointB,
-                                  routePoints: routePoints,
-                                  distanceText: _distanceText,
-                                  maptilerApiKey: maptilerApiKey,
-                                ),
-                              ),
-                            );
-                          },
-                          child: SizedBox(
-                            height: 180,
-                            child: ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(16),
-                              ),
-                              child: Stack(
-                                children: [
-                                  IgnorePointer(
-                                    child: FlutterMap(
-                                      options: MapOptions(
-                                        initialCameraFit: CameraFit.bounds(
-                                          bounds: LatLngBounds.fromPoints([
-                                            pointA,
-                                            pointB,
-                                          ]),
-                                          padding: const EdgeInsets.all(40.0),
-                                        ),
-                                        interactionOptions:
-                                            const InteractionOptions(
-                                              flags: InteractiveFlag.none,
-                                            ),
-                                      ),
-                                      children: [
-                                        TileLayer(
-                                          urlTemplate:
-                                              'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=$maptilerApiKey',
-                                          userAgentPackageName:
-                                              'com.example.app',
-                                        ),
-                                        PolylineLayer(
-                                          polylines: [
-                                            Polyline(
-                                              points: routePoints,
-                                              color: Colors.blue.shade400,
-                                              strokeWidth: 4.0,
-                                            ),
-                                          ],
-                                        ),
-                                        MarkerLayer(
-                                          markers: [
-                                            Marker(
-                                              point: pointA,
-                                              width: 32,
-                                              height: 32,
-                                              alignment: Alignment.center,
-                                              // 🌟 เปลี่ยนหมุด A ให้เป็นสีฟ้า
-                                              child: _buildMapPin(
-                                                'A',
-                                                const Color(0xFF2196F3),
-                                              ),
-                                            ),
-                                            Marker(
-                                              point: pointB,
-                                              width: 32,
-                                              height: 32,
-                                              alignment: Alignment.center,
-                                              // 🌟 เปลี่ยนหมุด B ให้เป็นสีแดง
-                                              child: _buildMapPin(
-                                                'B',
-                                                const Color(0xFFF44336),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 10,
-                                    right: 10,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.95),
-                                        borderRadius: BorderRadius.circular(12),
-                                        boxShadow: const [
-                                          BoxShadow(
-                                            color: Colors.black12,
-                                            blurRadius: 4,
-                                          ),
-                                        ],
-                                      ),
-                                      child: Text(
-                                        _distanceText,
-                                        style: const TextStyle(
-                                          color: Color(0xFFA052BE),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    bottom: 10,
-                                    right: 10,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.6),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: const Row(
-                                        children: [
-                                          Icon(
-                                            Icons.zoom_out_map,
-                                            color: Colors.white,
-                                            size: 14,
-                                          ),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            'กดเพื่อขยายแผนที่',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 11,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // 🌟 ปรับสีวงกลมให้ตรงกับหมุดในแผนที่
-                                  _buildHollowCircle(const Color(0xFF2196F3)),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'A จุดรับ',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: Color(0xFF2196F3),
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Text(
-                                          pickupAddress,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Container(
-                                margin: const EdgeInsets.only(
-                                  left: 7,
-                                  top: 4,
-                                  bottom: 4,
-                                ),
-                                height: 20,
-                                width: 2,
-                                color: Colors.grey.shade300,
-                              ),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // 🌟 ปรับสีวงกลมให้ตรงกับหมุดในแผนที่
-                                  _buildHollowCircle(const Color(0xFFF44336)),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'B จุดส่ง',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: Color(0xFFF44336),
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Text(
-                                          dropoffAddress,
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // 🌟 5. ข้อมูลผู้ป่วย
-                  _buildSectionTitle('ข้อมูลผู้ป่วย'),
-                  _buildSectionBox(
-                    child: Column(
-                      children: [
+                        _buildSectionDivider('ข้อมูลผู้ป่วย'),
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             CircleAvatar(
-                              radius: 30,
-                              backgroundColor: Colors.grey.shade200,
+                              radius: 26,
+                              backgroundColor: Colors.grey.shade100,
                               backgroundImage: patImage.length > 100
                                   ? MemoryImage(base64Decode(patImage))
                                   : null,
                               child: patImage.isEmpty
                                   ? const Icon(
                                       Icons.person,
-                                      size: 30,
+                                      size: 26,
                                       color: Colors.grey,
                                     )
                                   : null,
                             ),
                             const SizedBox(width: 16),
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    patName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+                              child: _buildInfoField('ชื่อ-นามสกุล', patName),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _buildInfoField('อายุ', patAge)),
+                            Expanded(child: _buildInfoField('เพศ', patGender)),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _buildInfoField('โรคประจำตัว', patDisease),
+                            ),
+                            Expanded(
+                              child: _buildInfoField(
+                                'การเคลื่อนไหว',
+                                patMobility,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        _buildInfoField('เบอร์โทรศัพท์', patPhone),
+
+                        _buildSectionDivider('ข้อมูลจุดรับ-จุดส่ง'),
+                        Container(
+                          height: 150,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Stack(
+                              children: [
+                                IgnorePointer(
+                                  child: FlutterMap(
+                                    options: MapOptions(
+                                      initialCameraFit: CameraFit.bounds(
+                                        bounds: LatLngBounds.fromPoints([
+                                          pointA,
+                                          pointB,
+                                        ]),
+                                        padding: const EdgeInsets.all(30.0),
+                                      ),
+                                      interactionOptions:
+                                          const InteractionOptions(
+                                            flags: InteractiveFlag.none,
+                                          ),
                                     ),
+                                    children: [
+                                      TileLayer(
+                                        urlTemplate:
+                                            'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=$maptilerApiKey',
+                                      ),
+                                      PolylineLayer(
+                                        polylines: [
+                                          Polyline(
+                                            points: routePoints,
+                                            color: Colors.blue.shade400,
+                                            strokeWidth: 4.0,
+                                          ),
+                                        ],
+                                      ),
+                                      MarkerLayer(
+                                        markers: [
+                                          Marker(
+                                            point: pointA,
+                                            width: 24,
+                                            height: 24,
+                                            child: _buildMapPin(
+                                              'A',
+                                              const Color(0xFF2196F3),
+                                            ),
+                                          ),
+                                          Marker(
+                                            point: pointB,
+                                            width: 24,
+                                            height: 24,
+                                            child: _buildMapPin(
+                                              'B',
+                                              const Color(0xFFF44336),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'อายุ $patAge · เพศ$patGender · $patMobility',
-                                    style: TextStyle(
-                                      color: Colors.grey.shade600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Container(
+                                ),
+                                Positioned(
+                                  bottom: 8,
+                                  right: 8,
+                                  child: Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 10,
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFFFF3E0),
-                                      borderRadius: BorderRadius.circular(12),
+                                      color: Colors.black87,
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.favorite,
-                                          color: Colors.orange,
-                                          size: 14,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Flexible(
-                                          child: Text(
-                                            patDisease,
-                                            style: const TextStyle(
-                                              color: Colors.orange,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
+                                    child: const Text(
+                                      'กดเพื่อดูแผนที่เต็ม',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                      ),
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12.0),
-                          child: Divider(height: 1, color: Color(0xFFEEEEEE)),
-                        ),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.phone,
-                              size: 18,
-                              color: Colors.black,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'เบอร์ผู้ป่วย',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                patPhone,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                                Positioned.fill(
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                FullScreenMapPage(
+                                                  pointA: pointA,
+                                                  pointB: pointB,
+                                                  routePoints: routePoints,
+                                                  distanceText: _distanceText,
+                                                  maptilerApiKey:
+                                                      maptilerApiKey,
+                                                ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ],
-                    ),
-                  ),
-
-                  // 🌟 6. ข้อมูลญาติ (ย้ายมาล่างสุด)
-                  _buildSectionTitle('ข้อมูลญาติผู้ติดต่อ'),
-                  _buildSectionBox(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                relName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF3E5F5),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                relRelation,
-                                style: const TextStyle(
-                                  color: Color(0xFFA052BE),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: 16),
+                        _buildInfoField('A จุดรับ', pickupAddress, maxLines: 2),
+                        const SizedBox(height: 12),
+                        _buildInfoField(
+                          'B จุดส่ง',
+                          dropoffAddress,
+                          maxLines: 2,
                         ),
                         const SizedBox(height: 12),
+                        _buildInfoField('ระยะทางประเมิน', _distanceText),
+
+                        _buildSectionDivider('ข้อมูลญาติผู้ติดต่อ'),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(
-                              Icons.phone,
-                              size: 18,
-                              color: Colors.black,
+                            Expanded(
+                              child: _buildInfoField('ชื่อ-นามสกุล', relName),
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'เบอร์โทร',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Text(
-                              relPhone,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
+                            Expanded(
+                              child: _buildInfoField(
+                                'ความสัมพันธ์',
+                                relRelation,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 16),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(
-                              Icons.chat_bubble_outline,
-                              size: 18,
-                              color: Colors.black,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'LINE ID',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
                             Expanded(
-                              child: Text(
-                                relLine,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                              child: _buildInfoField('เบอร์โทรศัพท์', relPhone),
+                            ),
+                            Expanded(
+                              child: _buildInfoField('LINE ID', relLine),
                             ),
                           ],
                         ),
@@ -1083,7 +746,8 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 30),
+                  // --- ส่วนปุ่มกด (อยู่นอกกรอบเอกสาร) ---
+                  const SizedBox(height: 24),
                   _buildBottomActionButtons(),
                   const SizedBox(height: 20),
                 ],
@@ -1100,6 +764,63 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     );
   }
 
+  // 🌟 ฟังก์ชันสร้างฟิลด์ข้อมูลตามเรฟเฟอเรนซ์ (Label สีเทาเล็ก Value สีดำใหญ่)[cite: 5]
+  Widget _buildInfoField(String label, String value, {int maxLines = 1}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade500,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value.isEmpty ? '-' : value,
+          maxLines: maxLines,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 🌟 ฟังก์ชันสร้างเส้นคั่นพร้อมข้อความตรงกลาง ตามเรฟเฟอเรนซ์[cite: 5]
+  Widget _buildSectionDivider(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Divider(color: Color(0xFFE8E8E8), thickness: 1),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF8E44AD), // สีม่วง
+              ),
+            ),
+          ),
+          const Expanded(
+            child: Divider(color: Color(0xFFE8E8E8), thickness: 1),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBottomActionButtons() {
     if (currentStatus == RequestStatus.completed ||
         currentStatus == RequestStatus.cancelled) {
@@ -1112,15 +833,16 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
           Expanded(
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4CAF50),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                backgroundColor: const Color(0xFF00B14F),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                elevation: 0,
               ),
               onPressed: () => _showConfirmationDialog(true),
               child: const Text(
-                'ตกลง',
+                'ตกลงรับงาน',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.white,
@@ -1133,18 +855,20 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
           Expanded(
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF44336),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                backgroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: Color(0xFFFF5C5C), width: 1.5),
                 ),
+                elevation: 0,
               ),
               onPressed: () => _showConfirmationDialog(false),
               child: const Text(
                 'ปฏิเสธ',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.white,
+                  color: Color(0xFFFF5C5C),
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1160,12 +884,13 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: isReady
-              ? const Color(0xFFA052BE)
+              ? const Color(0xFF8E44AD)
               : Colors.grey.shade400,
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
+          elevation: 0,
         ),
         onPressed: isReady
             ? () {
@@ -1181,7 +906,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
               }
             : null,
         child: const Text(
-          'ส่งการแจ้งเตือน',
+          'เริ่มส่งสถานะแจ้งเตือน',
           style: TextStyle(
             fontSize: 16,
             color: Colors.white,
@@ -1192,61 +917,19 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFFA052BE),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionBox({required Widget child}) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: child,
-    );
-  }
-
-  Widget _buildHollowCircle(Color color) {
-    return Container(
-      width: 16,
-      height: 16,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: color, width: 3.5),
-      ),
-    );
-  }
-
   Widget _buildMapPin(String label, Color color) {
-    // 🌟 เปลี่ยนจากการแสดงเงาเฉยๆ เป็นกรอบวงกลมสีสันสวยงามคล้ายหมุด
     return Container(
       decoration: BoxDecoration(
         color: color,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 2.5),
-        boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
-        ],
+        border: Border.all(color: Colors.white, width: 2),
       ),
       alignment: Alignment.center,
       child: Text(
         label,
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 14,
+          fontSize: 10,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -1254,7 +937,6 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
   }
 }
 
-// 🌟 อย่าลืมอัปเดต FullScreenMapPage ด้านล่างนี้ด้วยนะครับ
 class FullScreenMapPage extends StatelessWidget {
   final LatLng pointA;
   final LatLng pointB;
@@ -1302,7 +984,6 @@ class FullScreenMapPage extends StatelessWidget {
               TileLayer(
                 urlTemplate:
                     'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=$maptilerApiKey',
-                userAgentPackageName: 'com.example.app',
               ),
               PolylineLayer(
                 polylines: [
@@ -1319,21 +1000,13 @@ class FullScreenMapPage extends StatelessWidget {
                     point: pointA,
                     width: 44,
                     height: 44,
-                    alignment: Alignment.center,
-                    child: _buildLargeMapPin(
-                      'A',
-                      const Color(0xFF2196F3),
-                    ), // 🌟 สีฟ้า
+                    child: _buildLargeMapPin('A', const Color(0xFF2196F3)),
                   ),
                   Marker(
                     point: pointB,
                     width: 44,
                     height: 44,
-                    alignment: Alignment.center,
-                    child: _buildLargeMapPin(
-                      'B',
-                      const Color(0xFFF44336),
-                    ), // 🌟 สีแดง
+                    child: _buildLargeMapPin('B', const Color(0xFFF44336)),
                   ),
                 ],
               ),
@@ -1383,7 +1056,6 @@ class FullScreenMapPage extends StatelessWidget {
   }
 
   Widget _buildLargeMapPin(String label, Color color) {
-    // 🌟 เปลี่ยนหมุดแผนที่ใหญ่ให้เป็นวงกลมสวยๆ เหมือนกัน
     return Container(
       decoration: BoxDecoration(
         color: color,

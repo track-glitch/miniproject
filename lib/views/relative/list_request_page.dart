@@ -25,10 +25,9 @@ class _ListRequestPageState extends State<ListRequestPage> {
   int _currentTabIndex = 0; // 0 = กำลังดำเนินการ, 1 = สิ้นสุด, 2 = ยกเลิก
   bool _isLoading = true;
 
-  final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
+  final Color bgColor = const Color(0xFFF9F9F9);
   final Color primaryPurple = const Color(0xFF8763E6);
-  final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
-  final Color lightPurpleBg = const Color.fromARGB(255, 206, 157, 255);
+  final Color darkPurple = const Color(0xFF7D3C98);
 
   List<RequestCardData> requestsInProgress = [];
   List<RequestCardData> requestsCompleted = [];
@@ -40,11 +39,9 @@ class _ListRequestPageState extends State<ListRequestPage> {
     _fetchMyRequests();
   }
 
-  // 🌟 ดึงข้อมูลคำขอเฉพาะของตัวเองจาก Firebase
   Future<void> _fetchMyRequests() async {
     String uid =
         widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
-
     if (uid.isEmpty) {
       setState(() => _isLoading = false);
       return;
@@ -54,7 +51,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
       final snapshot = await FirebaseDatabase.instance
           .ref('Login/$uid/Relative/Request')
           .get();
-
       List<RequestCardData> inProgress = [];
       List<RequestCardData> completed = [];
       List<RequestCardData> cancelled = [];
@@ -63,7 +59,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
         final Map<dynamic, dynamic> requestsMap =
             snapshot.value as Map<dynamic, dynamic>;
 
-        // ดึงรายชื่อ Caretaker ทั้งหมดมาเตรียมไว้แมปชื่อ
         final allUsersSnapshot = await FirebaseDatabase.instance
             .ref('Login')
             .get();
@@ -87,7 +82,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
               Map<String, dynamic>.from(reqData),
             );
             String statusType = (req.requeststatus ?? 'pending').toLowerCase();
-
             String caretakerName = 'รอผู้ดูแลตอบรับ';
             if (req.caretakerId != null &&
                 caretakerNameMap.containsKey(req.caretakerId)) {
@@ -118,7 +112,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
           }
         });
 
-        // เรียงลำดับจากใหม่ไปเก่า
         int sortDate(RequestCardData a, RequestCardData b) {
           DateTime dateA = a.requestModel.requestdate ?? DateTime.now();
           DateTime dateB = b.requestModel.requestdate ?? DateTime.now();
@@ -131,7 +124,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
       }
 
       if (!mounted) return;
-
       setState(() {
         requestsInProgress = inProgress;
         requestsCompleted = completed;
@@ -142,6 +134,25 @@ class _ListRequestPageState extends State<ListRequestPage> {
       print("Error fetching requests: $e");
       setState(() => _isLoading = false);
     }
+  }
+
+  String _formatThaiDateShort(DateTime? date) {
+    if (date == null) return '-';
+    List<String> months = [
+      'ม.ค.',
+      'ก.พ.',
+      'มี.ค.',
+      'เม.ย.',
+      'พ.ค.',
+      'มิ.ย.',
+      'ก.ค.',
+      'ส.ค.',
+      'ก.ย.',
+      'ต.ค.',
+      'พ.ย.',
+      'ธ.ค.',
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year + 543}';
   }
 
   String _formatThaiDate(DateTime? date, DateTime? time) {
@@ -169,8 +180,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
       'ศุกร์',
       'เสาร์',
     ];
-
-    // ตรงกับรูป: วันศุกร์ 16 ม.ค. 2568 · 08:00 น.
     return 'วัน${days[date.weekday % 7]} ${date.day} ${months[date.month - 1]} ${date.year + 543} · ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} น.';
   }
 
@@ -184,15 +193,16 @@ class _ListRequestPageState extends State<ListRequestPage> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(color: bgColor),
-        ),
+        body: Center(child: CircularProgressIndicator(color: primaryPurple)),
       );
     }
 
     return Scaffold(
       backgroundColor: bgColor,
-      appBar: const CustomHeader(title: 'รายการคำขอ', showBackButton: true),
+      appBar: const CustomHeader(
+        title: 'ประวัติคำขอใช้บริการ',
+        showBackButton: true,
+      ),
       body: Column(
         children: [
           Container(
@@ -206,19 +216,15 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 unselectedLabelColor: Colors.grey.shade600,
                 indicatorColor: primaryPurple,
                 indicatorWeight: 3,
-
-                // 1. เพิ่มโค้ดส่วนนี้เพื่อปรับขนาดตัวอักษร
                 labelStyle: const TextStyle(
-                  fontSize: 14, // ปรับขนาดตัวอักษรตอนที่เลือก
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
                 unselectedLabelStyle: const TextStyle(
-                  fontSize: 13, // ปรับขนาดตัวอักษรตอนที่ไม่ได้เลือก
+                  fontSize: 13,
                   fontWeight: FontWeight.normal,
                 ),
-
                 tabs: const [
-                  // 2. เพิ่ม height เพื่อขยายความสูงของแถบให้ดูกว้างขึ้น
                   Tab(text: 'ดำเนินการ', height: 55),
                   Tab(text: 'สิ้นสุด', height: 55),
                   Tab(text: 'ยกเลิก', height: 55),
@@ -226,7 +232,10 @@ class _ListRequestPageState extends State<ListRequestPage> {
               ),
             ),
           ),
-          Container(height: 6, color: bgColor),
+          Container(
+            height: 6,
+            color: bgColor,
+          ), // ระยะห่างเล็กน้อยใต้ TabBar แบบ Caretaker
           Expanded(
             child: _getCurrentTabRequests().isEmpty
                 ? Center(
@@ -252,12 +261,19 @@ class _ListRequestPageState extends State<ListRequestPage> {
                   )
                 : ListView.separated(
                     itemCount: _getCurrentTabRequests().length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 14),
-                    padding: const EdgeInsets.all(16),
-                    itemBuilder: (context, index) {
-                      return _buildRequestCard(_getCurrentTabRequests()[index]);
-                    },
+                    separatorBuilder: (context, index) => Container(
+                      height: 8,
+                      color: bgColor,
+                      child: Center(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 14),
+                          height: 1,
+                          color: Colors.black.withOpacity(0.18),
+                        ),
+                      ),
+                    ),
+                    itemBuilder: (context, index) =>
+                        _buildRequestCard(_getCurrentTabRequests()[index]),
                   ),
           ),
         ],
@@ -265,10 +281,10 @@ class _ListRequestPageState extends State<ListRequestPage> {
       bottomNavigationBar: Container(
         height: 65,
         decoration: BoxDecoration(
-          color: darkPurple,
+          color: primaryPurple,
           boxShadow: [
             BoxShadow(
-              color: darkPurple.withValues(alpha: 0.27),
+              color: primaryPurple.withValues(alpha: 0.27),
               blurRadius: 12,
               offset: const Offset(0, -3),
             ),
@@ -281,14 +297,14 @@ class _ListRequestPageState extends State<ListRequestPage> {
               Icons.home_outlined,
               'บ้าน',
               false,
-              onTap: () => {
+              onTap: () {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
                     builder: (context) =>
-                        (RelativeHomePage(loggedUid: widget.loggedUid)),
+                        RelativeHomePage(loggedUid: widget.loggedUid),
                   ),
-                ),
+                );
               },
             ),
             _buildBottomNavItem(
@@ -310,39 +326,39 @@ class _ListRequestPageState extends State<ListRequestPage> {
   }
 
   Widget _buildRequestCard(RequestCardData request) {
-    Color titleColor;
+    Color mainColor;
     Color statusBgColor;
     Color statusTextColor;
     String statusText;
 
     switch (request.statusType) {
       case 'pending':
-        titleColor = const Color(0xFFFF8C00);
-        statusBgColor = const Color(0xFFFFE0B2);
-        statusTextColor = const Color(0xFFFF8C00);
-        statusText = 'อยู่ระหว่างรอ'; // แก้ข้อความให้ตรงกับดีไซน์
+        mainColor = const Color(0xFF757BFF); // สีส้ม
+        statusBgColor = const Color(0xFFB4BEFF);
+        statusTextColor = const Color(0xFF757BFF);
+        statusText = 'รอตอบรับ';
         break;
       case 'accepted':
-        titleColor = const Color(0xFF00B14F);
-        statusBgColor = const Color(0xFFB9F6CA);
-        statusTextColor = const Color(0xFF00B14F);
+        mainColor = primaryPurple; // สีม่วง
+        statusBgColor = const Color(0xFFF3E5F5);
+        statusTextColor = primaryPurple;
         statusText = 'ตอบรับแล้ว';
         break;
       case 'completed':
-        titleColor = const Color(0xFF00B14F);
-        statusBgColor = const Color(0xFFB9F6CA);
+        mainColor = const Color(0xFF00B14F); // สีเขียว
+        statusBgColor = const Color(0xFFE8F5E9);
         statusTextColor = const Color(0xFF00B14F);
         statusText = 'สิ้นสุดบริการ';
         break;
       case 'cancelled':
-        titleColor = const Color(0xFFF44336);
+        mainColor = const Color(0xFFF44336); // สีแดง
         statusBgColor = const Color(0xFFFFEBEE);
         statusTextColor = const Color(0xFFF44336);
         statusText = 'ยกเลิกบริการ';
         break;
       default:
-        titleColor = Colors.grey;
-        statusBgColor = Colors.grey.shade200;
+        mainColor = Colors.grey;
+        statusBgColor = Colors.grey.shade100;
         statusTextColor = Colors.grey;
         statusText = 'ไม่ทราบสถานะ';
     }
@@ -350,206 +366,201 @@ class _ListRequestPageState extends State<ListRequestPage> {
     bool isInProgressTab = _currentTabIndex == 0;
 
     return Container(
+      // 🌟 ใช้รูปแบบ Margin เหมือนฝั่ง Caretaker เป๊ะ
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-        ],
+        color: const Color(0xFFFFFDF2),
+        borderRadius: BorderRadius.circular(10), // มุม 10
+        border: Border.all(color: Colors.black.withOpacity(0.15), width: 1.2),
       ),
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '# ${request.id}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.black54,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: statusBgColor,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: statusTextColor,
-                    width: 1.2,
-                  ), // เพิ่มเส้นขอบเหมือนในดีไซน์
-                ),
-                child: Text(
-                  statusText,
-                  style: TextStyle(
-                    color: statusTextColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            request.serviceName,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: titleColor,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          _buildDetailRow(
-            icon: Icons.calendar_today,
-            iconColor: primaryPurple,
-            bgColor: const Color(0xFFEFE0F7),
-            label: 'วัน-เวลานัดหมาย',
-            value: request.date,
-            valueColor: primaryPurple,
-          ),
-          
-          const SizedBox(height: 10),
-        
-
-          // 🌟 โซนปุ่มด้านล่าง (แก้ไขให้ตรงตามรูปภาพ)
-          Row(
-            mainAxisAlignment: isInProgressTab
-                ? MainAxisAlignment.spaceBetween
-                : MainAxisAlignment.end,
-            children: [
-              // ถ้าอยู่แท็บกำลังดำเนินการ ให้แสดงปุ่ม "ติดตามสถานะบริการ"
-              if (isInProgressTab)
-                GestureDetector(
-                  onTap: () {
-                    // กดปุ่มแล้วเด้งไปหน้าแจ้งเตือน (Tracking)
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => TrackStatusNotificationPage(
-                          loggedUid: widget.loggedUid,
-                        ),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFEBEE), // สีพื้นแดงอ่อน
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.notifications,
-                          color: Color(0xFFF44336),
-                          size: 18,
-                        ),
-                        const SizedBox(width: 6),
-                        const Text(
-                          'ติดตามสถานะบริการ',
-                          style: TextStyle(
-                            color: Color(0xFFF44336),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            decoration: TextDecoration.underline,
-                            decorationColor: Color(0xFFF44336),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              TextButton(
-                onPressed: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ViewRequestDetailPage(
-                        requestModel: request.requestModel,
-                        caretakerName: request.caregiverName,
-                        loggedUid:
-                            widget.loggedUid ??
-                            FirebaseAuth.instance.currentUser!.uid,
-                      ),
-                    ),
-                  );
-                  _fetchMyRequests();
-                },
-                child: const Text(
-                  'View More',
-                  style: TextStyle(
-                    color: Color(0xFF8763E6),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow({
-    required IconData icon,
-    required Color iconColor,
-    required Color bgColor,
-    required String label,
-    required String value,
-    required Color valueColor,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
           decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(10),
-          ), // ปรับไอคอนเป็นสี่เหลี่ยมขอบมนเหมือนรูป
-          child: Icon(icon, size: 20, color: iconColor),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
+            // 🌟 เพิ่มแถบสีด้านซ้าย
+            border: Border(left: BorderSide(color: mainColor, width: 6)),
+          ),
+          padding: const EdgeInsets.all(12), // 🌟 บีบ Padding ลงเหลือ 12
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.black45,
-                  fontWeight: FontWeight.w500,
-                ),
+              // --- แถวที่ 1: รหัสคำขอ + สถานะ ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '# ${request.id}',
+                    style: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusBgColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: TextStyle(
+                        color: statusTextColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 2),
+
               Text(
-                value,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: valueColor,
-                ),
+                'ส่งเมื่อ: ${_formatThaiDateShort(request.requestModel.requestdate)}',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+              ),
+              const SizedBox(height: 8),
+
+              // --- แถวที่ 2: ชื่อบริการ ---
+              Text(
+                request.serviceName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: mainColor,
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // --- แถวที่ 3: วันและเวลานัดหมาย (จัดเลย์เอาต์ใหม่เหมือนฝั่ง Caretaker) ---
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: mainColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(
+                      Icons.calendar_today,
+                      size: 20,
+                      color: mainColor,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'วัน-เวลานัดหมาย',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        request.date,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: mainColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // --- แถวที่ 4: ปุ่มกดด้านล่าง ---
+              Row(
+                mainAxisAlignment: isInProgressTab
+                    ? MainAxisAlignment.spaceBetween
+                    : MainAxisAlignment.end,
+                children: [
+                  if (isInProgressTab)
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => TrackStatusNotificationPage(
+                              loggedUid: widget.loggedUid,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFEBEE),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          children: const [
+                            Icon(
+                              Icons.notifications,
+                              color: Color(0xFFF44336),
+                              size: 16,
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              'ติดตามสถานะแจ้งเตือน',
+                              style: TextStyle(
+                                color: Color(0xFFF44336),
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                                decorationColor: Color(0xFFF44336),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  GestureDetector(
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ViewRequestDetailPage(
+                            requestModel: request.requestModel,
+                            caretakerName: request.caregiverName,
+                            loggedUid:
+                                widget.loggedUid ??
+                                FirebaseAuth.instance.currentUser!.uid,
+                          ),
+                        ),
+                      );
+                      _fetchMyRequests();
+                    },
+                    child: const Text(
+                      'ดูรายละเอียด',
+                      style: TextStyle(
+                        color: Color(0xFF9B59B6),
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.underline,
+                        decorationColor: Color(0xFF9B59B6),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
-      ],
+      ),
     );
   }
 

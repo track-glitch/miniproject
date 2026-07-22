@@ -106,6 +106,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
         serviceName: req.hospitalname ?? 'ไม่ระบุสถานที่',
         statusType: statusType,
         date: _formatThaiDate(req.appointmentdate, req.appointmenttime),
+        submitDate: _formatThaiDate(req.requestdate, req.requestdate),
         category: req.departmentname ?? 'ทั่วไป',
         patient: patientName.isEmpty ? 'ไม่ระบุชื่อผู้ป่วย' : patientName,
         hasAlert: hasAlert,
@@ -264,8 +265,17 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                   )
                 : ListView.separated(
                     itemCount: _getCurrentTabRequests().length,
-                    separatorBuilder: (context, index) =>
-                        Container(height: 8, color: const Color(0xFFF4EDFB)),
+                    separatorBuilder: (context, index) => Container(
+                      height: 8,
+                      color: const Color(0xFFF4EDFB),
+                      child: Center(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 14),
+                          height: 1,
+                          color: Colors.black.withOpacity(0.18),
+                        ),
+                      ),
+                    ),
                     itemBuilder: (context, index) =>
                         _buildRequestCard(_getCurrentTabRequests()[index]),
                   ),
@@ -293,8 +303,8 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
         statusText = 'รอตอบรับ';
         break;
       case 'accepted':
-        mainColor = const Color(0xFF00C853);
-        statusBgColor = const Color(0xFFB9F6CA);
+        mainColor = const Color(0xFF9B59B6);
+        statusBgColor = const Color(0xFFF4EDFB);
         statusText = 'ตอบรับแล้ว';
         break;
       case 'pending_advice':
@@ -322,17 +332,11 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
 
     return Container(
       // 🔽 1. ลดระยะห่างระหว่างการ์ด (Margin)
-      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFFFFDF2),
         borderRadius: BorderRadius.circular(10), // ปรับขอบให้มนน้อยลงนิดนึง
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        border: Border.all(color: Colors.black.withOpacity(0.15), width: 1.2),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(10),
@@ -404,6 +408,10 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                   ),
                 ],
               ),
+              Text(
+                'ส่งคำขอเมื่อ: ${request.submitDate}',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+              ),
               const SizedBox(height: 8), // 🔽 ลด SizedBox
               // --- แถวที่ 2: ชื่อโรงพยาบาล ---
               Text(
@@ -429,7 +437,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                     ),
                     child: Icon(
                       Icons.calendar_today,
-                      size: 16,
+                      size: 20,
                       color: mainColor,
                     ), // 🔽 ไอคอนเล็กลง
                   ),
@@ -445,7 +453,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 2),
                       Text(
                         request.date,
                         style: TextStyle(
@@ -527,7 +534,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                             Text(
                               request.statusType == 'pending_advice'
                                   ? 'เพิ่มคำแนะนำ'
-                                  : 'ส่งแจ้งเตือน',
+                                  : 'แก้ไขสถานะ',
                               style: TextStyle(
                                 color: (request.hasAlert && isInProgressTab)
                                     ? const Color(0xFFF44336)
@@ -661,6 +668,7 @@ class RequestCard {
   final String serviceName;
   final String statusType;
   final String date;
+  final String submitDate;
   final String category;
   final String patient;
   final bool hasAlert;
@@ -675,6 +683,7 @@ class RequestCard {
     required this.serviceName,
     required this.statusType,
     required this.date,
+    required this.submitDate,
     required this.category,
     required this.patient,
     required this.hasAlert,

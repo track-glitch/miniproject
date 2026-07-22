@@ -3,12 +3,14 @@ class DocumentModel {
   String? documenttype;
   String? filepath;
   DateTime? uploaddate;
+  String? status;
 
   DocumentModel({
     this.documentId,
     this.documenttype,
     this.filepath,
     this.uploaddate,
+    this.status = 'PENDING', // กำหนดให้ตอนอัปโหลดครั้งแรกเป็น รอดำเนินการ เสมอ
   });
 
   factory DocumentModel.fromJson(Map<String, dynamic> json) {
@@ -19,6 +21,7 @@ class DocumentModel {
       uploaddate: json['uploaddate'] != null
           ? DateTime.parse(json['uploaddate'])
           : null,
+      status: json['status'],
     );
   }
 
@@ -28,6 +31,7 @@ class DocumentModel {
       'documenttype': documenttype,
       'filepath': filepath,
       'uploaddate': uploaddate?.toIso8601String(),
+      'status': status,
     };
   }
 }

@@ -138,7 +138,7 @@ class _LoginPageState extends State<LoginPage> {
             return;
           }
 
-          // 🌟 ถ้าทุกอย่างครบ (Approved + มีรถ) เข้าสู่หน้าหลัก[cite: 1]
+          // 🌟 ถ้าทุกอย่างครบ (Approved + มีรถ) เข้าสู่หน้าหลัก
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -153,6 +153,14 @@ class _LoginPageState extends State<LoginPage> {
           MaterialPageRoute(
             builder: (context) =>
                 RelativeHomePage(loggedUid: uid), // เปลี่ยนหน้าปลายทางตามของคุณ
+          ),
+        );
+      } else if (usertype == 'admin') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                ListCaretakerPage(uid: uid), // เปลี่ยนหน้าปลายทางตามของคุณ
           ),
         );
       }
