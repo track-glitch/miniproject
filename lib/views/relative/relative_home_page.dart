@@ -148,7 +148,11 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.payments_outlined, color: primaryColor, size: 28),
+                    Icon(
+                      Icons.payments_outlined,
+                      color: primaryColor,
+                      size: 28,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'รายละเอียดค่าใช้จ่าย',
@@ -161,7 +165,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   ],
                 ),
                 const Divider(height: 24, thickness: 1),
-                
+
                 // ส่วนอัตราค่าบริการ
                 Row(
                   children: [
@@ -183,21 +187,34 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
-                      Text('• ครึ่งวัน (4 ชั่วโมง): 800 บาท', style: TextStyle(fontSize: 13)),
+                      Text(
+                        '• ครึ่งวัน (4 ชั่วโมง): 800 บาท',
+                        style: TextStyle(fontSize: 13),
+                      ),
                       SizedBox(height: 4),
-                      Text('• เต็มวัน (8 ชั่วโมง): 1,350 บาท', style: TextStyle(fontSize: 13)),
+                      Text(
+                        '• เต็มวัน (8 ชั่วโมง): 1,350 บาท',
+                        style: TextStyle(fontSize: 13),
+                      ),
                       SizedBox(height: 4),
-                      Text('• เกินเวลาที่กำหนด: คิดเพิ่มชั่วโมงละ 200 บาท', style: TextStyle(fontSize: 13, color: Colors.black87)),
+                      Text(
+                        '• เกินเวลาที่กำหนด: คิดเพิ่มชั่วโมงละ 200 บาท',
+                        style: TextStyle(fontSize: 13, color: Colors.black87),
+                      ),
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // ส่วนค่าเดินทาง
                 Row(
                   children: [
-                    Icon(Icons.directions_car_outlined, size: 18, color: darkPurple),
+                    Icon(
+                      Icons.directions_car_outlined,
+                      size: 18,
+                      color: darkPurple,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'ค่าเดินทางเพิ่มเติม',
@@ -214,12 +231,16 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   padding: EdgeInsets.only(left: 8.0),
                   child: Text(
                     'หากจุดรับส่งหรือพื้นที่ใช้บริการอยู่นอกเหนือเขตอำเภอที่ผู้ดูแลกำหนด จะคิดค่าเดินทางเพิ่มเติม กิโลเมตรละ 10 บาท (คำนวณตามระยะทางจริงจากระบบแอปพลิเคชัน)',
-                    style: TextStyle(fontSize: 12.5, color: Colors.black87, height: 1.3),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: Colors.black87,
+                      height: 1.3,
+                    ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // ปุ่มปิด Dialog
                 SizedBox(
                   width: double.infinity,
@@ -464,7 +485,9 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(30),
                       border: Border.all(
-                        color: _selectedFilterDate != null ? primaryColor : greyBorder,
+                        color: _selectedFilterDate != null
+                            ? primaryColor
+                            : greyBorder,
                         width: 1.2,
                       ),
                       boxShadow: [
@@ -480,23 +503,27 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                         const SizedBox(width: 14),
                         Icon(
                           Icons.search_rounded,
-                          color: _selectedFilterDate != null ? primaryColor : Colors.grey,
+                          color: _selectedFilterDate != null
+                              ? primaryColor
+                              : Colors.grey,
                           size: 22,
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: TextField(
                             controller: _searchController,
-                            readOnly: _selectedFilterDate == null, // ปล็อกไม่ให้พิมพ์ถ้ายังไม่เลือกวันที่
+                            readOnly:
+                                _selectedFilterDate ==
+                                null, // ปล็อกไม่ให้พิมพ์ถ้ายังไม่เลือกวันที่
                             onTap: () {
-                              // 🌟 ถ้ายังไม่เลือกวันที่ เมื่อแตะช่องพิมพ์ จะเปิดปฏิทินให้เลือกทันที
+                              // 🌟 ถ้ายังไม่เลือกวันที่ เมื่อแตะช่องพิมพ์ จะเด้งเปิดปฏิทินให้เลือกทันที (ไม่มีป๊อปอัปแจ้งเตือนแล้ว)
                               if (_selectedFilterDate == null) {
                                 _openFilterCalendar();
                               }
                             },
                             decoration: InputDecoration(
                               hintText: _selectedFilterDate == null
-                                  ? 'แตะเลือกวันที่ทางขวาก่อนพิมพ์ค้นหา...'
+                                  ? 'เลือกวันที่ทางขวาก่อนพิมพ์ค้นหา...'
                                   : 'ค้นหา ชื่อ-นามสกุล หรือ ที่อยู่ (อำเภอ จังหวัด)',
                               hintStyle: TextStyle(
                                 fontSize: 12.5,
@@ -517,7 +544,9 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                   Padding(
                                     padding: const EdgeInsets.only(right: 4.0),
                                     child: Text(
-                                      DateFormat('dd/MM').format(_selectedFilterDate!),
+                                      DateFormat(
+                                        'dd/MM',
+                                      ).format(_selectedFilterDate!),
                                       style: TextStyle(
                                         color: primaryColor,
                                         fontWeight: FontWeight.bold,
@@ -537,7 +566,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                   GestureDetector(
                                     onTap: () => setState(() {
                                       _selectedFilterDate = null;
-                                      _searchController.clear(); // ล้างข้อความค้นหาเมื่อยกเลิกวันที่
+                                      _searchController
+                                          .clear(); // ล้างข้อความค้นหาเมื่อยกเลิกวันที่
                                     }),
                                     child: const Padding(
                                       padding: EdgeInsets.only(left: 4.0),
@@ -557,7 +587,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   ),
                   const SizedBox(height: 12),
 
-                  // 🌟 แถวรวมปุ่ม: ค้นหาใกล้ฉัน + ดูรายละเอียดค่าใช้จ่าย
+                  // 🌟 แถวรวมปุ่ม: ค้นหาใกล้ฉัน + ดูรายละเอียดค่าใช้จ่าย (วางข้างกันแบบเดิม)
                   Row(
                     children: [
                       // ปุ่มค้นหาใกล้ฉัน
@@ -625,7 +655,10 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(22),
-                                border: Border.all(color: primaryColor, width: 1.2),
+                                border: Border.all(
+                                  color: primaryColor,
+                                  width: 1.2,
+                                ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: primaryColor.withOpacity(0.15),
@@ -1071,16 +1104,10 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
     if (data['address'] != null) {
       location = data['address'];
-    } else if (data['Location'] != null && data['Location']['address'] != null) {
+    } else if (data['Location']['address'] != null) {
       location = data['Location']['address'];
     } else {
-      location = 'ไม่พบข้อมูล';
-    }
-
-    // 🌟 ดึงข้อมูลประสบการณ์ทำงาน
-    String experience = 'ไม่ระบุ';
-    if (data['experience'] != null && data['experience'].toString().trim().isNotEmpty) {
-      experience = data['experience'].toString().trim();
+      location == 'ไม่พบข้อมูล';
     }
 
     String carDetail = 'ไม่ระบุ';
@@ -1238,7 +1265,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   ),
                   const SizedBox(height: 6),
 
-                  // พื้นที่ให้บริการ
                   Row(
                     children: [
                       Icon(Icons.location_on, size: 13, color: primaryColor),
@@ -1258,27 +1284,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   ),
                   const SizedBox(height: 3),
 
-                  // 🌟 แสดงประสบการณ์ทำงาน
-                  Row(
-                    children: [
-                      Icon(Icons.work_history, size: 13, color: primaryColor),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          'ประสบการณ์: $experience',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.black54,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-
-                  // ยี่ห้อรถ
                   Row(
                     children: [
                       Icon(Icons.directions_car, size: 13, color: primaryColor),
