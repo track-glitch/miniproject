@@ -29,7 +29,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   bool _isRegistrationSuccess = false;
   String? _submitErrorMessage;
 
-  // --- Step 2 (เดิม Step 1): ข้อมูลส่วนตัว ---
+  // --- Step 2: ข้อมูลส่วนตัว ---
   final _step1FormKey = GlobalKey<FormState>();
   final TextEditingController _idCardController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -49,13 +49,15 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   double _currentLat = 0.0;
   double _currentLng = 0.0;
 
-  // --- Step 3 (เดิม Step 2): เอกสาร ---
-  File? _doc1File;
-  File? _doc2File;
-  File? _doc3File;
-  File? _resumeFile;
+  // --- Step 3: เอกสาร ---
+  File? _docIdCardFile;        // 1. สำเนาบัตรประชาชน
+  File? _docDriverLicenseFile; // 2. สำเนาใบขับขี่
+  File? _docVehicleRegFile;    // 3. สำเนาทะเบียนรถ
+  File? _docInsuranceFile;     // 4. สำเนาประกันภัยรถยนต์
+  File? _docResumeFile;        // 5. ประวัติการทำงาน
+  File? _docCertificateFile;   // 6. ใบประกาศนียบัตร (ไม่บังคับ)
 
-  // --- Step 1 (เดิม Step 3): เงื่อนไขการให้บริการ ---
+  // --- Step 1: เงื่อนไขการให้บริการ ---
   bool _isPolicyAccepted = false;
   bool _isObscure = true;
 
@@ -98,10 +100,12 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         _selectedGender.isNotEmpty ||
         _birthDate != null ||
         _profileImageFile != null ||
-        _doc1File != null ||
-        _doc2File != null ||
-        _doc3File != null ||
-        _resumeFile != null ||
+        _docIdCardFile != null ||
+        _docDriverLicenseFile != null ||
+        _docVehicleRegFile != null ||
+        _docInsuranceFile != null ||
+        _docResumeFile != null ||
+        _docCertificateFile != null ||
         _isPolicyAccepted;
   }
 
@@ -131,7 +135,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
 
   int _calculateAge(DateTime birthDate) {
     final today = DateTime.now();
-
     int age = today.year - birthDate.year;
 
     if (today.month < birthDate.month ||
@@ -249,17 +252,14 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
-  // 🌟 ฟังก์ชันจัดการ Step ถัดไป
   void _nextStep() {
     if (_currentStep == 1) {
-      // Step 1: เงื่อนไขการให้บริการ
       if (!_isPolicyAccepted) {
         _showErrorSnackBar('กรุณายอมรับเงื่อนไขการให้บริการก่อนดำเนินการต่อ');
         return;
       }
       setState(() => _currentStep = 2);
     } else if (_currentStep == 2) {
-      // Step 2: ข้อมูลส่วนตัว
       if (_step1FormKey.currentState!.validate()) {
         if (_profilePhotoBase64 == null) {
           _showErrorSnackBar('กรุณาเลือกรูปโปรไฟล์ของคุณ');
@@ -281,12 +281,12 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   }
 
   void _submitRegistration() async {
-    // Step 3: เอกสาร
-    if (_doc1File == null ||
-        _doc2File == null ||
-        _doc3File == null ||
-        _resumeFile == null) {
-      _showErrorSnackBar('กรุณาอัปโหลดเอกสารให้ครบทุกช่องเพื่อดำเนินการต่อ');
+    if (_docIdCardFile == null ||
+        _docDriverLicenseFile == null ||
+        _docVehicleRegFile == null ||
+        _docInsuranceFile == null ||
+        _docResumeFile == null) {
+      _showErrorSnackBar('กรุณาอัปโหลดเอกสารที่จำเป็น (*) ให้ครบถ้วน');
       return;
     }
 
@@ -301,24 +301,42 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
           uploaddate: DateTime.now(),
         ),
         DocumentModel(
-          documentId: "doc_insurance",
-          documenttype: "ใบขับขี่",
+          documentId: "doc_driver_license",
+          documenttype: "สำเนาใบขับขี่",
           filepath: "base64_data",
           uploaddate: DateTime.now(),
         ),
         DocumentModel(
-          documentId: "doc_training",
-          documenttype: "เอกสารการฝึกอบรม",
+          documentId: "doc_vehicle_reg",
+          documenttype: "สำเนาทะเบียนรถ",
+          filepath: "base64_data",
+          uploaddate: DateTime.now(),
+        ),
+        DocumentModel(
+          documentId: "doc_insurance",
+          documenttype: "สำเนาประกันภัยรถยนต์",
           filepath: "base64_data",
           uploaddate: DateTime.now(),
         ),
         DocumentModel(
           documentId: "doc_resume",
-          documenttype: "Resume",
+          documenttype: "ประวัติการทำงาน",
           filepath: "base64_data",
           uploaddate: DateTime.now(),
         ),
       ];
+
+      if (_docCertificateFile != null) {
+        documentsList.add(
+          DocumentModel(
+            documentId: "doc_certificate",
+            documenttype: "ใบประกาศนียบัตร",
+            filepath: "base64_data",
+            uploaddate: DateTime.now(),
+          ),
+        );
+      }
+
       CaretakerModel caretaker = CaretakerModel(
         caretakerId: _idCardController.text.trim(),
         password: _passwordController.text.trim(),
@@ -424,7 +442,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
 
   // ================= STEP 1 : เงื่อนไขการให้บริการ =================
   Widget _buildStep1() {
-    // ข้อตกลงและเงื่อนไขสำหรับผู้ดูแล
     final List<String> terms = [
       '1. ผู้ดูแลต้องลงทะเบียนด้วยข้อมูลที่ถูกต้อง ครบถ้วน และเป็นจริง พร้อมแนบเอกสารตามที่ระบบกำหนด',
       '2. ผู้ดูแลต้องปฏิบัติหน้าที่ด้วยความสุภาพ ซื่อสัตย์ และคำนึงถึงความปลอดภัยของผู้สูงอายุเป็นสำคัญ',
@@ -440,7 +457,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
 
     return Column(
       children: [
-        const SizedBox(height: 20),
         _buildSectionContainer(
           title: 'ข้อตกลงและเงื่อนไขการให้บริการ (สำหรับผู้ดูแล)',
           children: [
@@ -748,7 +764,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                   },
                 ),
               ),
-              _buildLabelField('ประสบการณ์การทำงาน (ถ้ามี)'),
+              _buildLabelField('รายละเอียดประสบการณ์ทำงานเพิ่มเติม (ถ้ามี)'),
               _buildTextField(
                 controller: _experienceController,
                 hint: 'ตัวอย่าง: ดูแลผู้ป่วย 3 ปี, เคยทำงานคลินิก',
@@ -771,37 +787,63 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
           title: 'อัปโหลดเอกสารประกอบ',
           children: [
             const Text(
-              'กรุณาอัปโหลดเอกสารต่อไปนี้ให้ครบถ้วนเพื่อประกอบการพิจารณาอนุมัติบัญชี\n(ไฟล์ที่รองรับ: PDF หรือ PNG)',
+              'กรุณาอัปโหลดเอกสารต่อไปนี้ให้ครบถ้วนเพื่อประกอบการพิจารณาอนุมัติบัญชี\n(ระบบรองรับไฟล์: PDF, PNG, JPG)',
               style: TextStyle(fontSize: 13, color: Colors.grey),
             ),
             const SizedBox(height: 15),
+
+            // 🌟 1. สำเนาบัตรประชาชน (บังคับ)
             _buildDocumentUploadWidget(
-              "1. สำเนาบัตรประชาชน (PDF หรือ PNG)",
-              _doc1File,
+              "1. สำเนาบัตรประชาชน (PDF, PNG, JPG)",
+              _docIdCardFile,
               true,
-              () => _pickImage((f) => setState(() => _doc1File = f)),
-              () => setState(() => _doc1File = null),
+              () => _pickImage((f) => setState(() => _docIdCardFile = f)),
+              () => setState(() => _docIdCardFile = null),
             ),
+
+            // 🌟 2. สำเนาใบขับขี่ (บังคับ)
             _buildDocumentUploadWidget(
-              "2. สำเนาประกันภัยรถยนตร์ (PDF หรือ PNG)",
-              _doc2File,
+              "2. สำเนาใบขับขี่ (PDF, PNG, JPG)",
+              _docDriverLicenseFile,
               true,
-              () => _pickImage((f) => setState(() => _doc2File = f)),
-              () => setState(() => _doc2File = null),
+              () => _pickImage((f) => setState(() => _docDriverLicenseFile = f)),
+              () => setState(() => _docDriverLicenseFile = null),
             ),
+
+            // 🌟 3. สำเนาทะเบียนรถ (บังคับ)
             _buildDocumentUploadWidget(
-              "3. เอกสารการฝึกอบรม (PDF หรือ PNG)",
-              _doc3File,
+              "3. สำเนาทะเบียนรถ (PDF, PNG, JPG)",
+              _docVehicleRegFile,
               true,
-              () => _pickImage((f) => setState(() => _doc3File = f)),
-              () => setState(() => _doc3File = null),
+              () => _pickImage((f) => setState(() => _docVehicleRegFile = f)),
+              () => setState(() => _docVehicleRegFile = null),
             ),
+
+            // 🌟 4. สำเนาประกันภัยรถยนต์ (บังคับ)
             _buildDocumentUploadWidget(
-              "4. Resume (PDF หรือ PNG)",
-              _resumeFile,
+              "4. สำเนาประกันภัยรถยนต์ (PDF, PNG, JPG)",
+              _docInsuranceFile,
               true,
-              () => _pickImage((f) => setState(() => _resumeFile = f)),
-              () => setState(() => _resumeFile = null),
+              () => _pickImage((f) => setState(() => _docInsuranceFile = f)),
+              () => setState(() => _docInsuranceFile = null),
+            ),
+
+            // 🌟 5. ประวัติการทำงาน (บังคับ)
+            _buildDocumentUploadWidget(
+              "5. ประวัติการทำงาน (Resume / CV) (PDF, PNG, JPG)",
+              _docResumeFile,
+              true,
+              () => _pickImage((f) => setState(() => _docResumeFile = f)),
+              () => setState(() => _docResumeFile = null),
+            ),
+
+            // 🌟 6. ใบประกาศนียบัตร (ไม่บังคับกรอก)
+            _buildDocumentUploadWidget(
+              "6. ใบประกาศนียบัตร (PDF, PNG, JPG)",
+              _docCertificateFile,
+              false, // ไม่บังคับ
+              () => _pickImage((f) => setState(() => _docCertificateFile = f)),
+              () => setState(() => _docCertificateFile = null),
             ),
           ],
         ),
@@ -1200,7 +1242,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                   Icon(Icons.upload_file, color: primaryColor, size: 28),
                   const SizedBox(height: 8),
                   Text(
-                    'แตะเพื่อเลือกไฟล์ หรือ รูปภาพ',
+                    'แตะเพื่อเลือกไฟล์ หรือ รูปภาพ (PDF, PNG, JPG)',
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                   ),
                 ],
