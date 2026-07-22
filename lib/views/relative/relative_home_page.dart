@@ -119,7 +119,135 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
         );
       },
     );
-    if (selectedDate != null) {}
+    if (selectedDate != null) {
+      setState(() {
+        _selectedFilterDate = selectedDate;
+      });
+    }
+  }
+
+  // ── 🌟 ฟังก์ชันแสดง Pop-up รายละเอียดค่าใช้จ่าย ────────────────────────
+  void _showPricingDetailsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: primaryColor, width: 1.5),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.payments_outlined, color: primaryColor, size: 28),
+                    const SizedBox(width: 8),
+                    Text(
+                      'รายละเอียดค่าใช้จ่าย',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: headingColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 24, thickness: 1),
+                
+                // ส่วนอัตราค่าบริการ
+                Row(
+                  children: [
+                    Icon(Icons.style, size: 18, color: darkPurple),
+                    const SizedBox(width: 6),
+                    Text(
+                      'อัตราค่าบริการแพ็กเกจ',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: darkPurple,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text('• ครึ่งวัน (4 ชั่วโมง): 800 บาท', style: TextStyle(fontSize: 13)),
+                      SizedBox(height: 4),
+                      Text('• เต็มวัน (8 ชั่วโมง): 1,350 บาท', style: TextStyle(fontSize: 13)),
+                      SizedBox(height: 4),
+                      Text('• เกินเวลาที่กำหนด: คิดเพิ่มชั่วโมงละ 200 บาท', style: TextStyle(fontSize: 13, color: Colors.black87)),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // ส่วนค่าเดินทาง
+                Row(
+                  children: [
+                    Icon(Icons.directions_car_outlined, size: 18, color: darkPurple),
+                    const SizedBox(width: 6),
+                    Text(
+                      'ค่าเดินทางเพิ่มเติม',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: darkPurple,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Padding(
+                  padding: EdgeInsets.only(left: 8.0),
+                  child: Text(
+                    'หากจุดรับส่งหรือพื้นที่ใช้บริการอยู่นอกเหนือเขตอำเภอที่ผู้ดูแลกำหนด จะคิดค่าเดินทางเพิ่มเติม กิโลเมตรละ 10 บาท (คำนวณตามระยะทางจริงจากระบบแอปพลิเคชัน)',
+                    style: TextStyle(fontSize: 12.5, color: Colors.black87, height: 1.3),
+                  ),
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // ปุ่มปิด Dialog
+                SizedBox(
+                  width: double.infinity,
+                  height: 42,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(21),
+                      ),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'เข้าใจแล้ว',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _showLoginRequiredDialog() {
@@ -295,7 +423,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
       body: SafeArea(
         child: Column(
           children: [
-            // ── Header: ชื่อหน้า + ช่องค้นหา + ปุ่มใกล้ฉัน ───────────────
+            // ── Header: ชื่อหน้า + ช่องค้นหา + ปุ่มคู่ ───────────────
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -318,7 +446,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
               child: Column(
                 children: [
-                  // ชื่อหน้า (เปลี่ยนเป็น ค้นหาผู้ดูแล ให้สมเหตุสมผลกับหน้า Home)
+                  // ชื่อหน้า
                   Text(
                     'ค้นหาผู้ดูแล',
                     style: TextStyle(
@@ -329,13 +457,16 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   ),
                   const SizedBox(height: 14),
 
-                  // ช่องค้นหา
+                  // 🌟 ช่องค้นหา (บังคับเลือกวันก่อนถึงจะพิมพ์ได้)
                   Container(
                     height: 48,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: greyBorder, width: 1.2),
+                      border: Border.all(
+                        color: _selectedFilterDate != null ? primaryColor : greyBorder,
+                        width: 1.2,
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: primaryColor.withOpacity(0.10),
@@ -349,16 +480,24 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                         const SizedBox(width: 14),
                         Icon(
                           Icons.search_rounded,
-                          color: primaryColor,
+                          color: _selectedFilterDate != null ? primaryColor : Colors.grey,
                           size: 22,
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: TextField(
                             controller: _searchController,
+                            readOnly: _selectedFilterDate == null, // ปล็อกไม่ให้พิมพ์ถ้ายังไม่เลือกวันที่
+                            onTap: () {
+                              // 🌟 ถ้ายังไม่เลือกวันที่ เมื่อแตะช่องพิมพ์ จะเปิดปฏิทินให้เลือกทันที
+                              if (_selectedFilterDate == null) {
+                                _openFilterCalendar();
+                              }
+                            },
                             decoration: InputDecoration(
-                              hintText:
-                                  'ค้นหา ชื่อ-นามสกุล หรือ ที่อยู่ (อำเภอ จังหวัด)',
+                              hintText: _selectedFilterDate == null
+                                  ? 'แตะเลือกวันที่ทางขวาก่อนพิมพ์ค้นหา...'
+                                  : 'ค้นหา ชื่อ-นามสกุล หรือ ที่อยู่ (อำเภอ จังหวัด)',
                               hintStyle: TextStyle(
                                 fontSize: 12.5,
                                 color: Colors.grey.shade400,
@@ -378,9 +517,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                   Padding(
                                     padding: const EdgeInsets.only(right: 4.0),
                                     child: Text(
-                                      DateFormat(
-                                        'dd/MM',
-                                      ).format(_selectedFilterDate!),
+                                      DateFormat('dd/MM').format(_selectedFilterDate!),
                                       style: TextStyle(
                                         color: primaryColor,
                                         fontWeight: FontWeight.bold,
@@ -398,13 +535,17 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                 // ปุ่มกากบาทล้างวันที่
                                 if (_selectedFilterDate != null)
                                   GestureDetector(
-                                    onTap: () => setState(
-                                      () => _selectedFilterDate = null,
-                                    ),
-                                    child: const Icon(
-                                      Icons.close,
-                                      size: 16,
-                                      color: Colors.red,
+                                    onTap: () => setState(() {
+                                      _selectedFilterDate = null;
+                                      _searchController.clear(); // ล้างข้อความค้นหาเมื่อยกเลิกวันที่
+                                    }),
+                                    child: const Padding(
+                                      padding: EdgeInsets.only(left: 4.0),
+                                      child: Icon(
+                                        Icons.close,
+                                        size: 16,
+                                        color: Colors.red,
+                                      ),
                                     ),
                                   ),
                               ],
@@ -416,59 +557,107 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   ),
                   const SizedBox(height: 12),
 
-                  // ปุ่มค้นหาใกล้ฉัน
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Material(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(22),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(22),
-                        onTap: () {
-                          // TODO: เชื่อมต่อ geolocator
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 9,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [primaryColor, darkPurple],
-                              begin: Alignment.centerLeft,
-                              end: Alignment.centerRight,
-                            ),
+                  // 🌟 แถวรวมปุ่ม: ค้นหาใกล้ฉัน + ดูรายละเอียดค่าใช้จ่าย
+                  Row(
+                    children: [
+                      // ปุ่มค้นหาใกล้ฉัน
+                      Expanded(
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(22),
+                          child: InkWell(
                             borderRadius: BorderRadius.circular(22),
-                            boxShadow: [
-                              BoxShadow(
-                                color: primaryColor.withOpacity(0.35),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.my_location_rounded,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                              SizedBox(width: 6),
-                              Text(
-                                'ค้นหาบริเวณใกล้ฉัน',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                            onTap: () {
+                              // TODO: เชื่อมต่อ geolocator
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [primaryColor, darkPurple],
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
                                 ),
+                                borderRadius: BorderRadius.circular(22),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: primaryColor.withOpacity(0.35),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
                               ),
-                            ],
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.my_location_rounded,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'ค้นหาใกล้ฉัน',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+
+                      // ปุ่มดูรายละเอียดค่าใช้จ่าย
+                      Expanded(
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(22),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(22),
+                            onTap: _showPricingDetailsDialog,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(22),
+                                border: Border.all(color: primaryColor, width: 1.2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: primaryColor.withOpacity(0.15),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.info_outline_rounded,
+                                    color: primaryColor,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'รายละเอียดค่าใช้จ่าย',
+                                    style: TextStyle(
+                                      color: primaryColor,
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -693,15 +882,12 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            // แท็บ "บ้าน" เป็น Active และกดแล้วไม่ต้องเด้งไปไหน (อยู่หน้าเดิม)
             _buildBottomNavItem(
               Icons.home_outlined,
               'บ้าน',
               true,
               onTap: () {},
             ),
-
-            // แท็บ "ขอใช้บริการ" กดแล้วเด้งไปหน้ารายการคำขอ (ListRequestPage)
             _buildBottomNavItem(
               Icons.support_agent,
               'รายการคำขอ',
@@ -716,9 +902,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                 );
               },
             ),
-
-            
-
             _buildBottomNavItem(
               Icons.person_outline,
               'ญาติ',
@@ -888,10 +1071,16 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
     if (data['address'] != null) {
       location = data['address'];
-    } else if (data['Location']['address'] != null) {
+    } else if (data['Location'] != null && data['Location']['address'] != null) {
       location = data['Location']['address'];
     } else {
-      location == 'ไม่พบข้อมูล';
+      location = 'ไม่พบข้อมูล';
+    }
+
+    // 🌟 ดึงข้อมูลประสบการณ์ทำงาน
+    String experience = 'ไม่ระบุ';
+    if (data['experience'] != null && data['experience'].toString().trim().isNotEmpty) {
+      experience = data['experience'].toString().trim();
     }
 
     String carDetail = 'ไม่ระบุ';
@@ -911,7 +1100,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
         rawStatus == 'พร้อมให้บริการ';
     String displayStatus = isAvailable ? 'พร้อมให้บริการ' : 'ไม่พร้อมให้บริการ';
 
-    // 🌟 ดึงข้อมูลคะแนนรีวิวที่เราเพิ่งคำนวณมาสดๆ ร้อนๆ
     double rating = data['rating'] != null
         ? (data['rating'] as num).toDouble()
         : 0.0;
@@ -1022,7 +1210,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   Row(
                     children: [
                       Text(
-                        '${rating.toStringAsFixed(1)} ', // โชว์ทศนิยม 1 ตำแหน่งสวยๆ
+                        '${rating.toStringAsFixed(1)} ',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -1050,6 +1238,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   ),
                   const SizedBox(height: 6),
 
+                  // พื้นที่ให้บริการ
                   Row(
                     children: [
                       Icon(Icons.location_on, size: 13, color: primaryColor),
@@ -1069,6 +1258,27 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   ),
                   const SizedBox(height: 3),
 
+                  // 🌟 แสดงประสบการณ์ทำงาน
+                  Row(
+                    children: [
+                      Icon(Icons.work_history, size: 13, color: primaryColor),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'ประสบการณ์: $experience',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black54,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+
+                  // ยี่ห้อรถ
                   Row(
                     children: [
                       Icon(Icons.directions_car, size: 13, color: primaryColor),
