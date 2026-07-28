@@ -317,4 +317,141 @@ class AdminService {
 
     print("✅ เพิ่ม Mockup ข้อมูลลงโหนด Relative เสร็จเรียบร้อย!");
   }
+
+  // ===============================================
+  // 🌟 ฟังก์ชันสร้างข้อมูลจำลอง: สถานะเสร็จสิ้น (Completed)
+  // แบบมี Review และ Doctor Advice ทั้งมีและไม่มีวันนัดหมายถัดไป
+  // ===============================================
+  Future<void> addMockupCompletedRequestForRelative() async {
+    DateTime currentTime = DateTime.now();
+
+    // UID ของญาติจำลอง และ ID ของอาสา (แก้ให้ตรงกับที่ใช้เทสต์)
+    String relativeUid = "3HFu0p120SU021mZ8nH6tYuYLtr2";
+    String myCaretakerId = "1234567891011";
+
+    // ===============================================
+    // 🌟 Mockup 1: สถานะ "เสร็จสิ้น" (completed)
+    // มีรีวิว + มีคำแนะนำแพทย์แบบ "มีนัดหมายครั้งถัดไป"
+    // ===============================================
+    RequestModel reqCompletedWithAppt = RequestModel(
+      requestId:
+          "REQ-COMP1-${currentTime.millisecondsSinceEpoch.toString().substring(7)}",
+      requestdetail: "พาผู้ป่วยไปตรวจตาและเบาหวาน",
+      pickuplocation: LocationModel(
+        locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
+        address: "บ้านพัก ต.พระบาท จ.ลำปาง",
+        latitude: 18.2750,
+        longitude: 99.5050,
+      ),
+      dropofflocation: LocationModel(
+        locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
+        address: "โรงพยาบาลศูนย์ลำปาง",
+        latitude: 18.2900,
+        longitude: 99.5000,
+      ),
+      hospitalname: "โรงพยาบาลศูนย์ลำปาง",
+      departmentname: "จักษุวิทยา",
+      appointmentdate: currentTime.subtract(
+        const Duration(days: 2),
+      ), // นัดไปแล้วเมื่อ 2 วันก่อน
+      appointmenttime: currentTime.subtract(const Duration(days: 2)),
+      requestdate: currentTime.subtract(const Duration(days: 5)),
+      requeststatus: "completed", // 🌟 สถานะเสร็จสิ้น
+      caretakerId: myCaretakerId,
+      isReadCaretaker: true,
+
+      // 🌟 เพิ่มข้อมูล Review (คะแนนเต็ม 5)
+      review: ReviewModel(
+        reviewId: "REV-${FirebaseDatabase.instance.ref().push().key}",
+        ratingscore: "5",
+        comment:
+            "ผู้ดูแลใจดีมากค่ะ พาไปถูกแผนกและช่วยจดคำแนะนำของหมอมาให้อย่างละเอียดเลย",
+        reviewdate: currentTime.subtract(const Duration(days: 1)),
+      ),
+
+      // 🌟 เพิ่มข้อมูล Doctor Advice (มีนัดหมายครั้งถัดไป)
+      doctoradvice: DoctorAdviceModel(
+        doctoradviceId: "ADV-${FirebaseDatabase.instance.ref().push().key}",
+        doctorname: "นพ. สมชาย ตาดี",
+        advicedetail:
+            "ความดันตาปกติ ให้หยอดยาแก้ตาแห้งทุก 4 ชั่วโมง ระวังอย่าให้ฝุ่นเข้าตา",
+        departmentname: "จักษุวิทยา",
+        hospitalname: "โรงพยาบาลศูนย์ลำปาง",
+        appointmentdate: currentTime.add(
+          const Duration(days: 30),
+        ), // 📅 นัดอีกที 30 วันข้างหน้า
+        appointmenttime: currentTime.add(const Duration(days: 30)),
+        medicalphoto: "", // ปล่อยว่าง หรือใส่ Base64 ของรูปใบนัด
+      ),
+    );
+
+    // ===============================================
+    // 🌟 Mockup 2: สถานะ "เสร็จสิ้น" (completed)
+    // มีรีวิว + มีคำแนะนำแพทย์แบบ "ไม่มีนัดหมายครั้งถัดไป"
+    // ===============================================
+    RequestModel reqCompletedNoAppt = RequestModel(
+      requestId:
+          "REQ-COMP2-${currentTime.millisecondsSinceEpoch.toString().substring(7)}",
+      requestdetail: "พาผู้ป่วยไปทำแผลและตัดไหม",
+      pickuplocation: LocationModel(
+        locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
+        address: "บ้านพัก ต.พระบาท จ.ลำปาง",
+        latitude: 18.2750,
+        longitude: 99.5050,
+      ),
+      dropofflocation: LocationModel(
+        locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
+        address: "คลินิกเวชกรรมเขลางค์",
+        latitude: 18.2800,
+        longitude: 99.4900,
+      ),
+      hospitalname: "คลินิกเวชกรรมเขลางค์",
+      departmentname: "ศัลยกรรมทั่วไป",
+      appointmentdate: currentTime.subtract(const Duration(days: 1)),
+      appointmenttime: currentTime.subtract(const Duration(days: 1)),
+      requestdate: currentTime.subtract(const Duration(days: 3)),
+      requeststatus: "completed", // 🌟 สถานะเสร็จสิ้น
+      caretakerId: myCaretakerId,
+      isReadCaretaker: true,
+
+      // 🌟 เพิ่มข้อมูล Review
+      review: ReviewModel(
+        reviewId: "REV-${FirebaseDatabase.instance.ref().push().key}",
+        ratingscore: "4",
+        comment: "บริการดีครับ ขับรถนิ่ม ตรงเวลา",
+        reviewdate: currentTime,
+      ),
+
+      // 🌟 เพิ่มข้อมูล Doctor Advice (ไม่มีนัดหมาย)
+      doctoradvice: DoctorAdviceModel(
+        doctoradviceId: "ADV-${FirebaseDatabase.instance.ref().push().key}",
+        doctorname: "พญ. สมหญิง แผลสวย",
+        advicedetail:
+            "แผลแห้งสนิทดี ตัดไหมเรียบร้อยแล้ว สามารถอาบน้ำโดนแผลได้ตามปกติ ไม่ต้องมาทำแผลแล้ว",
+        departmentname: "ศัลยกรรมทั่วไป",
+        hospitalname: "คลินิกเวชกรรมเขลางค์",
+        appointmentdate: null, // ❌ ไม่มีนัดหมายครั้งถัดไปให้ส่งค่า null
+        appointmenttime: null, // ❌ ไม่มีนัดหมายครั้งถัดไปให้ส่งค่า null
+        medicalphoto: "",
+      ),
+    );
+
+    List<RequestModel> allRequests = [reqCompletedWithAppt, reqCompletedNoAppt];
+
+    // 🌟 วนลูปบันทึกเข้าโหนด Relative -> Request
+    for (var req in allRequests) {
+      await FirebaseDatabase.instance
+          .ref()
+          .child('Login')
+          .child(relativeUid)
+          .child('Relative')
+          .child('Request')
+          .child(req.requestId!)
+          .set(req.toJson());
+    }
+
+    print(
+      "✅ เพิ่ม Mockup งานที่เสร็จสิ้น (Completed) ลงโหนด Relative เสร็จเรียบร้อย!",
+    );
+  }
 }

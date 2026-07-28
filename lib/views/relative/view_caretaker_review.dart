@@ -4,7 +4,12 @@ import 'package:miniproject/services/caretaker_service.dart';
 
 class ViewCaretakerReview extends StatefulWidget {
   final String caretakerId; // 🌟 รับค่า ID เข้ามาเพื่อดึงข้อมูล
-  const ViewCaretakerReview({super.key, required this.caretakerId, required List<Map<String, dynamic>> reviews});
+  final List<Map<String, dynamic>> reviews;
+  const ViewCaretakerReview({
+    super.key,
+    required this.caretakerId,
+    required this.reviews,
+  });
 
   @override
   State<ViewCaretakerReview> createState() => _ViewCaretakerReviewState();
@@ -43,22 +48,24 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
   }
 
   Future<void> _fetchData() async {
-    // ดึงโปรไฟล์อาสามาแสดงด้านบน
-    final profile = await _service.getCaretakerProfile(widget.caretakerId);
-    // ดึงรีวิวทั้งหมดของอาสาคนนี้
-    final reviews = await _service.getAllReviews(widget.caretakerId);
-
-    setState(() {
+    // 1. ดึงแค่โปรไฟล์อาสามาแสดงด้านบน
+    try {
+      final profile = await _service.getCaretakerProfile(widget.caretakerId);
       if (profile != null) {
         caretakerName =
             "${profile['firstname'] ?? ''} ${profile['lastname'] ?? ''}".trim();
         caretakerCitizenId = profile['caretakerId'] ?? '';
         caretakerImage = profile['profilephoto'] ?? '';
       }
+    } catch (e) {
+      print("Error fetching profile: $e");
+    }
 
-      allReviews = reviews;
-      filteredReviews = reviews;
-      _isLoading = false;
+    setState(() {
+      // 2. 🌟 นำ widget.reviews ที่รับมาจากหน้า Profile มาใช้งานได้เลย!
+      allReviews = widget.reviews;
+      filteredReviews = widget.reviews;
+      _isLoading = false; // ปิดสถานะโหลด
     });
   }
 
@@ -260,7 +267,8 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
                                           filteredReviews = allReviews.where((
                                             review,
                                           ) {
-                                            return (review['ratingscorescorescorescorescorescorescorescore'] as double)
+                                            return (review['ratingscore']
+                                                        as double)
                                                     .floor() ==
                                                 targetStar.floor();
                                           }).toList();
@@ -313,12 +321,33 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
                                         ),
                                     itemBuilder: (context, index) {
                                       final review = filteredReviews[index];
+
+                                      // 🌟 แปลงวันที่ให้เป็น พ.ศ. สวยๆ (ถ้ามีข้อมูล)
+                                      String formattedDate = '';
+                                      if (review['reviewdate'] != null) {
+                                        try {
+                                          DateTime d = DateTime.parse(
+                                            review['reviewdate'].toString(),
+                                          );
+                                          formattedDate =
+                                              '${d.day}/${d.month}/${d.year + 543}';
+                                        } catch (_) {}
+                                      }
+
                                       return _buildReviewItem(
-                                        name: review['reviewerName'],
-                                        ratingscorescorescorescorescorescorescore: review['ratingscorescorescorescorescorescorescore'],
-                                        comment: review['comment'],
-                                        reviewdate: review['reviewdate'],
-                                        imageUrl: review['reviewerImage'],
+                                        name:
+                                            review['reviewerName'] ??
+                                            'ผู้ใช้บริการ', // ดักค่า Null
+                                        ratingscore: (review['ratingscore'] ?? 0)
+                                            .toDouble(), // แปลงเป็น double ให้ชัวร์
+                                        comment:
+                                            review['comment'] ??
+                                            '', // ดักค่า Null
+                                        reviewdate:
+                                            formattedDate, // ใช้วันที่ที่จัดฟอร์แมตแล้ว
+                                        imageUrl:
+                                            review['reviewerImage'] ??
+                                            '', // 🌟 จุดสำคัญ! ดักค่า Null ป้องกันแอปเด้ง
                                       );
                                     },
                                   ),
@@ -336,7 +365,7 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
   // 🌟 ฟังก์ชันวาด UI แต่ละรีวิว (ใช้โค้ดเดียวกับหน้าโปรไฟล์เป๊ะๆ)
   Widget _buildReviewItem({
     required String name,
-    required double ratingscorescorescorescorescorescorescore,
+    required double ratingscore,
     required String comment,
     required String reviewdate,
     required String imageUrl,
@@ -406,7 +435,7 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
                   Row(
                     children: List.generate(5, (index) {
                       return Icon(
-                        index < ratingscorescorescorescorescorescorescore.floor()
+                        index < ratingscore.floor()
                             ? Icons.star_rounded
                             : Icons.star_border_rounded,
                         color: const Color(0xFFFFC107),

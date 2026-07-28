@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:miniproject/views/caretaker/add_doctor_advice_page.dart';
 import 'dart:async';
-import 'package:intl/intl.dart'; // 🌟 เพิ่ม package สำหรับจัดการเวลา
+import 'package:intl/intl.dart';
 
 import '../../widgets/custom_header_nav.dart';
 import '../../widgets/custom_bottom_nav.dart';
@@ -46,11 +46,15 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
   bool _hasStarted = false;
   int _currentStepIndex = 0;
 
-  // 🌟 เก็บประวัติการแจ้งเตือนจาก Firebase เพื่อเอาเวลามาโชว์
   List<Map<dynamic, dynamic>> _notificationHistory = [];
-
   StreamSubscription<Position>? _positionStreamSubscription;
   Timer? _trackingTimer;
+
+  // 🎨 สีหลักที่ใช้ตกแต่ง (อิงจากภาพ)
+  final Color bgColor = const Color(0xFFF3E5FF);
+  final Color primaryPurple = const Color(0xFF7D3C98);
+  final Color completePurple = const Color(0xFF6A1B9A);
+  final Color warningYellow = const Color(0xFFFFCA28);
 
   @override
   void initState() {
@@ -59,7 +63,6 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
   }
 
   Future<void> _initData() async {
-    // 🌟 ดึงข้อมูลประวัติเพื่อนำมาสร้าง Timeline
     _notificationHistory = await _service.getNotifications(
       widget.requestData.relativeUid,
       widget.requestData.id,
@@ -67,6 +70,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
 
     _currentStepIndex = _notificationHistory.length;
 
+    // 🌟 เช็คว่ามีประวัติการแจ้งเตือนหรือยัง
     if (_currentStepIndex > 0) {
       _hasStarted = true;
     }
@@ -101,7 +105,6 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     setState(() => _isLoading = true);
 
     try {
-      // 🌟 ดึงสถานะปัจจุบันที่จะส่ง จาก Index โดยตรง ไม่ต้องพึ่ง Dropdown
       String statusToSubmit = _statusList[_currentStepIndex];
 
       await _service.addStatusNotification(
@@ -110,7 +113,6 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
         status: statusToSubmit,
       );
 
-      // 🌟 ดึงประวัติใหม่ เพื่อเอา Timestamp ล่าสุดมาโชว์บนจอ
       _notificationHistory = await _service.getNotifications(
         widget.requestData.relativeUid,
         widget.requestData.id,
@@ -153,7 +155,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
 
       setState(() {
         _hasStarted = true;
-        _currentStepIndex = _notificationHistory.length; // อัปเดต Step ถัดไป
+        _currentStepIndex = _notificationHistory.length;
       });
 
       if (mounted) {
@@ -161,6 +163,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
           const SnackBar(
             content: Text('ส่งสถานะสำเร็จแล้ว!'),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 1),
           ),
         );
       }
@@ -173,82 +176,111 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 🌟 1. ดึงและจัดการรูปแบบวันที่/เวลา (เพิ่มเข้ามาใหม่)
     List<String> dateParts = widget.requestData.date.split('·');
     String dateOnly = dateParts[0].trim();
     String timeOnly = dateParts.length > 1 ? dateParts[1].trim() : '';
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: bgColor, // 🌟 พื้นหลังสีม่วงอ่อน
       appBar: const CustomHeader(
         title: 'ส่งสถานะการแจ้งเตือน',
         showBackButton: true,
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF7D3C98)),
-            )
+          ? Center(child: CircularProgressIndicator(color: primaryPurple))
           : Column(
               children: [
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 24.0,
-                      vertical: 20.0,
+                      horizontal: 16.0,
+                      vertical: 16.0,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 🌟 2. ส่วนกล่อง "ข้อมูลบริการปัจจุบัน" (เพิ่มเข้ามาใหม่)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'ข้อมูลบริการปัจจุบัน',
-                              style: TextStyle(
-                                color: Color(0xFF9B59B6), // สีม่วง
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                        // 🌟 กล่องข้อมูลบริการ (UI แบบ Card)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryPurple.withOpacity(0.08),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
                               ),
-                            ),
-                            Text(
-                              widget.requestData.id,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade500,
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'ข้อมูลบริการปัจจุบัน',
+                                    style: TextStyle(
+                                      color: primaryPurple,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  Text(
+                                    widget.requestData.id,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _buildInfoRow(
-                          'ผู้ป่วย:',
-                          widget.requestData.patient,
-                          isBold: true,
-                        ),
-                        _buildInfoRow('วัน/เวลา:', '$dateOnly  $timeOnly'),
-                        _buildInfoRow(
-                          'สถานที่:',
-                          widget.requestData.serviceName,
-                        ),
-                        _buildInfoRow('แผนก:', widget.requestData.category),
-
-                        const SizedBox(height: 32), // ระยะห่างก่อนขึ้นส่วนถัดไป
-                        // ----------------------------------------------------
-                        const Text(
-                          'รายละเอียดของการแจ้งเตือน',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                              const Divider(height: 20, thickness: 1),
+                              _buildInfoRow(
+                                'ผู้ป่วย:',
+                                widget.requestData.patient,
+                                isBold: true,
+                              ),
+                              _buildInfoRow(
+                                'วัน/เวลา:',
+                                '$dateOnly  $timeOnly',
+                              ),
+                              _buildInfoRow(
+                                'สถานที่:',
+                                widget.requestData.serviceName,
+                              ),
+                              _buildInfoRow(
+                                'แผนก:',
+                                widget.requestData.category,
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 24),
 
-                        // Timeline รายละเอียดสถานะ
-                        _buildTimeline(),
+                        const SizedBox(height: 16),
 
-                        const SizedBox(height: 30),
+                        // 🌟 กล่อง Timeline
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 20,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryPurple.withOpacity(0.08),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: _buildTimeline(),
+                        ),
+                        const SizedBox(height: 16),
                       ],
                     ),
                   ),
@@ -260,7 +292,6 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     );
   }
 
-  // 🌟 ฟังก์ชันวาด Timeline ทั้งหมด
   Widget _buildTimeline() {
     return ListView.builder(
       shrinkWrap: true,
@@ -268,7 +299,8 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
       itemCount: _statusList.length,
       itemBuilder: (context, index) {
         bool isCompleted = index < _currentStepIndex;
-        bool isCurrent = index == _currentStepIndex;
+        // 🌟 แก้ลอจิก: ถ้ายังไม่เคยเริ่มเลย (ไม่มีประวัติ) ให้แสดงเป็นสีเทารอดำเนินการไปก่อน
+        bool isCurrent = index == _currentStepIndex && _hasStarted;
         bool isLast = index == _statusList.length - 1;
 
         return _buildTimelineTile(
@@ -282,22 +314,21 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     );
   }
 
-  // 🌟 ฟังก์ชันวาดเส้นประ
+  // 🌟 บีบเส้นประให้สั้นลง
   Widget _buildDashedLine() {
     return Column(
       children: List.generate(
-        5,
+        4, // ลดจำนวนเส้นประ
         (index) => Container(
           width: 2,
           height: 4,
           color: Colors.grey.shade300,
-          margin: const EdgeInsets.symmetric(vertical: 3),
+          margin: const EdgeInsets.symmetric(vertical: 2.5),
         ),
       ),
     );
   }
 
-  // 🌟 ฟังก์ชันวาดแต่ละแถวของสถานะ
   Widget _buildTimelineTile({
     required int index,
     required String title,
@@ -307,16 +338,14 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
   }) {
     String timeText = '';
 
-    // พยายามดึงเวลาออกมาจากประวัติ ถ้าดึงสำเร็จให้แสดง ถ้าไม่มีให้ปล่อยว่าง
     if (isCompleted && index < _notificationHistory.length) {
       var data = _notificationHistory[index];
       if (data['timestamp'] != null) {
         try {
-          // จำลองการจัด Format เวลา (ถ้า Firebase เป็น String ให้ใช้แบบนี้ได้เลย หรือปรับตามฟิลด์จริง)
           DateTime dt = DateTime.parse(data['timestamp'].toString()).toLocal();
           timeText = DateFormat('HH:mm น.').format(dt);
         } catch (e) {
-          timeText = ""; // กรณี parse ไม่สำเร็จ
+          timeText = "";
         }
       }
     } else if (isCurrent) {
@@ -326,44 +355,41 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // คอลัมน์ซ้าย: วงกลมสัญลักษณ์ และเส้นประ
         Column(
           children: [
             Container(
-              width: 32,
-              height: 32,
+              width: 28, // บีบขนาดวงกลมเล็กลงนิดนึง
+              height: 28,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isCompleted
-                    ? const Color(0xFF6A1B9A) // สีม่วงเข้ม
+                    ? completePurple
                     : (isCurrent ? Colors.white : const Color(0xFFF0F0F0)),
                 border: Border.all(
                   color: isCompleted
-                      ? const Color(0xFF6A1B9A)
-                      : (isCurrent
-                            ? const Color(0xFFFFCA28)
-                            : Colors.grey.shade300),
+                      ? completePurple
+                      : (isCurrent ? warningYellow : Colors.grey.shade300),
                   width: isCurrent ? 3 : 1,
                 ),
                 boxShadow: isCurrent
                     ? [
                         BoxShadow(
-                          color: const Color(0xFFFFCA28).withOpacity(0.4),
-                          blurRadius: 8,
+                          color: warningYellow.withOpacity(0.4),
+                          blurRadius: 6,
                           spreadRadius: 2,
                         ),
                       ]
                     : [],
               ),
               child: isCompleted
-                  ? const Icon(Icons.check, color: Colors.white, size: 18)
+                  ? const Icon(Icons.check, color: Colors.white, size: 16)
                   : (isCurrent
                         ? Center(
                             child: Container(
-                              width: 14,
-                              height: 14,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFFFCA28), // สีเหลือง
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: warningYellow,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -373,70 +399,74 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
             if (!isLast) _buildDashedLine(),
           ],
         ),
-        const SizedBox(width: 16),
-        // คอลัมน์ขวา: ข้อความและป้ายกำกับ
+        const SizedBox(width: 12), // บีบระยะห่างข้อความกับวงกลม
         Expanded(
           child: Container(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(bottom: 4), // บีบความสูงแต่ละแถวลง
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: (isCompleted || isCurrent)
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: (isCompleted || isCurrent)
-                            ? Colors.black87
-                            : Colors.grey.shade400,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: (isCompleted || isCurrent)
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: (isCompleted || isCurrent)
+                              ? Colors.black87
+                              : Colors.grey.shade400,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      isCompleted
-                          ? "${timeText.isNotEmpty ? '$timeText — ' : ''}เสร็จสิ้น"
-                          : (isCurrent
-                                ? "$timeText — กำลังดำเนินการ"
-                                : "รอดำเนินการ"),
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isCompleted
-                            ? Colors.grey.shade500
+                      const SizedBox(height: 2),
+                      Text(
+                        isCompleted
+                            ? "${timeText.isNotEmpty ? '$timeText — ' : ''}เสร็จสิ้น"
                             : (isCurrent
-                                  ? const Color(0xFFF57F17)
-                                  : Colors.grey.shade300),
-                        fontWeight: isCurrent
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+                                  ? "$timeText — กำลังดำเนินการ"
+                                  : "รอดำเนินการ"),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isCompleted
+                              ? Colors.grey.shade500
+                              : (isCurrent
+                                    ? const Color(0xFFF57F17)
+                                    : Colors.grey.shade400),
+                          fontWeight: isCurrent
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 if (isCompleted || isCurrent)
                   Container(
+                    margin: const EdgeInsets.only(left: 8),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 6,
+                      horizontal: 10,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
                       color: isCompleted
                           ? const Color(0xFFF3E5F5)
                           : const Color(0xFFFFF8E1),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       isCompleted ? "เสร็จสิ้น" : "กำลังดำเนิน",
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: isCompleted
-                            ? const Color(0xFF6A1B9A)
+                            ? completePurple
                             : const Color(0xFFF57F17),
                       ),
                     ),
@@ -449,25 +479,25 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     );
   }
 
-  // 🌟 ฟังก์ชันวาดแต่ละแถวของข้อมูลบริการปัจจุบัน
+  // 🌟 บีบระยะห่างแถวข้อมูลให้ดูแน่นขึ้นนิดหน่อย
   Widget _buildInfoRow(String label, String value, {bool isBold = false}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+      padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 70,
+            width: 65,
             child: Text(
               label,
-              style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
             ),
           ),
           Expanded(
             child: Text(
               value,
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
                 color: Colors.black87,
               ),
@@ -478,12 +508,11 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     );
   }
 
-  // 🌟 ส่วนปุ่มด้านล่างจอ
   Widget _buildBottomAction() {
     bool isAllDone = _currentStepIndex >= _statusList.length;
 
     return Container(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(16.0), // ลด Padding ปุ่มด้านล่าง
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -498,10 +527,8 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
         width: double.infinity,
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: isAllDone
-                ? Colors.grey.shade400
-                : const Color(0xFF9B59B6),
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            backgroundColor: isAllDone ? Colors.grey.shade400 : primaryPurple,
+            padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -510,8 +537,8 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
           onPressed: isAllDone ? null : _submitStatus,
           child: _isLoading
               ? const SizedBox(
-                  height: 24,
-                  width: 24,
+                  height: 20,
+                  width: 20,
                   child: CircularProgressIndicator(
                     color: Colors.white,
                     strokeWidth: 2,
@@ -520,7 +547,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
               : const Text(
                   'แจ้งเตือน',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),

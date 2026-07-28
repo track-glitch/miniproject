@@ -29,29 +29,23 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   Map<String, dynamic>? caretakerData;
   Map<String, dynamic>? vehicleData;
   bool isLoading = true;
-  List<Map<String, dynamic>> _reviews =
-      []; // 🌟 รายการรีวิวที่ดึงมาจาก Firebase
+  List<Map<String, dynamic>> _reviews = [];
 
   final Color primaryColor = const Color.fromARGB(255, 153, 116, 255);
-  final Color bgColor = const Color.fromARGB(
-    255,
-    225,
-    202,
-    255,
-  ); // ม่วงพาสเทลอ่อน
+  final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
   final Color cardColor = Colors.white;
-  final Color borderColor = const Color(0xFFDDD0F0); // ขอบม่วงอ่อน สบายตา
-  final Color accentPurple = const Color(0xFFB388FF); // ม่วงสด accent
-  final Color labelColor = const Color(0xFF7E57C2); // ม่วงกลาง สำหรับ label
+  final Color borderColor = const Color(0xFFDDD0F0);
+  final Color accentPurple = const Color(0xFFB388FF);
+  final Color labelColor = const Color(0xFF7E57C2);
 
   @override
   void initState() {
     super.initState();
-    loadCaretaker();
-    _fetchReviews(); // 🌟 ดึงรีวิวจาก Firebase
+    loadCaretaker().then((_) {
+      _fetchReviews();
+    });
   }
 
-  // 🎯 ฟังก์ชันสำหรับเปิดแจ้งเตือนกรณีที่ยังไม่ได้เข้าสู่ระบบ
   void _showLoginRequiredDialog() {
     showDialog(
       context: context,
@@ -98,7 +92,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                       ),
                     ),
                     onPressed: () {
-                      Navigator.pop(context); // ปิด Dialog
+                      Navigator.pop(context);
                     },
                     child: const Text(
                       'ไปหน้าเข้าสู่ระบบ',
@@ -143,8 +137,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     }
   }
 
-  // 🌟 ดึงรีวิวของผู้ดูแลคนนี้ทั้งหมด โดยไล่ดูทุก Request ของทุกญาติ
-  // (โครงสร้าง Firebase: Login/{relativeUid}/Relative/Request/{requestId}/Review)
   Future<void> _fetchReviews() async {
     try {
       final snapshot = await FirebaseDatabase.instance.ref('Login').get();
@@ -161,14 +153,37 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
         final reqs = Map<String, dynamic>.from(relativeData['Request'] as Map);
         reqs.forEach((reqId, reqData) {
           if (reqData is! Map) return;
-          if (reqData['caretakerId'] != widget.caretakerId) return;
-          if (reqData['Review'] == null) return;
 
-          final reviewData = Map<String, dynamic>.from(
-            reqData['Review'] as Map,
-          );
+          print('🔍 เจอ Request ID: $reqId ของอาสา ${reqData['caretakerId']}');
+
+          String dbId = reqData['caretakerId'].toString().trim();
+
+          // 🌟🌟🌟 แก้จุดที่ 2 ตรงนี้ครับ 🌟🌟🌟
+          // ดึงเลขบัตรประชาชนจากข้อมูลโปรไฟล์ แทนการใช้ UID
+          String pageId =
+              caretakerData?['caretakerId']?.toString().trim() ?? '';
+
+          if (dbId != pageId) {
+            print(
+              '❌ ข้าม: ID ไม่ตรงกัน (ในระบบ: "$dbId" vs หน้าโปรไฟล์: "$pageId")',
+            );
+            return;
+          }
+
+          print('🎯 เจออาสาที่ตรงกันแล้ว!');
+
+          final rawReview = reqData['Review'] ?? reqData['review'];
+
+          if (rawReview == null) {
+            print('❌ ข้าม: Request นี้ไม่มีคีย์ Review');
+            return;
+          }
+
+          final reviewData = Map<String, dynamic>.from(rawReview as Map);
           final double score =
               double.tryParse(reviewData['ratingscore']?.toString() ?? '') ?? 0;
+
+          print('✅ ดึงรีวิวสำเร็จ! คะแนน: $score');
 
           collected.add({
             'ratingscore': score,
@@ -181,7 +196,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
         });
       });
 
-      // เรียงรีวิวล่าสุดไว้บนสุด
       collected.sort((a, b) {
         final dateA =
             DateTime.tryParse(a['reviewdate'] ?? '') ?? DateTime(2000);
@@ -205,6 +219,8 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
         rating = avgRating;
         reviewCount = collected.length;
       });
+
+      print('🎉 โหลดรีวิวเสร็จสิ้น! พบรีวิวทั้งหมด ${collected.length} รายการ');
     } catch (e) {
       print('Error fetching reviews: $e');
     }
@@ -221,7 +237,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
       );
     }
     return Scaffold(
-      backgroundColor: bgColor, // สีพื้นหลังม่วงพาสเทลเต็มจอ
+      backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: primaryColor,
         elevation: 2,
@@ -244,7 +260,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
           ),
         ),
       ),
-      // ย้าย SingleChildScrollView ออกมาครอบนอกสุด
       body: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
@@ -262,6 +277,9 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                       const SizedBox(height: 12),
                       _buildPersonalInfo(),
                       const SizedBox(height: 12),
+                      // 🌟 เพิ่มส่วนแสดงประสบการณ์และบริการตรงนี้
+                      _buildProfessionalInfo(),
+                      const SizedBox(height: 12),
                       _buildAddressInfo(),
                       const SizedBox(height: 12),
                       _buildVehicleInfo(),
@@ -278,8 +296,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
           );
         },
       ),
-      // แถบเมนูด้านล่าง
-      // แถบเมนูด้านล่าง (แก้ไขเพิ่มเติมเฉพาะส่วน onTap)
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: primaryColor,
@@ -291,12 +307,8 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
           fontSize: 11,
         ),
         unselectedLabelStyle: const TextStyle(fontSize: 11),
-
-        // 🎯 1. เพิ่มฟังก์ชัน onTap ดักเงื่อนไขที่ตรงนี้
         onTap: (index) async {
           if (index == 3) {
-            // เมื่อกดเมนู "ญาติ" (Index ลำดับที่ 3)
-            // เช็คสิทธิ์ด้วยค่า loggedUid ตัวจริงก่อน
             String? uid = widget.loggedUid;
 
             if (uid == null) {
@@ -304,13 +316,11 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
               uid = currentUser?.uid;
             }
 
-            // 💥 ถ้าไม่ได้ล็อกอิน (ค่า uid เป็น null) บังคับเด้ง Dialog เตือนทันที
             if (uid == null) {
               _showLoginRequiredDialog();
               return;
             }
 
-            // 🚀 ถ้าล็อกอินผ่านแล้ว ให้ดึงข้อมูลและเปิดหน้าแก้ไขประวัติ (ดึงโค้ดดักของเดิมมาทำงาน)
             showDialog(
               context: context,
               barrierDismissible: false,
@@ -322,7 +332,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
               final snapshot = await FirebaseDatabase.instance
                   .ref('Login/$uid')
                   .get();
-              if (context.mounted) Navigator.pop(context); // ปิด Loading
+              if (context.mounted) Navigator.pop(context);
 
               if (snapshot.exists && snapshot.value is Map) {
                 final userData = Map<String, dynamic>.from(
@@ -384,7 +394,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                 }
 
                 if (context.mounted) {
-                  // นำทางไปหน้าแก้ไขข้อมูล
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -392,7 +401,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                         currentPatient: patient,
                         currentRelative: relative,
                         loggedUid: uid!,
-                      ), //
+                      ),
                     ),
                   );
                 }
@@ -416,7 +425,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             }
           }
         },
-
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'บ้าน'),
           BottomNavigationBarItem(
@@ -436,7 +444,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     );
   }
 
-  // 1. ส่วนหัวโปรไฟล์
   Widget _buildProfileHeader() {
     String rawStatus =
         (caretakerData?['servicestatus']?.toString() ?? 'ไม่พร้อมให้บริการ')
@@ -483,7 +490,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                 ),
                 child: CircleAvatar(
                   radius: 40,
-                  backgroundColor: const Color(0xFFE8D5FF), // ม่วงพาสเทลอ่อน
+                  backgroundColor: const Color(0xFFE8D5FF),
                   backgroundImage:
                       caretakerData?['profilephoto'] != null &&
                           caretakerData!['profilephoto'].toString().isNotEmpty
@@ -507,8 +514,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                       : null,
                 ),
               ),
-
-              // จุดสถานะ
               Container(
                 decoration: const BoxDecoration(
                   color: Colors.white,
@@ -522,10 +527,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
               ),
             ],
           ),
-
           const SizedBox(height: 12),
-
-          // สถานะออนไลน์
           Text(
             isAvailable ? 'พร้อมให้บริการ' : 'ไม่พร้อมให้บริการ',
             style: TextStyle(
@@ -534,10 +536,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
               fontSize: 14,
             ),
           ),
-
           const SizedBox(height: 6),
-
-          // ชื่อ-นามสกุล
           Text(
             '${caretakerData?['firstname'] ?? 'สมหมาย'} ${caretakerData?['lastname'] ?? 'จากมา'}',
             style: const TextStyle(
@@ -547,10 +546,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             ),
             textAlign: TextAlign.center,
           ),
-
           const SizedBox(height: 4),
-
-          // เลขบัตรประชาชน (caretakerId)
           Text(
             '${caretakerData?['caretakerId'] ?? '1520201258787'}',
             style: const TextStyle(
@@ -565,33 +561,24 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     );
   }
 
-  //ฟังชั้นคำนวณอายุจากวันเกิด
   String calculateAge(String? birthdate) {
     if (birthdate == null || birthdate.isEmpty) return '-';
-
     final birth = DateTime.parse(birthdate);
     final now = DateTime.now();
-
     int age = now.year - birth.year;
-
     if (now.month < birth.month ||
         (now.month == birth.month && now.day < birth.day)) {
       age--;
     }
-
     return '$age ปี';
   }
 
-  //ฟังชั้นแปลงวันเกิดเป็นรูปแบบวันที่ไทย (วัน/เดือน/ปี พ.ศ.)
   String thaiDate(String? birthdate) {
     if (birthdate == null || birthdate.isEmpty) return '-';
-
     final d = DateTime.parse(birthdate);
-
     return '${d.day}/${d.month}/${d.year + 543}';
   }
 
-  // 2. ข้อมูลส่วนตัว
   Widget _buildPersonalInfo() {
     return _buildCard(
       child: Column(
@@ -635,7 +622,54 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     );
   }
 
-  // 3. ข้อมูลที่อยู่
+  // 🌟 เพิ่มฟังก์ชันสำหรับสร้างการ์ดข้อมูลประสบการณ์และรายละเอียดบริการ
+  Widget _buildProfessionalInfo() {
+    return _buildCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.work_outline, size: 22, color: Color(0xFF9B59B6)),
+              SizedBox(width: 8),
+              Text(
+                'ประสบการณ์และการบริการ',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Color(0xFF8763E6),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildInfoRow(
+            'ประสบการณ์:',
+            caretakerData?['experience'] ?? 'ไม่ได้ระบุ',
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'รายละเอียดการให้บริการ:',
+            style: TextStyle(
+              color: Color(0xFF9B59B6),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            caretakerData?['servicedesc'] ?? 'ไม่ได้ระบุรายละเอียด',
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF333333),
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAddressInfo() {
     return _buildCard(
       child: Column(
@@ -690,7 +724,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     );
   }
 
-  // 4. ข้อมูลยานพาหนะ
   Widget _buildVehicleInfo() {
     return _buildCard(
       child: Column(
@@ -736,16 +769,12 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             ],
           ),
           const SizedBox(height: 16),
-          // สไลเดอร์รูปภาพรถ
           Container(
             height: 160,
             width: double.infinity,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.grey.shade400,
-                width: 1.5,
-              ), // คืนค่ากรอบรูปดั้งเดิม
+              border: Border.all(color: Colors.grey.shade400, width: 1.5),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
@@ -806,7 +835,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             ),
           ),
           const SizedBox(height: 12),
-          // จุดไข่ปลา
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -852,11 +880,9 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     );
   }
 
-  // ตัวแปรสำหรับรีวิวแบบดั้งเดิม
   double rating = 0;
   int reviewCount = 0;
 
-  // 6. รีวิวล่าสุด (🌟 ดึงจาก Firebase จริงแล้ว)
   Widget _buildReviews() {
     return _buildCard(
       child: Column(
@@ -874,24 +900,23 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                   color: Color(0xFF8763E6),
                 ),
               ),
-
-              
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ViewCaretakerReview(caretakerId: widget.caretakerId, reviews: _reviews),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ViewCaretakerReview(
+                        caretakerId: widget.caretakerId,
+                        reviews: _reviews,
                       ),
-                    );
-                  },
-                  child: Text('ดูทั้งหมด (${_reviews.length})'),
-                ),
+                    ),
+                  );
+                },
+                child: Text('ดูทั้งหมด (${_reviews.length})'),
+              ),
             ],
           ),
-
           const SizedBox(height: 16),
-
           if (reviewCount == 0)
             const Text(
               'ยังไม่มีรีวิว',
@@ -899,13 +924,10 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             )
           else ...[
             Text('${rating.toStringAsFixed(1)} คะแนน ($reviewCount รีวิว)'),
-
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Divider(),
             ),
-
-            // 🌟 แสดงรีวิวจริง (สูงสุด 5 รายการล่าสุด)
             ..._reviews.take(5).map(_buildReviewItem),
           ],
         ],
@@ -913,7 +935,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     );
   }
 
-  // 🌟 การ์ดรีวิวแต่ละรายการ
   Widget _buildReviewItem(Map<String, dynamic> review) {
     final double score = (review['ratingscore'] as double?) ?? 0;
     final String comment = (review['comment'] as String?) ?? '';
@@ -986,7 +1007,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     return '${date.day} ${thaiMonths[date.month - 1]} ${date.year + 543}';
   }
 
-  // 7. ปุ่มขอใช้บริการ
   Widget _buildRequestButton() {
     return Container(
       width: double.infinity,
@@ -1004,9 +1024,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             ),
           ),
           onPressed: () {
-            print("widget.loggedUid = ${widget.loggedUid}");
-            print("currentUser = ${FirebaseAuth.instance.currentUser?.uid}");
-
             String? uid = widget.loggedUid;
 
             if (uid == null) {
@@ -1014,13 +1031,11 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
               uid = currentUser?.uid;
             }
 
-            // ยังไม่ได้ล็อกอิน
             if (uid == null) {
               _showLoginRequiredDialog();
               return;
             }
 
-            // ล็อกอินแล้ว เปิดหน้าส่งคำขอ
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -1028,7 +1043,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                   caretakerData: caretakerData!,
                   caretakerId: widget.caretakerId,
                   loggedUid: uid,
-                  initialSelectedDate: widget.selectedDate, // 🌟 ส่งวันที่ต่อไป
+                  initialSelectedDate: widget.selectedDate,
                 ),
               ),
             );
@@ -1046,7 +1061,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     );
   }
 
-  // Widget Helper สำหรับกล่องข้อมูลต่างๆ
   Widget _buildCard({required Widget child}) {
     return Container(
       width: double.infinity,
@@ -1092,34 +1106,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildLegendItem(
-    Color color,
-    String label, {
-    required bool isOutline,
-  }) {
-    return Row(
-      children: [
-        Container(
-          width: 14,
-          height: 14,
-          decoration: BoxDecoration(
-            color: isOutline ? Colors.white : color.withOpacity(0.6),
-            border: Border.all(
-              color: isOutline ? color : Colors.transparent,
-              width: 1.5,
-            ),
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 13, color: Colors.black54),
-        ),
-      ],
     );
   }
 }

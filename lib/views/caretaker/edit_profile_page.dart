@@ -54,6 +54,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   TextEditingController lnameController = TextEditingController();
   TextEditingController phoneController = TextEditingController();
   TextEditingController experienceController = TextEditingController();
+  TextEditingController servicedescController = TextEditingController();
   TextEditingController serviceAreaController = TextEditingController();
 
   @override
@@ -104,13 +105,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
         recentReviews = reviewsData;
         isServiceOn =
             (data['servicestatus'] == 'ON' ||
-            data['servicestatus'] == 'Available');
+            data['servicestatus'] == 'online');
         fnameController.text = data['firstname'] ?? '';
         lnameController.text = data['lastname'] ?? '';
         phoneController.text = data['phonenumber'] ?? '';
 
         // 🌟 2. ดึงข้อมูล Experience
         experienceController.text = data['experience'] ?? '';
+        servicedescController.text = data['servicedesc'] ?? '';
 
         // 🌟 3. ดักจับที่อยู่ทั้งแบบ Location (ใหม่) และ location (เก่า)
         var locData = data['Location'] ?? data['location'];
@@ -156,6 +158,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       'lastname': lnameController.text,
       'phonenumber': phoneController.text,
       'experience': experienceController.text,
+      'servicedesc': servicedescController.text,
       'gender': selectedGender,
       'birthdate': birthDate?.toIso8601String(),
       'Location': {
@@ -178,7 +181,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   void _toggleServiceStatus(bool val) async {
     setState(() => isServiceOn = val);
-    String statusStr = val ? 'Available' : 'Unavailable';
+    String statusStr = val ? 'online' : 'offline';
     await _service.updateServiceStatus(widget.uid, statusStr);
     ScaffoldMessenger.of(
       context,
@@ -296,11 +299,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             maxLines: 3,
                             maxLength: 500,
                           ),
+
+                          _buildInputField(
+                            'รายละเอียดการบริการ (ถ้ามี)',
+                            controller: servicedescController,
+                            maxLines: 3,
+                            maxLength: 500,
+                          ),
                         ],
                       ),
 
                       _buildSectionContainer(
-                        title: 'พื้นที่ที่ให้บริการ',
+                        title: 'ที่อยู่ปัจจุบัน',
                         children: [
                           _buildInputField(
                             'เขตอำเภอ/พื้นที่ ที่สะดวกให้บริการ',

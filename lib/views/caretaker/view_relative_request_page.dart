@@ -274,7 +274,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF7F8FA),
+        backgroundColor: const Color(0xFFF4EDFB),
         appBar: const CustomHeader(
           title: 'รายละเอียดคำขอ',
           showBackButton: true,
@@ -364,13 +364,13 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     switch (currentStatus) {
       case RequestStatus.pending:
         statusColor = const Color(0xFF757BFF);
-        statusBgColor = Colors.white;
+        statusBgColor = const Color(0xFFE8EAFF);
         statusText = 'รอตอบรับ';
         break;
       case RequestStatus.acceptedEarly:
       case RequestStatus.acceptedReady:
-        statusColor = const Color(0xFF00B14F);
-        statusBgColor = Colors.white;
+        statusColor = const Color(0xFF9B59B6);
+        statusBgColor = const Color(0xFFF4EDFB);
         statusText = 'ตอบรับแล้ว';
         break;
       case RequestStatus.completed:
@@ -426,7 +426,8 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                       border: Border.all(color: Colors.grey.shade300, width: 1),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
+                          // เปลี่ยนสีเงาให้เป็นโทนม่วง
+                          color: Colors.purple.withOpacity(0.03),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -581,9 +582,36 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                             ),
                             Expanded(
                               child: _buildInfoField(
-                                'การเคลื่อนไหว',
+                                'สภาพร่างกาย',
                                 patMobility,
                               ),
+                            ),
+                          ],
+                        ),
+                        _buildSectionDivider('ข้อมูลญาติผู้ติดต่อ'),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _buildInfoField('ชื่อ-นามสกุล', relName),
+                            ),
+                            Expanded(
+                              child: _buildInfoField(
+                                'ความสัมพันธ์',
+                                relRelation,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _buildInfoField('เบอร์โทรศัพท์', relPhone),
+                            ),
+                            Expanded(
+                              child: _buildInfoField('LINE ID', relLine),
                             ),
                           ],
                         ),
@@ -705,43 +733,22 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        _buildInfoField('A จุดรับ', pickupAddress, maxLines: 2),
+                        _buildLocationField(
+                          'A',
+                          const Color(0xFF2196F3),
+                          ' จุดรับ',
+                          pickupAddress,
+                        ),
                         const SizedBox(height: 12),
-                        _buildInfoField(
-                          'B จุดส่ง',
+                        // 🌟 ใช้ฟังก์ชันใหม่ ใส่สีแดงให้ตัว B
+                        _buildLocationField(
+                          'B',
+                          const Color(0xFFF44336),
+                          ' จุดส่ง',
                           dropoffAddress,
-                          maxLines: 2,
                         ),
                         const SizedBox(height: 12),
                         _buildInfoField('ระยะทางประเมิน', _distanceText),
-
-                        _buildSectionDivider('ข้อมูลญาติผู้ติดต่อ'),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: _buildInfoField('ชื่อ-นามสกุล', relName),
-                            ),
-                            Expanded(
-                              child: _buildInfoField(
-                                'ความสัมพันธ์',
-                                relRelation,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: _buildInfoField('เบอร์โทรศัพท์', relPhone),
-                            ),
-                            Expanded(
-                              child: _buildInfoField('LINE ID', relLine),
-                            ),
-                          ],
-                        ),
                       ],
                     ),
                   ),
@@ -793,17 +800,64 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     );
   }
 
+  // 🌟 ฟังก์ชันใหม่สำหรับแยกสีตัวอักษร A และ B โดยเฉพาะ
+  Widget _buildLocationField(
+    String letter,
+    Color color,
+    String title,
+    String value,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              letter,
+              style: TextStyle(
+                fontSize: 14,
+                color: color, // สีน้ำเงินหรือแดงจะถูกส่งเข้ามาตรงนี้
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12,
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value.isEmpty ? '-' : value,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+
   // 🌟 ฟังก์ชันสร้างเส้นคั่นพร้อมข้อความตรงกลาง ตามเรฟเฟอเรนซ์[cite: 5]
   Widget _buildSectionDivider(String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24.0),
       child: Row(
         children: [
-          const Expanded(
+          // เปลี่ยน Expanded ตรงนี้เป็น SizedBox ดันข้อความไปทางซ้าย
+          const SizedBox(
             child: Divider(color: Color(0xFFE8E8E8), thickness: 1),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 0),
             child: Text(
               title,
               style: const TextStyle(

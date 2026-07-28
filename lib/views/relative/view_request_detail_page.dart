@@ -259,9 +259,30 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   }
 
   String _calculateAge(String? birthdate) {
-    if (birthdate == null || birthdate.isEmpty) return '-';
-    final birth = DateTime.tryParse(birthdate);
+    if (birthdate == null || birthdate.trim().isEmpty) return '-';
+
+    // 1. ลองแปลงรูปแบบมาตรฐานก่อน (เช่น 1944-01-01 หรือรูปแบบที่มี T ต่อท้าย)
+    DateTime? birth = DateTime.tryParse(birthdate);
+
+    // 2. ถ้าแปลงไม่ผ่าน (birth เป็น null) ให้ลองเช็คว่าเป็นรูปแบบ DD/MM/YYYY หรือไม่
+    if (birth == null && birthdate.contains('/')) {
+      final parts = birthdate.split('/');
+      if (parts.length == 3) {
+        final day = int.tryParse(parts[0]);
+        final month = int.tryParse(parts[1]);
+        final year = int.tryParse(parts[2]);
+
+        // ถ้าแยกชิ้นส่วนออกมาเป็นตัวเลขได้สำเร็จ ให้ประกอบร่างเป็น DateTime ใหม่
+        if (day != null && month != null && year != null) {
+          birth = DateTime(year, month, day);
+        }
+      }
+    }
+
+    // 3. ถ้าลองทุกทางแล้วยังไม่ได้จริงๆ ค่อยคืนค่า '-'
     if (birth == null) return '-';
+
+    // 4. คำนวณอายุ (ใช้ตรรกะเดิมของคุณคือ ปีปัจจุบัน - ปีเกิด)
     return '${DateTime.now().year - birth.year}';
   }
 
@@ -440,6 +461,100 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                       ],
                     ),
                   ),
+                  // 🌟 --- ส่วนข้อมูลผู้ดูแลที่ถูกปรับปรุงใหม่ ---
+                  if (caretakerData != null &&
+                      widget.caretakerName != 'รอผู้ดูแลตอบรับ') ...[
+                    _buildSectionDivider('ผู้ดูแลที่ได้รับมอบหมาย'),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 20, right: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              _buildAvatar(
+                                caretakerData?['profilephoto'],
+                                radius: 28,
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      widget.caretakerName,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: primaryPurple,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    // 🌟 นำคะแนนรีวิวมาแสดง
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.star_rounded,
+                                          color: Colors.orange,
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${caretakerRating.toStringAsFixed(1)} ($caretakerReviewCount รีวิว)',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          // 🌟 เพิ่มฟิลด์ อายุ และ เพศ
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildDocField(
+                                  'อายุ',
+                                  '${_calculateAge(caretakerData?['birthdate'])} ปี',
+                                ),
+                              ),
+                              Expanded(
+                                child: _buildDocField(
+                                  'เพศ',
+                                  caretakerData?['gender'] ?? '-',
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          // 🌟 เพิ่มฟิลด์ เบอร์ติดต่อ และ อีเมล
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildDocField(
+                                  'เบอร์ติดต่อ',
+                                  caretakerData?['phonenumber'] ?? '-',
+                                ),
+                              ),
+                              Expanded(
+                                child: _buildDocField(
+                                  'อีเมล',
+                                  caretakerData?['email'] ?? '-',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 16),
+                  ],
 
                   _buildSectionDivider('ข้อมูลผู้ป่วย'),
 
@@ -588,105 +703,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                       ],
                     ),
                   ),
-
-                  // 🌟 --- ส่วนข้อมูลผู้ดูแลที่ถูกปรับปรุงใหม่ ---
-                  if (caretakerData != null &&
-                      widget.caretakerName != 'รอผู้ดูแลตอบรับ') ...[
-                    _buildSectionDivider('ผู้ดูแลที่ได้รับมอบหมาย'),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        left: 20,
-                        right: 20,
-                        bottom: 20,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              _buildAvatar(
-                                caretakerData?['profilephoto'],
-                                radius: 28,
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      widget.caretakerName,
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: primaryPurple,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    // 🌟 นำคะแนนรีวิวมาแสดง
-                                    Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.star_rounded,
-                                          color: Colors.orange,
-                                          size: 18,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '${caretakerRating.toStringAsFixed(1)} ($caretakerReviewCount รีวิว)',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          // 🌟 เพิ่มฟิลด์ อายุ และ เพศ
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildDocField(
-                                  'อายุ',
-                                  '${_calculateAge(caretakerData?['birthdate'])} ปี',
-                                ),
-                              ),
-                              Expanded(
-                                child: _buildDocField(
-                                  'เพศ',
-                                  caretakerData?['gender'] ?? '-',
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          // 🌟 เพิ่มฟิลด์ เบอร์ติดต่อ และ อีเมล
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildDocField(
-                                  'เบอร์ติดต่อ',
-                                  caretakerData?['phonenumber'] ?? '-',
-                                ),
-                              ),
-                              Expanded(
-                                child: _buildDocField(
-                                  'อีเมล',
-                                  caretakerData?['email'] ?? '-',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ] else ...[
-                    const SizedBox(height: 20),
-                  ],
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
