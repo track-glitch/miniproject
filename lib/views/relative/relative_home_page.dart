@@ -3,6 +3,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniproject/models/patient_model.dart';
 import 'package:miniproject/models/relative_model.dart';
+import 'package:miniproject/services/function_service.dart';
 import 'package:miniproject/views/relative/edit_relative_info_page.dart';
 import 'package:miniproject/views/relative/list_request_page.dart';
 import 'package:miniproject/views/relative/track_status_notification_page.dart';

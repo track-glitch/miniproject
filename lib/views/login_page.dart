@@ -119,25 +119,6 @@ class _LoginPageState extends State<LoginPage> {
           );
           return;
         } else if (accountStatus == 'Approved') {
-          // 🌟 ถ้ายืนยันแล้ว เช็คว่ามีรถหรือยัง[cite: 10]
-          bool hasVehicle = result['hasVehicle'] ?? false;
-
-          if (!hasVehicle) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => VehicleRegisterPage(uid: uid),
-              ),
-            );
-            // หมายเหตุ: ใช้ SnackBar ชั่วคราว ถ้ายังไม่สร้างไฟล์ให้ uncomment ด้านบนออก
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('กรุณาเพิ่มข้อมูลยานพาหนะ (นำทางไปหน้าข้อมูลรถ)'),
-              ),
-            );
-            return;
-          }
-
           // 🌟 ถ้าทุกอย่างครบ (Approved + มีรถ) เข้าสู่หน้าหลัก
           Navigator.pushReplacement(
             context,

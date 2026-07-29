@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 // --- เปลี่ยน Path ให้ตรงกับโครงสร้างโฟลเดอร์ในโปรเจกต์ของคุณ ---
 import 'package:miniproject/models/patient_model.dart';
 import 'package:miniproject/models/relative_model.dart';
+import 'package:miniproject/services/function_service.dart';
 import 'package:miniproject/views/relative/edit_relative_info_page.dart';
 import 'package:miniproject/views/login_page.dart';
 import 'package:miniproject/views/relative/list_request_page.dart';
@@ -60,6 +61,16 @@ class _TrackStatusNotificationPageState
   // สีสำหรับเมนูด้านล่างและ Dialog ให้เหมือนหน้า Search
   final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
   final Color searchPrimaryColor = const Color(0xFF8763E6);
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
 
   // ฟังก์ชันแจ้งเตือนให้เข้าสู่ระบบ (ยกมาจากหน้า Search)
   void _showLoginRequiredDialog() {
@@ -210,7 +221,7 @@ class _TrackStatusNotificationPageState
                 );
               },
             ),
-            
+
             _buildBottomNavItem(
               Icons.person_outline,
               'ญาติ',

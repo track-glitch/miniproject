@@ -304,25 +304,26 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                           setState(() => _isLoading = true);
 
                           try {
-                            // เก็บเฉพาะตอนที่ติ๊กเลือก
-                            Map<String, dynamic> nextAppt = {};
-                            if (_hasNextAppointment) {
-                              nextAppt = {
-                                'doctor': _doctorController.text,
-                                'date': _dateController.text,
-                                'time': _timeController.text,
-                                'hospital': _hospitalController.text,
-                                'department': _deptController.text,
-                              };
-                            }
-
                             await _service.saveDoctorAdvice(
                               relativeUid: widget.relativeUid,
                               requestId: widget.requestId,
-                              adviceText: _adviceController.text,
-                              base64Image: _base64Image ?? '',
-                              nextAppointment:
-                                  nextAppt, // ส่ง {} ไปถ้าไม่มีนัดหมาย
+                              advicedetail: _adviceController.text,
+                              medicalphoto: _base64Image ?? '',
+                              doctorname: _hasNextAppointment
+                                  ? _doctorController.text
+                                  : '',
+                              hospitalname: _hasNextAppointment
+                                  ? _hospitalController.text
+                                  : '',
+                              departmentname: _hasNextAppointment
+                                  ? _deptController.text
+                                  : '',
+                              appointmentdate: _hasNextAppointment
+                                  ? _dateController.text
+                                  : '',
+                              appointmenttime: _hasNextAppointment
+                                  ? _timeController.text
+                                  : '',
                             );
 
                             await _service.updateRequestStatus(

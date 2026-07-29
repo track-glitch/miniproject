@@ -20,17 +20,28 @@ class AdminService {
 
       if (!snapshot.exists || snapshot.value == null) return [];
 
-      // 🌟 ท่าไม้ตาย: แปลงข้อมูลทั้งหมดจาก Firebase ให้เป็น Map<String, dynamic> 100%
-      final Map<String, dynamic> data = jsonDecode(jsonEncode(snapshot.value));
+      // 🌟 1. แปลงเป็น dynamic ก่อน เพื่อตรวจสอบประเภทข้อมูล
+      final dynamic rawData = jsonDecode(jsonEncode(snapshot.value));
+      Map<String, dynamic> data = {};
+
+      // 🌟 2. ดักจับกรณี Firebase คืนค่าเป็น List หรือ Map
+      if (rawData is List) {
+        for (int i = 0; i < rawData.length; i++) {
+          if (rawData[i] != null) {
+            data[i.toString()] = rawData[i] as Map<String, dynamic>;
+          }
+        }
+      } else if (rawData is Map) {
+        data = Map<String, dynamic>.from(rawData);
+      }
 
       List<CaretakerModel> caretakers = [];
 
       data.forEach((uid, userData) {
-        // ถ้าบัญชีนี้ไม่มีโหนด Caretaker ให้ข้ามไป
-        if (userData['Caretaker'] == null) return;
+        // ข้ามถ้าไม่มีข้อมูล Caretaker
+        if (userData == null || userData['Caretaker'] == null) return;
 
-        // ข้อมูลตอนนี้รับประกันว่าเป็น Map<String, dynamic> แน่นอน
-        final caretakerData = userData['Caretaker'] as Map<String, dynamic>;
+        final caretakerData = Map<String, dynamic>.from(userData['Caretaker']);
 
         // กรองเอาเฉพาะ accountstatus ที่ตรงกับแท็บที่เลือก
         if (caretakerData['accountstatus'] != status) return;
@@ -39,39 +50,54 @@ class AdminService {
         VehicleModel? vehicle;
         if (caretakerData['Vehicle'] != null) {
           vehicle = VehicleModel.fromJson(
-            caretakerData['Vehicle'] as Map<String, dynamic>,
+            Map<String, dynamic>.from(caretakerData['Vehicle']),
           );
         }
 
-        // 📂 2. ดึงข้อมูลรายการเอกสาร (ถ้ามี)
+        // 📂 2. ดึงข้อมูลรายการเอกสาร (ดัก List/Map ตรงนี้ด้วย เพราะเป็นจุดที่เกิดบั๊กบ่อย)
         List<DocumentModel>? documents;
         if (caretakerData['Document'] != null) {
-          final docMap = caretakerData['Document'] as Map<String, dynamic>;
-          documents = docMap.values.map((e) {
-            return DocumentModel.fromJson(e as Map<String, dynamic>);
-          }).toList();
+          final docRaw = caretakerData['Document'];
+          documents = [];
+
+          if (docRaw is List) {
+            for (var e in docRaw) {
+              if (e != null) {
+                documents.add(
+                  DocumentModel.fromJson(Map<String, dynamic>.from(e)),
+                );
+              }
+            }
+          } else if (docRaw is Map) {
+            docRaw.forEach((key, value) {
+              if (value != null) {
+                documents!.add(
+                  DocumentModel.fromJson(Map<String, dynamic>.from(value)),
+                );
+              }
+            });
+          }
         }
 
         caretakers.add(
           CaretakerModel(
-            caretakerId: caretakerData['caretakerId'] ?? '',
-            password: caretakerData['password'] ?? '',
-            usertype: caretakerData['usertype'] ?? '',
-            profilephoto: caretakerData['profilephoto'] ?? '',
-            firstname: caretakerData['firstname'] ?? '',
-            lastname: caretakerData['lastname'] ?? '',
-            gender: caretakerData['gender'] ?? '',
+            caretakerId: caretakerData['caretakerId']?.toString() ?? '',
+            password: caretakerData['password']?.toString() ?? '',
+            usertype: caretakerData['usertype']?.toString() ?? '',
+            profilephoto: caretakerData['profilephoto']?.toString() ?? '',
+            firstname: caretakerData['firstname']?.toString() ?? '',
+            lastname: caretakerData['lastname']?.toString() ?? '',
+            gender: caretakerData['gender']?.toString() ?? '',
             birthdate: caretakerData['birthdate'] != null
-                ? DateTime.parse(caretakerData['birthdate'])
+                ? DateTime.tryParse(caretakerData['birthdate'].toString())
                 : null,
-            phonenumber: caretakerData['phonenumber'] ?? '',
-            email: caretakerData['email'] ?? '',
-            experience: caretakerData['experience'] ?? '',
-            admincomment: caretakerData['admincomment'] ?? '',
-            servicestatus: caretakerData['servicestatus'] ?? '',
-            accountstatus: caretakerData['accountstatus'] ?? '',
+            phonenumber: caretakerData['phonenumber']?.toString() ?? '',
+            email: caretakerData['email']?.toString() ?? '',
+            experience: caretakerData['experience']?.toString() ?? '',
+            admincomment: caretakerData['admincomment']?.toString() ?? '',
+            servicestatus: caretakerData['servicestatus']?.toString() ?? '',
+            accountstatus: caretakerData['accountstatus']?.toString() ?? '',
 
-            // 🌟 ดึงข้อมูล Location มาแปลง
             location: caretakerData['Location'] != null
                 ? LocationModel.fromJson(
                     Map<String, dynamic>.from(caretakerData['Location']),
@@ -86,7 +112,7 @@ class AdminService {
 
       return caretakers;
     } catch (e) {
-      print('Error fetching caretakers: $e');
+      print('Error fetching caretakers: $e'); // ตรงนี้จะไม่ Error อีกต่อไป
       return [];
     }
   }
@@ -111,7 +137,7 @@ class AdminService {
       final snapshot = await _dbRef.child('Login').child(uid).get();
       if (snapshot.exists && snapshot.value != null) {
         Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
-        return data['username']?.toString() ?? 'unknow';
+        return data['usertype']?.toString() ?? 'unknow';
       } else {
         return 'ไม่พบผู้ใช้ในระบบ';
       }
@@ -146,14 +172,40 @@ class AdminService {
   }
 
   Future<void> rejectCaretaker(String caretakerId, String reason) async {
-    String? uid = await _findUidByCaretakerId(
-      caretakerId,
-    ); // 🔎 ให้ลูกมือไปหา UID ให้
+    String? uid = await _findUidByCaretakerId(caretakerId);
     if (uid != null) {
+      // 1. อัปเดตสถานะบัญชีหลัก
       await _dbRef.child('Login').child(uid).child('Caretaker').update({
         'accountstatus': 'Rejected',
         'admincomment': reason,
       });
+
+      // 2. 🌟 ค้นหาเอกสารทั้งหมดและอัปเดตสถานะเป็น REJECTED
+      DatabaseEvent docEvent = await _dbRef
+          .child('Login')
+          .child(uid)
+          .child('Caretaker')
+          .child('Document')
+          .once();
+
+      if (docEvent.snapshot.exists && docEvent.snapshot.value != null) {
+        Map<dynamic, dynamic> docs =
+            docEvent.snapshot.value as Map<dynamic, dynamic>;
+        Map<String, dynamic> updates = {};
+
+        // วนลูปเพื่อสร้างคำสั่งอัปเดตสถานะเอกสารทุกชิ้น
+        docs.forEach((key, value) {
+          updates['$key/status'] = 'REJECTED';
+        });
+
+        // สั่งอัปเดตรวดเดียว
+        await _dbRef
+            .child('Login')
+            .child(uid)
+            .child('Caretaker')
+            .child('Document')
+            .update(updates);
+      }
     }
   }
 

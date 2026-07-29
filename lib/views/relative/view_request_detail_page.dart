@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:miniproject/views/relative/view_doctor_advice_page.dart';
 
 import '../../widgets/custom_header_nav.dart';
 import '../../services/caretaker_service.dart';
 import 'package:miniproject/models/request_model.dart';
+import 'review_caretaker_page.dart';
 
 enum RequestStatus {
   pending,
@@ -40,8 +42,11 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   double caretakerRating = 0.0;
   int caretakerReviewCount = 0;
 
+  bool isReviewed = false;
+  Map<dynamic, dynamic>? doctorAdviceData;
+  String? caretakerUidForReview;
+
   final Color primaryPurple = const Color(0xFF8763E6);
-  // 🌟 ปรับสีพื้นหลังให้เป็นสีม่วงอ่อนๆ เข้ากับธีมของแอป ดูไม่จืด
   final Color bgGray = const Color(0xFFF4EDFB);
 
   @override
@@ -77,37 +82,48 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       final relSnap = await FirebaseDatabase.instance
           .ref('Login/${widget.loggedUid}/Relative')
           .get();
-      if (relSnap.exists && relSnap.value is Map)
+      if (relSnap.exists && relSnap.value is Map) {
         relativeData = Map<String, dynamic>.from(relSnap.value as Map);
+      }
 
       final patSnap = await FirebaseDatabase.instance
           .ref('Login/${widget.loggedUid}/Relative/Patient')
           .get();
-      if (patSnap.exists && patSnap.value is Map)
+      if (patSnap.exists && patSnap.value is Map) {
         patientData = Map<String, dynamic>.from(patSnap.value as Map);
+      }
+
+      final requestSnap = await FirebaseDatabase.instance
+          .ref(
+            'Login/${widget.loggedUid}/Relative/Request/${widget.requestModel.requestId}',
+          )
+          .get();
+      if (requestSnap.exists && requestSnap.value is Map) {
+        final reqData = requestSnap.value as Map;
+        isReviewed = reqData['isReviewed'] ?? false;
+        doctorAdviceData = reqData['DoctorAdvice'];
+      }
 
       String? targetId = widget.requestModel.caretakerId;
       if (targetId != null && targetId.isNotEmpty) {
         final usersSnap = await FirebaseDatabase.instance.ref('Login').get();
         if (usersSnap.exists && usersSnap.value is Map) {
           final users = usersSnap.value as Map<dynamic, dynamic>;
-          String? foundCaretakerUid;
 
           users.forEach((key, value) {
             if (value['Caretaker'] != null &&
                 value['Caretaker']['caretakerId'] == targetId) {
-              foundCaretakerUid = key.toString();
+              caretakerUidForReview = key.toString();
               caretakerData = Map<String, dynamic>.from(value['Caretaker']);
-              // 🌟 ดึง Email มาด้วยเผื่อมันเก็บอยู่ที่ root ของ user
               if (value['email'] != null) {
                 caretakerData!['email'] = value['email'];
               }
             }
           });
 
-          if (foundCaretakerUid != null) {
+          if (caretakerUidForReview != null) {
             final reviews = await CaretakerService().getAllReviews(
-              foundCaretakerUid!,
+              caretakerUidForReview!,
             );
             caretakerReviewCount = reviews.length;
             if (reviews.isNotEmpty) {
@@ -124,6 +140,52 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  void _showReviewPage() {
+    if (caretakerUidForReview == null) return;
+
+    String dateStr = _formatThaiDateFull(widget.requestModel.appointmentdate);
+    String timeStr = _formatTime(widget.requestModel.appointmenttime);
+    String fullDateTime = '$dateStr เวลา $timeStr';
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ReviewCaretakerPage(
+          requestId: widget.requestModel.requestId!,
+          relativeUid: widget.loggedUid,
+          caretakerUid: caretakerUidForReview!,
+          caretakerName: widget.caretakerName,
+          hospitalName: widget.requestModel.hospitalname ?? 'ไม่ระบุโรงพยาบาล',
+          appointmentDateStr: fullDateTime,
+          caretakerImage: caretakerData?['profilephoto'],
+        ),
+      ),
+    ).then((value) {
+      if (value == true) {
+        setState(() {
+          _isLoading = true;
+        });
+        _fetchDetailData();
+      }
+    });
+  }
+
+  // 🌟 ฟังก์ชันเปิดหน้าคำแนะนำจากแพทย์แบบเต็มจอ
+  void _navigateToDoctorAdvicePage() {
+    if (doctorAdviceData == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ViewDoctorAdvicePage(
+          loggedUid: widget.loggedUid,
+          // 💡 หมายเหตุ: ตอนนี้หน้า ViewDoctorAdvicePage เป็นข้อมูลจำลอง (Mock Data)
+          // ในอนาคตคุณสามารถเพิ่ม Parameter เพื่อส่ง doctorAdviceData, patientData และ req ไปแสดงผลจริงได้ครับ
+        ),
+      ),
+    );
   }
 
   void _cancelRequest() {
@@ -260,29 +322,19 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
 
   String _calculateAge(String? birthdate) {
     if (birthdate == null || birthdate.trim().isEmpty) return '-';
-
-    // 1. ลองแปลงรูปแบบมาตรฐานก่อน (เช่น 1944-01-01 หรือรูปแบบที่มี T ต่อท้าย)
     DateTime? birth = DateTime.tryParse(birthdate);
-
-    // 2. ถ้าแปลงไม่ผ่าน (birth เป็น null) ให้ลองเช็คว่าเป็นรูปแบบ DD/MM/YYYY หรือไม่
     if (birth == null && birthdate.contains('/')) {
       final parts = birthdate.split('/');
       if (parts.length == 3) {
         final day = int.tryParse(parts[0]);
         final month = int.tryParse(parts[1]);
         final year = int.tryParse(parts[2]);
-
-        // ถ้าแยกชิ้นส่วนออกมาเป็นตัวเลขได้สำเร็จ ให้ประกอบร่างเป็น DateTime ใหม่
         if (day != null && month != null && year != null) {
           birth = DateTime(year, month, day);
         }
       }
     }
-
-    // 3. ถ้าลองทุกทางแล้วยังไม่ได้จริงๆ ค่อยคืนค่า '-'
     if (birth == null) return '-';
-
-    // 4. คำนวณอายุ (ใช้ตรรกะเดิมของคุณคือ ปีปัจจุบัน - ปีเกิด)
     return '${DateTime.now().year - birth.year}';
   }
 
@@ -299,10 +351,9 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     }
 
     var req = widget.requestModel;
-
     String statusText = 'รอตอบรับ';
-    Color statusColor = const Color(0xFF757BFF); // สีน้ำเงิน
-    Color statusBgColor = const Color(0xFFE8EAFF); // พื้นหลังสีฟ้าอ่อน
+    Color statusColor = const Color(0xFF757BFF);
+    Color statusBgColor = const Color(0xFFE8EAFF);
 
     if (currentStatus == RequestStatus.acceptedEarly ||
         currentStatus == RequestStatus.acceptedReady) {
@@ -332,7 +383,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.grey.shade300),
-                // 🌟 เพิ่มเงาให้การ์ดดูมีมิติเล็กน้อย
                 boxShadow: [
                   BoxShadow(
                     color: Colors.purple.withOpacity(0.03),
@@ -344,7 +394,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // --- ส่วนหัว Header ---
                   Padding(
                     padding: const EdgeInsets.only(
                       left: 20,
@@ -412,7 +461,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
 
                   _buildSectionDivider('ข้อมูลการนัดหมาย'),
 
-                  // --- ข้อมูลสถานพยาบาลและนัดหมาย ---
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Column(
@@ -461,7 +509,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                       ],
                     ),
                   ),
-                  // 🌟 --- ส่วนข้อมูลผู้ดูแลที่ถูกปรับปรุงใหม่ ---
+
                   if (caretakerData != null &&
                       widget.caretakerName != 'รอผู้ดูแลตอบรับ') ...[
                     _buildSectionDivider('ผู้ดูแลที่ได้รับมอบหมาย'),
@@ -490,7 +538,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                       ),
                                     ),
                                     const SizedBox(height: 4),
-                                    // 🌟 นำคะแนนรีวิวมาแสดง
                                     Row(
                                       children: [
                                         const Icon(
@@ -514,7 +561,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          // 🌟 เพิ่มฟิลด์ อายุ และ เพศ
                           Row(
                             children: [
                               Expanded(
@@ -532,7 +578,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          // 🌟 เพิ่มฟิลด์ เบอร์ติดต่อ และ อีเมล
                           Row(
                             children: [
                               Expanded(
@@ -552,13 +597,9 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                         ],
                       ),
                     ),
-                  ] else ...[
-                    const SizedBox(height: 16),
                   ],
 
                   _buildSectionDivider('ข้อมูลผู้ป่วย'),
-
-                  // --- ข้อมูลผู้ป่วย ---
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Column(
@@ -602,112 +643,13 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildDocField(
-                                'สภาพร่างกาย',
-                                patientData?['mobility'] ?? '-',
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _buildDocField(
-                          'โรคประจำตัว',
-                          (patientData?['disease']?.toString().isEmpty ?? true)
-                              ? '-'
-                              : patientData!['disease'],
-                        ),
                       ],
                     ),
                   ),
-
-                  _buildSectionDivider('ข้อมูลญาติ (ผู้ติดต่อ)'),
-
-                  // --- ข้อมูลญาติ ---
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildDocField(
-                                'ชื่อ - นามสกุล',
-                                '${relativeData?['firstname'] ?? '-'} ${relativeData?['lastname'] ?? ''}',
-                              ),
-                            ),
-                            Expanded(
-                              child: _buildDocField(
-                                'ความสัมพันธ์',
-                                relativeData?['relationship'] ?? '-',
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildDocField(
-                                'เบอร์โทรศัพท์',
-                                relativeData?['phonenumber'] ?? '-',
-                              ),
-                            ),
-                            Expanded(
-                              child: _buildDocField(
-                                'LINE ID',
-                                relativeData?['lineId'] ?? '-',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  _buildSectionDivider('การเดินทาง'),
-
-                  // --- จุดรับและจุดส่ง ---
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: _buildDocField(
-                                'จุดรับ',
-                                req.pickuplocation?.address ?? 'ไม่ระบุ',
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: _buildDocField(
-                                'จุดส่ง',
-                                req.dropofflocation?.address ?? 'ไม่ระบุ',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
-
             const SizedBox(height: 24),
             _buildBottomActionButtons(),
             const SizedBox(height: 24),
@@ -753,7 +695,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       padding: const EdgeInsets.symmetric(vertical: 20.0),
       child: Row(
         children: [
-          // 🌟 ทำให้ขีดด้านซ้ายสั้นลง เพื่อผลักข้อความไปทางซ้าย
           const SizedBox(
             width: 0,
             child: Divider(color: Color(0xFFE8E8E8), thickness: 1),
@@ -777,6 +718,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     );
   }
 
+  // 🌟 รวมปุ่มแยกให้ชัดเจนตรงนี้
   Widget _buildBottomActionButtons() {
     if (currentStatus == RequestStatus.cancelled)
       return const SizedBox.shrink();
@@ -784,28 +726,59 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     if (currentStatus == RequestStatus.completed) {
       return Column(
         children: [
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryPurple,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+          // ปุ่มที่ 1: ดูคำแนะนำจากแพทย์ (แสดงเมื่อมีข้อมูล)
+          if (doctorAdviceData != null)
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryPurple, // สีม่วง
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-              ),
-              onPressed: () {},
-              child: const Text(
-                'ดูวันนัดหมายและคำแนะนำ',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+                onPressed: _navigateToDoctorAdvicePage,
+                label: const Text(
+                  'ดูคำแนะนำและนัดหมายถัดไป',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
-          ),
+
+          if (doctorAdviceData != null && !isReviewed)
+            const SizedBox(height: 12),
+
+          // ปุ่มที่ 2: ให้คะแนนบริการ (แสดงเฉพาะตอนที่ยังไม่ได้รีวิว)
+          if (!isReviewed)
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange, // สีส้ม
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: _showReviewPage,
+                label: const Text(
+                  'ให้คะแนนบริการ',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+
           const SizedBox(height: 16),
+
           GestureDetector(
             onTap: () {},
             child: const Text(

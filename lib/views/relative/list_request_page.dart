@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miniproject/models/patient_model.dart';
 import 'package:miniproject/models/relative_model.dart';
 import 'package:miniproject/models/request_model.dart';
+import 'package:miniproject/services/function_service.dart';
 import 'package:miniproject/views/relative/edit_relative_info_page.dart';
 import 'package:miniproject/views/login_page.dart';
 import 'package:miniproject/views/relative/relative_home_page.dart';
@@ -37,6 +38,11 @@ class _ListRequestPageState extends State<ListRequestPage> {
   void initState() {
     super.initState();
     _fetchMyRequests();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   Future<void> _fetchMyRequests() async {

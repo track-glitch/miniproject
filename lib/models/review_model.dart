@@ -4,12 +4,7 @@ class ReviewModel {
   String? comment;
   DateTime? reviewdate;
 
-  ReviewModel({
-    this.reviewId,
-    this.ratingscore,
-    this.comment,
-    this.reviewdate,
-  });
+  ReviewModel({this.reviewId, this.ratingscore, this.comment, this.reviewdate});
 
   factory ReviewModel.fromJson(Map<String, dynamic> json) {
     return ReviewModel(

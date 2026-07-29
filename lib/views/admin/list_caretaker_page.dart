@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../models/caretaker_model.dart';
 import '../../services/admin_service.dart';
-import 'view_caretaker_registration_page.dart'; // อย่าลืม import หน้าดูรายละเอียด
+import 'view_caretaker_registration_page.dart';
 import '../../views/login_page.dart';
-import 'dart:convert'; // 🌟 1. เพิ่มบรรทัดนี้ด้านบนสุดของไฟล์
+import 'dart:convert';
 
 class ListCaretakerPage extends StatefulWidget {
   final String uid;
@@ -16,7 +16,6 @@ class ListCaretakerPage extends StatefulWidget {
 class _ListCaretakerPageState extends State<ListCaretakerPage> {
   final AdminService _adminService = AdminService();
   String adminName = '';
-  // ตัวแปรเก็บสถานะแท็บปัจจุบัน ค่าเริ่มต้นคือรอดำเนินการ
   String _selectedStatus = 'Pending';
 
   final Color primaryColor = const Color(0xFFA052BE);
@@ -26,15 +25,11 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
   @override
   void initState() {
     super.initState();
-    // 3. ให้เรียกใช้ฟังก์ชันดึงข้อมูลทันทีที่เปิดหน้านี้ขึ้นมา
     _fetchAdminName();
   }
 
   Future<void> _fetchAdminName() async {
-    // สังเกตว่าเราใช้ widget.uid เพื่อดึงค่า uid ที่ส่งมาจากหน้าก่อน
     String name = await AdminService().getAdminName(widget.uid);
-
-    // 5. เมื่อได้ข้อมูลมาแล้ว ใช้ setState เพื่อสั่งให้หน้าจออัปเดตข้อความ
     setState(() {
       adminName = name;
     });
@@ -58,14 +53,9 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
-              // 1. ปิด Popup
-              Navigator.pop(context);
-              // 2. ล้างข้อมูลและเด้งกลับไปหน้า Login (แทนที่ LoginPage() ด้วยหน้าล็อกอินของคุณ)
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const LoginPage(),
-                ), // ใส่ชื่อคลาสหน้า Login
+                MaterialPageRoute(builder: (context) => const LoginPage()),
                 (route) => false,
               );
             },
@@ -79,7 +69,6 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
     );
   }
 
-  // ฟังก์ชันคำนวณอายุจากวันเกิด
   int _calculateAge(DateTime birthDate) {
     DateTime currentDate = DateTime.now();
     int age = currentDate.year - birthDate.year;
@@ -97,122 +86,205 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
     return age;
   }
 
-  // ==========================================
-  // 🟡 การ์ดสำหรับแท็บ "รอตรวจสอบ"
-  // ==========================================
   Widget _buildPendingCard(CaretakerModel caretaker, int age) {
-    return _buildBaseCard(
-      caretaker: caretaker,
-      age: age,
-      statusColor: const Color(
-        0xFFE6A500,
-      ), // ปรับเหลืองให้เข้มขึ้นเพื่อให้อ่านง่าย
-      statusText: 'รอตรวจสอบ', // 🌟 เพิ่มบรรทัดนี้
-      actionButton: ElevatedButton(
-        onPressed: () {
-          // ไปหน้ารายละเอียดเพื่อ อนุมัติ/ไม่อนุมัติ
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  ViewCaretakerRegistrationPage(caretaker: caretaker),
-            ),
-          ).then((_) {
-            setState(() {}); // รีเฟรชหน้าเมื่อกลับมา
-          });
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        child: const Text('ตรวจสอบรายละเอียด', style: TextStyle(fontSize: 11)),
-      ),
-    );
-  }
+    String address = caretaker.location?.address ?? 'ไม่ระบุที่อยู่';
 
-  // ==========================================
-  // 🟢 การ์ดสำหรับแท็บ "อนุมัติแล้ว"
-  // ==========================================
-  Widget _buildApprovedCard(CaretakerModel caretaker, int age) {
-    return _buildBaseCard(
-      caretaker: caretaker,
-      age: age,
-      statusText: 'อนุมัติแล้ว',
-      statusColor: const Color(0xFF00FF29), // สีเขียว
-      actionButton: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFE6A500).withOpacity(0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE6A500).withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 💡 ในอนาคตคุณสามารถเพิ่มปุ่มอื่นๆ ตรงนี้ได้ เช่น ปุ่มดูโปรไฟล์, ปุ่มแบน
-          ElevatedButton(
-            onPressed: () {
-              // TODO: 🚀 ใส่ฟังก์ชันไปหน้า "ดูรายงาน" ตรงนี้ในอนาคต
-              print("ไปหน้าดูรายงานของ ${caretaker.firstname}");
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(
-                0xFF3498DB,
-              ), // ใช้สีฟ้าน้ำเงินสำหรับปุ่มรายงาน
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  '${caretaker.firstname} ${caretaker.lastname}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE6A500).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  'รอตรวจสอบ',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFE6A500),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 24, color: Color(0xFFF0F0F0)),
+
+          // 🌟 ข้อมูลส่วนตัว (ไม่มี Icon)
+          Text(
+            'เพศ: ${caretaker.gender ?? '-'}   อายุ: $age ปี',
+            style: const TextStyle(fontSize: 14),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'เบอร์โทร: ${caretaker.phonenumber ?? '-'}',
+            style: const TextStyle(fontSize: 14),
+          ),
+          if (caretaker.email != null && caretaker.email!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'อีเมล: ${caretaker.email}',
+              style: const TextStyle(fontSize: 14),
+            ),
+          ],
+          const SizedBox(height: 4),
+          Text('ที่อยู่: $address', style: const TextStyle(fontSize: 14)),
+
+          const Divider(height: 24, color: Color(0xFFF0F0F0)),
+
+          // 🌟 ส่วนอัปเดตเพิ่มเติมในอนาคต (รถยนต์, รีวิว, รีพอร์ต)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildFutureStatusText('รถยนต์', 'รออัปเดต', Colors.grey),
+              _buildFutureStatusText('รีวิว', '-', Colors.grey),
+              _buildFutureStatusText('รีพอร์ต', '0 ครั้ง', Colors.green),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        ViewCaretakerRegistrationPage(caretaker: caretaker),
+                  ),
+                ).then((_) => setState(() {}));
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'ตรวจสอบเอกสาร',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            child: const Text('ดูรายงาน', style: TextStyle(fontSize: 11)),
           ),
         ],
       ),
     );
   }
 
-  // ==========================================
-  // 🔴 การ์ดสำหรับแท็บ "ระงับสิทธิ์"
-  // ==========================================
+  // Widget ช่วยแสดงผลสถานะย่อย
+  Widget _buildFutureStatusText(String label, String value, Color valueColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: valueColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildApprovedCard(CaretakerModel caretaker, int age) {
+    return _buildBaseCard(
+      caretaker: caretaker,
+      age: age,
+      statusText: 'อนุมัติแล้ว',
+      statusColor: const Color(0xFF00FF29),
+      actionButton: ElevatedButton(
+        onPressed: () {},
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF3498DB),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: const Text('ดูรายงาน', style: TextStyle(fontSize: 12)),
+      ),
+    );
+  }
+
   Widget _buildSuspendedCard(CaretakerModel caretaker, int age) {
     return _buildBaseCard(
       caretaker: caretaker,
       age: age,
       statusText: 'ระงับสิทธิ์',
-      statusColor: const Color(0xFFFF0000), // สีแดง
+      statusColor: const Color(0xFFFF0000),
       actionButton: ElevatedButton(
-        onPressed: () {
-          // TODO: อาจจะทำปุ่มให้กดดูเหตุผลที่โดนแบน หรือ ปุ่มปลดแบน
-        },
+        onPressed: () {},
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.grey.shade600,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
-        child: const Text('ดูหมายเหตุ', style: TextStyle(fontSize: 11)),
+        child: const Text('ดูหมายเหตุ', style: TextStyle(fontSize: 12)),
       ),
     );
   }
 
-  // ==========================================
-  // 🛠️ ฟังก์ชันฐาน (Base Card) สำหรับวาดโครงสร้างหลักที่เหมือนกัน
-  // ==========================================
-  // ==========================================
-  // 🛠️ ฟังก์ชันฐาน (Base Card) ดีไซน์ใหม่
-  // ==========================================
   Widget _buildBaseCard({
     required CaretakerModel caretaker,
     required int age,
     required Color statusColor,
-    required String statusText, // 🌟 รับข้อความสถานะมาด้วย
+    required String statusText,
     required Widget actionButton,
+    bool isPending = false, // 🌟 พารามิเตอร์ใหม่
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white, // เปลี่ยนพื้นเป็นสีขาวเพื่อให้เงาโดดเด่น
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withValues(alpha: 0.15), // เงาสีม่วงฟุ้งๆ
+            color: primaryColor.withOpacity(0.15),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -221,7 +293,6 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🏷️ ส่วนหัว: ชื่อ และ ป้ายสถานะแบบ Badge
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -242,9 +313,9 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
+                  color: statusColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: statusColor.withValues(alpha: 0.5)),
+                  border: Border.all(color: statusColor.withOpacity(0.5)),
                 ),
                 child: Text(
                   statusText,
@@ -257,16 +328,14 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
               ),
             ],
           ),
-          const Divider(height: 24, color: Color(0xFFF0F0F0)), // เส้นคั่นบางๆ
-          // 👤 ส่วนเนื้อหา: รูปโปรไฟล์ และ ข้อมูล
+          const Divider(height: 24, color: Color(0xFFF0F0F0)),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // กรอบรูปโปรไฟล์มีสีม่วงล้อมรอบนิดๆ
               Container(
                 padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.15),
+                  color: primaryColor.withOpacity(0.15),
                   shape: BoxShape.circle,
                 ),
                 child: CircleAvatar(
@@ -274,7 +343,7 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                   backgroundColor: const Color(0xFF82CDA4),
                   backgroundImage: _getProfileImageProvider(
                     caretaker.profilephoto,
-                  ), // 🌟 ดัก Base64 แล้ว
+                  ),
                   child: (caretaker.profilephoto?.isEmpty ?? true)
                       ? const Icon(Icons.person, size: 36, color: Colors.white)
                       : null,
@@ -286,22 +355,54 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildInfoRow(
-                      Icons.phone_outlined,
-                      caretaker.phonenumber ?? '-',
-                    ),
-                    _buildInfoRow(
                       Icons.person_outline,
                       '${caretaker.gender ?? '-'}, $age ปี',
                     ),
                     _buildInfoRow(
                       Icons.directions_car_outlined,
-                      '${caretaker.vehicle?.vehicletype} ${caretaker.vehicle?.brand}',
+                      '${caretaker.vehicle?.vehicletype ?? '-'} ${caretaker.vehicle?.brand ?? ''}',
                     ),
+                    if (!isPending) ...[
+                      // ถ้าไม่ใช่ Pending ให้โชว์เบอร์โทรปกติ
+                      _buildInfoRow(
+                        Icons.phone_outlined,
+                        caretaker.phonenumber ?? '-',
+                      ),
+                    ],
                   ],
                 ),
               ),
             ],
           ),
+
+          // 🌟 ดีไซน์พิเศษ: โชว์กล่องข้อมูลการติดต่อสำหรับ "รอตรวจสอบ"
+          if (isPending) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF9E6), // สีพื้นหลังเหลืองอ่อนๆ
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFFE082)),
+              ),
+              child: Column(
+                children: [
+                  _buildContactRow(
+                    Icons.phone,
+                    'เบอร์โทร',
+                    caretaker.phonenumber ?? '-',
+                  ),
+                  const SizedBox(height: 8),
+                  _buildContactRow(
+                    Icons.email,
+                    'อีเมล',
+                    caretaker.email ?? '-',
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           const SizedBox(height: 12),
           Align(alignment: Alignment.bottomRight, child: actionButton),
         ],
@@ -309,7 +410,30 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
     );
   }
 
-  // 🌟 ฟังก์ชันวาดไอคอนนำหน้าข้อความ
+  // 🌟 ฟังก์ชันแยกสำหรับกล่อง Contact
+  Widget _buildContactRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: const Color(0xFFE6A500)),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: const TextStyle(
+            fontSize: 13,
+            color: Colors.black54,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 13, color: Colors.black87),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildInfoRow(IconData icon, String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -331,14 +455,13 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
     );
   }
 
-  // ฟังก์ชันสร้าง UI ของแท็บ
   Widget _buildTab(String title, String status, Color dotColor) {
     bool isActive = _selectedStatus == status;
     return Expanded(
       child: GestureDetector(
         onTap: () {
           setState(() {
-            _selectedStatus = status; // อัปเดตสถานะเมื่อกดแท็บ
+            _selectedStatus = status;
           });
         },
         child: Container(
@@ -374,10 +497,20 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
     );
   }
 
-  // 🌟 2. นำฟังก์ชันนี้ไปวางไว้ด้านใน _ListCaretakerPageState (วางไว้ใต้ตัวแปรสีก็ได้ครับ)
   ImageProvider? _getProfileImageProvider(String? data) {
     if (data == null || data.trim().isEmpty) return null;
-    if (data.contains('.')) return AssetImage('assets/images/Profile/$data');
+
+    // 🌟 1. ดักจับว่าเป็น URL จากอินเทอร์เน็ต (Cloudinary) หรือไม่
+    if (data.startsWith('http')) {
+      return NetworkImage(data);
+    }
+
+    // 🌟 2. ถ้าเป็นชื่อไฟล์ที่มีนามสกุล (เช่น profile.png)
+    if (data.contains('.')) {
+      return AssetImage('assets/images/Profile/$data');
+    }
+
+    // 🌟 3. นอกเหนือจากนั้น ถือว่าเป็น Base64
     try {
       return MemoryImage(base64Decode(data));
     } catch (e) {
@@ -395,7 +528,7 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
         centerTitle: true,
         title: Text(
           'Hello, $adminName',
-          style: TextStyle(
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w500,
             fontSize: 20,
@@ -405,11 +538,7 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
             tooltip: 'ออกจากระบบ',
-            onPressed: () {
-              _showLogoutConfirmDialog(
-                context,
-              ); // เรียกฟังก์ชันถามยืนยันก่อนออก
-            },
+            onPressed: () => _showLogoutConfirmDialog(context),
           ),
         ],
       ),
@@ -426,14 +555,13 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
           ),
           const SizedBox(height: 16),
 
-          // ส่วนของแท็บ (Tabs)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
+                border: Border.all(color: primaryColor.withOpacity(0.3)),
               ),
               child: Row(
                 children: [
@@ -443,17 +571,15 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                     'ระงับสิทธิ์',
                     'Suspended',
                     const Color(0xFFFF0000),
-                  ), // หรือ 'Rejected' ตาม DB
+                  ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 16),
 
-          // รายการการ์ดตามสถานะ
           Expanded(
             child: FutureBuilder<List<CaretakerModel>>(
-              // ส่ง _selectedStatus ไปเพื่อดึงข้อมูลใหม่ทุกครั้งที่แท็บเปลี่ยน
               future: _adminService.getCaretakersByStatus(_selectedStatus),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -462,7 +588,6 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                   );
                 }
 
-                // ค้นหาบรรทัดนี้ในฟังก์ชัน build
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return Center(
                     child: Column(
@@ -471,7 +596,7 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                         Icon(
                           Icons.inbox_outlined,
                           size: 64,
-                          color: primaryColor.withValues(alpha: 0.3),
+                          color: primaryColor.withOpacity(0.3),
                         ),
                         const SizedBox(height: 12),
                         const Text(
@@ -497,16 +622,13 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                         ? _calculateAge(caretaker.birthdate!)
                         : 0;
 
-                    // 🔀 เช็กสถานะแท็บปัจจุบัน แล้วแยกไปเรียกการ์ดแต่ละแบบ
-                    if (_selectedStatus == 'Pending') {
+                    if (_selectedStatus == 'Pending')
                       return _buildPendingCard(caretaker, age);
-                    } else if (_selectedStatus == 'Approved') {
+                    if (_selectedStatus == 'Approved')
                       return _buildApprovedCard(caretaker, age);
-                    } else if (_selectedStatus == 'Suspended') {
+                    if (_selectedStatus == 'Suspended')
                       return _buildSuspendedCard(caretaker, age);
-                    }
-
-                    return const SizedBox(); // กันเหนียวกรณีไม่มีสถานะ
+                    return const SizedBox();
                   },
                 );
               },

@@ -385,11 +385,11 @@ class CaretakerService {
     }
   }
 
-  // 2. เพิ่มการแจ้งเตือนใหม่ และอัปเดตพิกัดปัจจุบัน
   Future<void> addStatusNotification({
     required String relativeUid,
     required String requestId,
     required String status,
+    required String detail, // 🌟 1. เพิ่มตัวรับ detail เข้ามา
   }) async {
     try {
       // เพิ่มประวัติแจ้งเตือน
@@ -401,9 +401,13 @@ class CaretakerService {
           .child(requestId)
           .child('Notification')
           .push();
+
+      // 🌟 2. เปลี่ยน Key ให้ตรงกับ NotificationModel เพื่อให้ตอนดึงข้อมูลไม่พัง
       await ref.set({
-        'status': status,
-        'timestamp': DateTime.now().toIso8601String(),
+        'notifyId': ref.key,
+        'notifystatus': status,
+        'notifydetail': detail,
+        'notifydate': DateTime.now().toIso8601String(),
       });
 
       // ถ้ามีพิกัด ให้เซฟพิกัดล่าสุดแยกไว้ เพื่อให้ญาติดูแบบ Real-time ง่ายๆ
@@ -453,25 +457,35 @@ class CaretakerService {
   Future<void> saveDoctorAdvice({
     required String relativeUid,
     required String requestId,
-    required String adviceText,
-    required String base64Image,
-    required Map<String, dynamic> nextAppointment, // 🌟 เพิ่มตัวแปรตารางนัดหมาย
+    required String advicedetail,
+    required String medicalphoto,
+    required String doctorname,
+    required String hospitalname,
+    required String departmentname,
+    required String appointmentdate,
+    required String appointmenttime,
   }) async {
     try {
+      // 🌟 นำข้อมูลมาจัดรูปแบบให้ตรงกับ DoctorAdviceModel
+      Map<String, dynamic> adviceData = {
+        'advicedetail': advicedetail,
+        'medicalphoto': medicalphoto,
+        'doctorname': doctorname,
+        'hospitalname': hospitalname,
+        'departmentname': departmentname,
+        'appointmentdate': appointmentdate,
+        'appointmenttime': appointmenttime,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
       await _dbRef
           .child('Login')
           .child(relativeUid)
           .child('Relative')
           .child('Request')
           .child(requestId)
-          .child('DoctorAdvice')
-          .set({
-            'advice': adviceText,
-            'image': base64Image,
-            'nextAppointment':
-                nextAppointment, // 🌟 อัปโหลดขึ้น Firebase คู่กัน
-            'timestamp': DateTime.now().toIso8601String(),
-          });
+          .child('DoctorAdvice') // 🌟 เซฟภายใต้ชื่อ DoctorAdvice
+          .set(adviceData);
     } catch (e) {
       print("Error saving doctor advice: $e");
     }

@@ -43,14 +43,15 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
   ];
 
   bool _isLoading = true;
-  bool _hasStarted = false;
-  int _currentStepIndex = 0;
-
   List<Map<dynamic, dynamic>> _notificationHistory = [];
   StreamSubscription<Position>? _positionStreamSubscription;
   Timer? _trackingTimer;
 
-  // 🎨 สีหลักที่ใช้ตกแต่ง (อิงจากภาพ)
+  String? _selectedStatus;
+  final TextEditingController _detailController = TextEditingController();
+  Timer? _clockTimer;
+  DateTime _currentTime = DateTime.now();
+
   final Color bgColor = const Color(0xFFF3E5FF);
   final Color primaryPurple = const Color(0xFF7D3C98);
   final Color completePurple = const Color(0xFF6A1B9A);
@@ -60,6 +61,11 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
   void initState() {
     super.initState();
     _initData();
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() => _currentTime = DateTime.now());
+      }
+    });
   }
 
   Future<void> _initData() async {
@@ -68,12 +74,17 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
       widget.requestData.id,
     );
 
-    _currentStepIndex = _notificationHistory.length;
-
-    // 🌟 เช็คว่ามีประวัติการแจ้งเตือนหรือยัง
-    if (_currentStepIndex > 0) {
-      _hasStarted = true;
+    // Default สถานะใน Dropdown เป็นขั้นตอนถัดไปที่ยังไม่เคยส่ง
+    for (String s in _statusList) {
+      bool exists = _notificationHistory.any(
+        (n) => n['notifystatus'] == s || n['status'] == s,
+      );
+      if (!exists) {
+        _selectedStatus = s;
+        break;
+      }
     }
+    _selectedStatus ??= _statusList.last;
 
     setState(() {
       _isLoading = false;
@@ -84,6 +95,8 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
   void dispose() {
     _positionStreamSubscription?.cancel();
     _trackingTimer?.cancel();
+    _clockTimer?.cancel();
+    _detailController.dispose();
     super.dispose();
   }
 
@@ -99,18 +112,75 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     }
   }
 
+  // 🌟 ฟังก์ชันแสดงป๊อปอัพยืนยัน
+  void _showConfirmationDialog() {
+    if (_selectedStatus == null) return;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'ยืนยันการส่งสถานะ',
+            style: TextStyle(fontWeight: FontWeight.bold, color: primaryPurple),
+          ),
+          content: Text(
+            'คุณต้องการแจ้งเตือนสถานะ\n"$_selectedStatus" ใช่หรือไม่?',
+            style: const TextStyle(fontSize: 15, height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // ปิดป๊อปอัพโดยไม่ทำอะไร
+              },
+              child: Text(
+                'ยกเลิก',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryPurple,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop(); // ปิดป๊อปอัพก่อน
+                _submitStatus(); // 🌟 ค่อยเรียกฟังก์ชันส่งข้อมูลจริง
+              },
+              child: const Text(
+                'ยืนยัน',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _submitStatus() async {
-    if (_isLoading || _currentStepIndex >= _statusList.length) return;
+    if (_isLoading || _selectedStatus == null) return;
 
     setState(() => _isLoading = true);
 
     try {
-      String statusToSubmit = _statusList[_currentStepIndex];
+      String statusToSubmit = _selectedStatus!;
+      String detailToSubmit = _detailController.text.trim();
 
       await _service.addStatusNotification(
         relativeUid: widget.requestData.relativeUid,
         requestId: widget.requestData.id,
         status: statusToSubmit,
+        detail: detailToSubmit,
       );
 
       _notificationHistory = await _service.getNotifications(
@@ -153,10 +223,11 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
         return;
       }
 
-      setState(() {
-        _hasStarted = true;
-        _currentStepIndex = _notificationHistory.length;
-      });
+      int currentIndex = _statusList.indexOf(statusToSubmit);
+      if (currentIndex != -1 && currentIndex < _statusList.length - 1) {
+        _selectedStatus = _statusList[currentIndex + 1];
+      }
+      _detailController.clear();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -181,7 +252,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     String timeOnly = dateParts.length > 1 ? dateParts[1].trim() : '';
 
     return Scaffold(
-      backgroundColor: bgColor, // 🌟 พื้นหลังสีม่วงอ่อน
+      backgroundColor: bgColor,
       appBar: const CustomHeader(
         title: 'ส่งสถานะการแจ้งเตือน',
         showBackButton: true,
@@ -199,7 +270,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 🌟 กล่องข้อมูลบริการ (UI แบบ Card)
+                        // 🌟 1. กล่องข้อมูลบริการ (UI แบบ Card)
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -261,12 +332,9 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
 
                         const SizedBox(height: 16),
 
-                        // 🌟 กล่อง Timeline
+                        // 🌟 2. กล่องฟอร์มสำหรับเลือกและส่งการแจ้งเตือน
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 20,
-                          ),
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
@@ -278,47 +346,214 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                               ),
                             ],
                           ),
-                          child: _buildTimeline(),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'อัปเดตสถานะการบริการ',
+                                    style: TextStyle(
+                                      color: primaryPurple,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.access_time,
+                                        size: 14,
+                                        color: Colors.orange.shade800,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        DateFormat(
+                                          'HH:mm น.',
+                                        ).format(_currentTime),
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.orange.shade800,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              DropdownButtonFormField<String>(
+                                value: _selectedStatus,
+                                decoration: InputDecoration(
+                                  labelText: 'สถานะปัจจุบัน',
+                                  filled: true,
+                                  fillColor: const Color(0xFFF9F9F9),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                      color: primaryPurple,
+                                    ),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 12,
+                                  ),
+                                ),
+                                items: _statusList
+                                    .map(
+                                      (s) => DropdownMenuItem(
+                                        value: s,
+                                        child: Text(
+                                          s,
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (val) =>
+                                    setState(() => _selectedStatus = val),
+                              ),
+                              const SizedBox(height: 12),
+                              TextFormField(
+                                controller: _detailController,
+                                maxLines: 2,
+                                decoration: InputDecoration(
+                                  labelText: 'รายละเอียดเพิ่มเติม (ถ้ามี)',
+                                  hintText:
+                                      'เช่น ถึงก่อนเวลา 10 นาที, ผู้ป่วยขึ้นรถเรียบร้อย',
+                                  hintStyle: TextStyle(
+                                    color: Colors.grey.shade400,
+                                    fontSize: 13,
+                                  ),
+                                  filled: true,
+                                  fillColor: const Color(0xFFF9F9F9),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(
+                                      color: primaryPurple,
+                                    ),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // 🌟 3. กล่องแสดงประวัติสถานะที่ส่งไปแล้ว (Timeline ประวัติ)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 20,
+                          ),
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryPurple.withOpacity(0.08),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'ประวัติการส่งสถานะ',
+                                style: TextStyle(
+                                  color: primaryPurple,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTimeline(),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 16),
                       ],
                     ),
                   ),
                 ),
-                // ส่วนปุ่มแจ้งเตือนด้านล่าง
                 _buildBottomAction(),
               ],
             ),
     );
   }
 
+  // 🌟 นำข้อมูลจาก _notificationHistory มาแสดงเป็น Timeline เท่านั้น
   Widget _buildTimeline() {
+    if (_notificationHistory.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20.0),
+          child: Text(
+            'ยังไม่มีประวัติการส่งสถานะ',
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+          ),
+        ),
+      );
+    }
+
+    // จัดเรียงตามเวลาเก่าไปใหม่
+    _notificationHistory.sort((a, b) {
+      String timeA = a['notifydate'] ?? a['timestamp'] ?? "";
+      String timeB = b['notifydate'] ?? b['timestamp'] ?? "";
+      return timeA.compareTo(timeB);
+    });
+
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _statusList.length,
+      itemCount: _notificationHistory.length,
       itemBuilder: (context, index) {
-        bool isCompleted = index < _currentStepIndex;
-        // 🌟 แก้ลอจิก: ถ้ายังไม่เคยเริ่มเลย (ไม่มีประวัติ) ให้แสดงเป็นสีเทารอดำเนินการไปก่อน
-        bool isCurrent = index == _currentStepIndex && _hasStarted;
-        bool isLast = index == _statusList.length - 1;
+        var item = _notificationHistory[index];
+        bool isLast = index == _notificationHistory.length - 1;
 
-        return _buildTimelineTile(
-          index: index,
-          title: _statusList[index],
-          isCompleted: isCompleted,
-          isCurrent: isCurrent,
-          isLast: isLast,
-        );
+        return _buildTimelineTile(item: item, isLast: isLast);
       },
     );
   }
 
-  // 🌟 บีบเส้นประให้สั้นลง
   Widget _buildDashedLine() {
     return Column(
       children: List.generate(
-        4, // ลดจำนวนเส้นประ
+        4,
         (index) => Container(
           width: 2,
           height: 4,
@@ -329,27 +564,21 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     );
   }
 
+  // 🌟 สร้าง UI สำหรับประวัติที่สำเร็จแล้วเท่านั้น
   Widget _buildTimelineTile({
-    required int index,
-    required String title,
-    required bool isCompleted,
-    required bool isCurrent,
+    required Map<dynamic, dynamic> item,
     required bool isLast,
   }) {
+    String title = item['notifystatus'] ?? item['status'] ?? 'ไม่ทราบสถานะ';
+    String detailText = item['notifydetail']?.toString() ?? '';
     String timeText = '';
 
-    if (isCompleted && index < _notificationHistory.length) {
-      var data = _notificationHistory[index];
-      if (data['timestamp'] != null) {
-        try {
-          DateTime dt = DateTime.parse(data['timestamp'].toString()).toLocal();
-          timeText = DateFormat('HH:mm น.').format(dt);
-        } catch (e) {
-          timeText = "";
-        }
-      }
-    } else if (isCurrent) {
-      timeText = DateFormat('HH:mm น.').format(DateTime.now());
+    String? rawDate = item['notifydate'] ?? item['timestamp'];
+    if (rawDate != null) {
+      try {
+        DateTime dt = DateTime.parse(rawDate).toLocal();
+        timeText = DateFormat('HH:mm น.').format(dt);
+      } catch (e) {}
     }
 
     return Row(
@@ -358,51 +587,22 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
         Column(
           children: [
             Container(
-              width: 28, // บีบขนาดวงกลมเล็กลงนิดนึง
+              width: 28,
               height: 28,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isCompleted
-                    ? completePurple
-                    : (isCurrent ? Colors.white : const Color(0xFFF0F0F0)),
-                border: Border.all(
-                  color: isCompleted
-                      ? completePurple
-                      : (isCurrent ? warningYellow : Colors.grey.shade300),
-                  width: isCurrent ? 3 : 1,
-                ),
-                boxShadow: isCurrent
-                    ? [
-                        BoxShadow(
-                          color: warningYellow.withOpacity(0.4),
-                          blurRadius: 6,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                    : [],
+                color: completePurple,
+                border: Border.all(color: completePurple, width: 1),
               ),
-              child: isCompleted
-                  ? const Icon(Icons.check, color: Colors.white, size: 16)
-                  : (isCurrent
-                        ? Center(
-                            child: Container(
-                              width: 12,
-                              height: 12,
-                              decoration: BoxDecoration(
-                                color: warningYellow,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          )
-                        : null),
+              child: const Icon(Icons.check, color: Colors.white, size: 16),
             ),
             if (!isLast) _buildDashedLine(),
           ],
         ),
-        const SizedBox(width: 12), // บีบระยะห่างข้อความกับวงกลม
+        const SizedBox(width: 12),
         Expanded(
           child: Container(
-            padding: const EdgeInsets.only(bottom: 4), // บีบความสูงแต่ละแถวลง
+            padding: const EdgeInsets.only(bottom: 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -413,64 +613,35 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                     children: [
                       Text(
                         title,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 14.5,
-                          fontWeight: (isCompleted || isCurrent)
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          color: (isCompleted || isCurrent)
-                              ? Colors.black87
-                              : Colors.grey.shade400,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        isCompleted
-                            ? "${timeText.isNotEmpty ? '$timeText — ' : ''}เสร็จสิ้น"
-                            : (isCurrent
-                                  ? "$timeText — กำลังดำเนินการ"
-                                  : "รอดำเนินการ"),
+                        "${timeText.isNotEmpty ? '$timeText — ' : ''}ส่งแล้ว",
                         style: TextStyle(
                           fontSize: 12,
-                          color: isCompleted
-                              ? Colors.grey.shade500
-                              : (isCurrent
-                                    ? const Color(0xFFF57F17)
-                                    : Colors.grey.shade400),
-                          fontWeight: isCurrent
-                              ? FontWeight.bold
-                              : FontWeight.normal,
+                          color: Colors.grey.shade500,
                         ),
                       ),
+                      if (detailText.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(
+                            detailText,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
-                if (isCompleted || isCurrent)
-                  Container(
-                    margin: const EdgeInsets.only(left: 8),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isCompleted
-                          ? const Color(0xFFF3E5F5)
-                          : const Color(0xFFFFF8E1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      isCompleted ? "เสร็จสิ้น" : "กำลังดำเนิน",
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: isCompleted
-                            ? completePurple
-                            : const Color(0xFFF57F17),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
@@ -479,7 +650,6 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     );
   }
 
-  // 🌟 บีบระยะห่างแถวข้อมูลให้ดูแน่นขึ้นนิดหน่อย
   Widget _buildInfoRow(String label, String value, {bool isBold = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
@@ -509,10 +679,8 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
   }
 
   Widget _buildBottomAction() {
-    bool isAllDone = _currentStepIndex >= _statusList.length;
-
     return Container(
-      padding: const EdgeInsets.all(16.0), // ลด Padding ปุ่มด้านล่าง
+      padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -527,14 +695,15 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
         width: double.infinity,
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: isAllDone ? Colors.grey.shade400 : primaryPurple,
+            backgroundColor: primaryPurple,
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
             elevation: 0,
           ),
-          onPressed: isAllDone ? null : _submitStatus,
+          // 🌟 แก้ไขตรงนี้ จาก _submitStatus เป็น _showConfirmationDialog
+          onPressed: _isLoading ? null : _showConfirmationDialog,
           child: _isLoading
               ? const SizedBox(
                   height: 20,
@@ -545,7 +714,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                   ),
                 )
               : const Text(
-                  'แจ้งเตือน',
+                  'ส่งแจ้งเตือน',
                   style: TextStyle(
                     fontSize: 18,
                     color: Colors.white,

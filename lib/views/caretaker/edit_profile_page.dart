@@ -134,8 +134,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
           vehicleBrand = data['Vehicle']['brand'] ?? '';
           vehicleModel = data['Vehicle']['model'] ?? '';
           vehiclePlate = data['Vehicle']['licenseplate'] ?? '';
-          if (data['Vehicle']['vehiclephotos'] != null) {
-            for (var photo in data['Vehicle']['vehiclephotos']) {
+
+          // 🌟 แก้ไข: เปลี่ยนจาก 'vehiclephotos' เป็น 'VehiclePhoto' ให้ตรงกับ Database
+          if (data['Vehicle']['VehiclePhoto'] != null) {
+            for (var photo in data['Vehicle']['VehiclePhoto']) {
               vehicleImages.add(photo['photo']);
             }
           }
@@ -390,41 +392,82 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             items: vehicleImages.map((img) {
                               return ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
-                                child: img.length > 100
-                                    ? Image.memory(
-                                        base64Decode(img),
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                      )
-                                    : Image.network(
+                                child: img.startsWith('http')
+                                    ? Image.network(
                                         img,
                                         fit: BoxFit.cover,
                                         width: double.infinity,
+                                        // 🌟 เพิ่ม loadingBuilder เพื่อโชว์ตอนรูปกำลังโหลด
+                                        loadingBuilder:
+                                            (
+                                              BuildContext context,
+                                              Widget child,
+                                              ImageChunkEvent? loadingProgress,
+                                            ) {
+                                              if (loadingProgress == null)
+                                                return child;
+                                              return Center(
+                                                child: CircularProgressIndicator(
+                                                  color: primaryColor,
+                                                  value:
+                                                      loadingProgress
+                                                              .expectedTotalBytes !=
+                                                          null
+                                                      ? loadingProgress
+                                                                .cumulativeBytesLoaded /
+                                                            loadingProgress
+                                                                .expectedTotalBytes!
+                                                      : null,
+                                                ),
+                                              );
+                                            },
+                                        // 🌟 ดัก Error กรณีลิงก์รูปเสีย
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return Container(
+                                                color: Colors.grey.shade200,
+                                                width: double.infinity,
+                                                child: const Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.broken_image,
+                                                      color: Colors.grey,
+                                                      size: 40,
+                                                    ),
+                                                    Text(
+                                                      'โหลดรูปภาพไม่สำเร็จ',
+                                                      style: TextStyle(
+                                                        color: Colors.grey,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                      )
+                                    : Image.memory(
+                                        base64Decode(img),
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        // 🌟 ดัก Error กรณีแปลง Base64 ไม่ผ่าน
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return Container(
+                                                color: Colors.grey.shade200,
+                                                width: double.infinity,
+                                                child: const Center(
+                                                  child: Icon(
+                                                    Icons.broken_image,
+                                                    color: Colors.grey,
+                                                    size: 40,
+                                                  ),
+                                                ),
+                                              );
+                                            },
                                       ),
-                              );
-                            }).toList(),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: vehicleImages.asMap().entries.map((
-                              entry,
-                            ) {
-                              return AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                width: _currentImageIndex == entry.key
-                                    ? 20.0
-                                    : 8.0,
-                                height: 8.0,
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 4.0,
-                                ),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(4),
-                                  color: _currentImageIndex == entry.key
-                                      ? primaryColor
-                                      : Colors.grey.shade300,
-                                ),
                               );
                             }).toList(),
                           ),
@@ -530,12 +573,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 child: CircleAvatar(
                   radius: 41,
                   backgroundColor: Colors.white,
-                  backgroundImage: profileImageUrl.length > 100
-                      ? MemoryImage(base64Decode(profileImageUrl))
-                      : (profileImageUrl.isNotEmpty
-                                ? NetworkImage(profileImageUrl)
-                                : null)
-                            as ImageProvider?,
+                  // 🌟 แก้ไขตรงนี้ ใช้ startsWith('http') เช็กว่าเป็นลิ้งก์หรือไม่
+                  backgroundImage: profileImageUrl.isNotEmpty
+                      ? (profileImageUrl.startsWith('http')
+                            ? NetworkImage(profileImageUrl)
+                            : MemoryImage(base64Decode(profileImageUrl))
+                                  as ImageProvider)
+                      : null,
                   child: profileImageUrl.isEmpty
                       ? Icon(
                           Icons.person,

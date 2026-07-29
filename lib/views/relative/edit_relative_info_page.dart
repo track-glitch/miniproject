@@ -89,6 +89,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   void initState() {
     super.initState();
     _initData();
+
     // 🌟 รอจนกว่า _fetchAndForceShowData จะทำงานเสร็จค่อยปิด Loading
     _fetchAndForceShowData().then((_) {
       if (mounted) {
