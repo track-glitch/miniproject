@@ -2,12 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:miniproject/models/patient_model.dart';
 import 'package:miniproject/models/relative_model.dart';
-import 'package:miniproject/views/login_page.dart';
 import 'package:miniproject/views/relative/edit_relative_info_page.dart';
 import 'package:miniproject/views/relative/request_caretaker_service_page.dart';
 import 'dart:convert';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:miniproject/views/relative/view_caretaker_review.dart';
 
 class CaretakerProfilePage extends StatefulWidget {
   final String caretakerId;
@@ -29,7 +27,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   Map<String, dynamic>? caretakerData;
   Map<String, dynamic>? vehicleData;
   bool isLoading = true;
-  List<Map<String, dynamic>> _reviews = [];
 
   final Color primaryColor = const Color.fromARGB(255, 153, 116, 255);
   final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
@@ -41,9 +38,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   @override
   void initState() {
     super.initState();
-    loadCaretaker().then((_) {
-      _fetchReviews();
-    });
+    loadCaretaker();
   }
 
   void _showLoginRequiredDialog() {
@@ -137,95 +132,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     }
   }
 
-  Future<void> _fetchReviews() async {
-    try {
-      final snapshot = await FirebaseDatabase.instance.ref('Login').get();
-      if (!snapshot.exists || snapshot.value is! Map) return;
-
-      final allUsers = Map<String, dynamic>.from(snapshot.value as Map);
-      List<Map<String, dynamic>> collected = [];
-
-      allUsers.forEach((uid, val) {
-        if (val is! Map || val['Relative'] == null) return;
-        final relativeData = Map<String, dynamic>.from(val['Relative'] as Map);
-        if (relativeData['Request'] == null) return;
-
-        final reqs = Map<String, dynamic>.from(relativeData['Request'] as Map);
-        reqs.forEach((reqId, reqData) {
-          if (reqData is! Map) return;
-
-          print('🔍 เจอ Request ID: $reqId ของอาสา ${reqData['caretakerId']}');
-
-          String dbId = reqData['caretakerId'].toString().trim();
-
-          // 🌟🌟🌟 แก้จุดที่ 2 ตรงนี้ครับ 🌟🌟🌟
-          // ดึงเลขบัตรประชาชนจากข้อมูลโปรไฟล์ แทนการใช้ UID
-          String pageId =
-              caretakerData?['caretakerId']?.toString().trim() ?? '';
-
-          if (dbId != pageId) {
-            print(
-              '❌ ข้าม: ID ไม่ตรงกัน (ในระบบ: "$dbId" vs หน้าโปรไฟล์: "$pageId")',
-            );
-            return;
-          }
-
-          print('🎯 เจออาสาที่ตรงกันแล้ว!');
-
-          final rawReview = reqData['Review'] ?? reqData['review'];
-
-          if (rawReview == null) {
-            print('❌ ข้าม: Request นี้ไม่มีคีย์ Review');
-            return;
-          }
-
-          final reviewData = Map<String, dynamic>.from(rawReview as Map);
-          final double score =
-              double.tryParse(reviewData['ratingscore']?.toString() ?? '') ?? 0;
-
-          print('✅ ดึงรีวิวสำเร็จ! คะแนน: $score');
-
-          collected.add({
-            'ratingscore': score,
-            'comment': reviewData['comment']?.toString() ?? '',
-            'reviewdate': reviewData['reviewdate']?.toString(),
-            'reviewerName':
-                '${relativeData['firstname'] ?? ''} ${relativeData['lastname'] ?? ''}'
-                    .trim(),
-          });
-        });
-      });
-
-      collected.sort((a, b) {
-        final dateA =
-            DateTime.tryParse(a['reviewdate'] ?? '') ?? DateTime(2000);
-        final dateB =
-            DateTime.tryParse(b['reviewdate'] ?? '') ?? DateTime(2000);
-        return dateB.compareTo(dateA);
-      });
-
-      double avgRating = 0;
-      if (collected.isNotEmpty) {
-        final total = collected.fold<double>(
-          0,
-          (sum, r) => sum + (r['ratingscore'] as double),
-        );
-        avgRating = total / collected.length;
-      }
-
-      if (!mounted) return;
-      setState(() {
-        _reviews = collected;
-        rating = avgRating;
-        reviewCount = collected.length;
-      });
-
-      print('🎉 โหลดรีวิวเสร็จสิ้น! พบรีวิวทั้งหมด ${collected.length} รายการ');
-    } catch (e) {
-      print('Error fetching reviews: $e');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -273,21 +179,15 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                   ),
                   child: Column(
                     children: [
+                      // 🌟 Profile Header รวมปุ่มขอใช้บริการขนาดมินิมอลอยู่ใต้เลขบัตร
                       _buildProfileHeader(),
                       const SizedBox(height: 12),
                       _buildPersonalInfo(),
                       const SizedBox(height: 12),
-                      // 🌟 เพิ่มส่วนแสดงประสบการณ์และบริการตรงนี้
                       _buildProfessionalInfo(),
                       const SizedBox(height: 12),
-                      _buildAddressInfo(),
-                      const SizedBox(height: 12),
                       _buildVehicleInfo(),
-                      const SizedBox(height: 12),
-                      _buildReviews(),
-                      const SizedBox(height: 20),
-                      _buildRequestButton(),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 30),
                     ],
                   ),
                 ),
@@ -444,6 +344,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     );
   }
 
+  // 🌟 Profile Header: แสดงข้อความบอกเลขบัตรประชาชน + ย้ายปุ่มไว้ใต้เลขบัตร (Minimal Style)
   Widget _buildProfileHeader() {
     String rawStatus =
         (caretakerData?['servicestatus']?.toString() ?? 'ไม่พร้อมให้บริการ')
@@ -454,7 +355,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
         rawStatus == 'พร้อมให้บริการ';
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -538,7 +439,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
           ),
           const SizedBox(height: 6),
           Text(
-            '${caretakerData?['firstname'] ?? 'สมหมาย'} ${caretakerData?['lastname'] ?? 'จากมา'}',
+            '${caretakerData?['firstname'] ?? 'อัศวิน'} ${caretakerData?['lastname'] ?? 'จินดา'}',
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 20,
@@ -547,16 +448,72 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
+          // 🌟 เขียนบอกชัดเจนว่าเป็นเลขบัตรประชาชน
           Text(
-            '${caretakerData?['caretakerId'] ?? '1520201258787'}',
+            'เลขบัตรประชาชน: ${caretakerData?['caretakerId'] ?? '1234567891011'}',
             style: const TextStyle(
               color: Color.fromARGB(255, 85, 85, 85),
               fontSize: 13,
               fontWeight: FontWeight.normal,
-              letterSpacing: 0.5,
+              letterSpacing: 0.3,
             ),
           ),
+          const SizedBox(height: 14),
+          
+          // 🌟 ปุ่มขอใช้บริการ ดีไซน์เล็กลง ดูมินิมอล อยู่ใต้เลขบัตรประชาชน
+          _buildMinimalRequestButton(),
         ],
+      ),
+    );
+  }
+
+  // 🌟 ฟังก์ชันสร้างปุ่ม "ขอใช้บริการ" สไตล์มินิมอล ขนาดกะทัดรัด
+  Widget _buildMinimalRequestButton() {
+    return SizedBox(
+      height: 38,
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 2,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+        onPressed: () {
+          String? uid = widget.loggedUid;
+
+          if (uid == null) {
+            final currentUser = FirebaseAuth.instance.currentUser;
+            uid = currentUser?.uid;
+          }
+
+          if (uid == null) {
+            _showLoginRequiredDialog();
+            return;
+          }
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ServiceRequestPage(
+                caretakerData: caretakerData!,
+                caretakerId: widget.caretakerId,
+                loggedUid: uid,
+                initialSelectedDate: widget.selectedDate,
+              ),
+            ),
+          );
+        },
+        label: const Text(
+          'ขอใช้บริการ',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
@@ -580,6 +537,18 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   }
 
   Widget _buildPersonalInfo() {
+    String addressText = '-';
+    if (caretakerData?['location'] != null &&
+        caretakerData!['location']['address'] != null &&
+        caretakerData!['location']['address'].toString().isNotEmpty) {
+      addressText = caretakerData!['location']['address'].toString();
+    } else if (caretakerData?['address'] != null &&
+        caretakerData!['address'].toString().isNotEmpty) {
+      addressText = caretakerData!['address'].toString();
+    } else {
+      addressText = '14 หมู่ 8 ตำบล ปัว อำเภอ อวน จังหวัด น่าน 50189';
+    }
+
     return _buildCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -617,12 +586,12 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             caretakerData?['phonenumber'] ?? '0861940622',
           ),
           _buildInfoRow('อีเมล:', caretakerData?['email'] ?? 'somk@gmail.com'),
+          _buildInfoRow('ที่อยู่:', addressText),
         ],
       ),
     );
   }
 
-  // 🌟 เพิ่มฟังก์ชันสำหรับสร้างการ์ดข้อมูลประสบการณ์และรายละเอียดบริการ
   Widget _buildProfessionalInfo() {
     return _buildCard(
       child: Column(
@@ -664,60 +633,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
               color: Color(0xFF333333),
               height: 1.5,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAddressInfo() {
-    return _buildCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                margin: const EdgeInsets.only(top: 2, right: 12),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Icon(Icons.place, color: Colors.red.shade500, size: 40),
-                    Container(
-                      width: 10,
-                      height: 10,
-                      margin: const EdgeInsets.only(bottom: 10),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'ข้อมูลที่อยู่',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Color(0xFF8763E6),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      caretakerData?['address'] ??
-                          '14 หมู่ 8        ตำบล ปัว\nอำเภอ อวน  จังหวัด น่าน   50189',
-                      style: const TextStyle(fontSize: 15, height: 1.5),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -876,187 +791,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
       decoration: BoxDecoration(
         color: isActive ? const Color(0xFF9B59B6) : Colors.grey.shade300,
         shape: BoxShape.circle,
-      ),
-    );
-  }
-
-  double rating = 0;
-  int reviewCount = 0;
-
-  Widget _buildReviews() {
-    return _buildCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'รีวิวล่าสุด',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Color(0xFF8763E6),
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ViewCaretakerReview(
-                        caretakerId: widget.caretakerId,
-                        reviews: _reviews,
-                      ),
-                    ),
-                  );
-                },
-                child: Text('ดูทั้งหมด (${_reviews.length})'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (reviewCount == 0)
-            const Text(
-              'ยังไม่มีรีวิว',
-              style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
-            )
-          else ...[
-            Text('${rating.toStringAsFixed(1)} คะแนน ($reviewCount รีวิว)'),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Divider(),
-            ),
-            ..._reviews.take(5).map(_buildReviewItem),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReviewItem(Map<String, dynamic> review) {
-    final double score = (review['ratingscore'] as double?) ?? 0;
-    final String comment = (review['comment'] as String?) ?? '';
-    final String reviewerName = (review['reviewerName'] as String?) ?? '';
-    final DateTime? date = review['reviewdate'] != null
-        ? DateTime.tryParse(review['reviewdate'])
-        : null;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  reviewerName.isEmpty ? 'ผู้ใช้บริการ' : reviewerName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-              if (date != null)
-                Text(
-                  _formatThaiReviewDate(date),
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
-                ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: List.generate(5, (index) {
-              return Icon(
-                index < score.round() ? Icons.star : Icons.star_border,
-                color: Colors.orange,
-                size: 13,
-              );
-            }),
-          ),
-          if (comment.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              comment,
-              style: const TextStyle(fontSize: 13, color: Colors.black87),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  String _formatThaiReviewDate(DateTime date) {
-    const thaiMonths = [
-      'ม.ค.',
-      'ก.พ.',
-      'มี.ค.',
-      'เม.ย.',
-      'พ.ค.',
-      'มิ.ย.',
-      'ก.ค.',
-      'ส.ค.',
-      'ก.ย.',
-      'ต.ค.',
-      'พ.ย.',
-      'ธ.ค.',
-    ];
-    return '${date.day} ${thaiMonths[date.month - 1]} ${date.year + 543}';
-  }
-
-  Widget _buildRequestButton() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: SizedBox(
-        height: 52,
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor,
-            foregroundColor: Colors.white,
-            elevation: 4,
-            shadowColor: const Color(0xFF9B59B6).withOpacity(0.4),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-          onPressed: () {
-            String? uid = widget.loggedUid;
-
-            if (uid == null) {
-              final currentUser = FirebaseAuth.instance.currentUser;
-              uid = currentUser?.uid;
-            }
-
-            if (uid == null) {
-              _showLoginRequiredDialog();
-              return;
-            }
-
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ServiceRequestPage(
-                  caretakerData: caretakerData!,
-                  caretakerId: widget.caretakerId,
-                  loggedUid: uid,
-                  initialSelectedDate: widget.selectedDate,
-                ),
-              ),
-            );
-          },
-          child: const Text(
-            'ขอใช้บริการ',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
       ),
     );
   }

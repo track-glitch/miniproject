@@ -13,7 +13,6 @@ import '../models/document_model.dart';
 import '../models/location_model.dart';
 import '../models/vehicle_model.dart';
 import '../models/vehicle_photo_model.dart';
-import 'package:http/http.dart' as http;
 
 class CaretakerRegisterPage extends StatefulWidget {
   const CaretakerRegisterPage({super.key});
@@ -64,7 +63,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   final TextEditingController _colorController = TextEditingController();
 
   String _selectedVehicleType = "";
-  String _selectedProvince = ""; // 🌟 ตัวแปรเก็บค่าจังหวัด
+  String _selectedProvince = "";
   File? _exteriorImageFile;
   String? _exteriorPhotoBase64;
   File? _interiorImageFile;
@@ -77,15 +76,14 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   File? _docDriverLicenseFile;
   File? _docVehicleRegFile;
   File? _docInsuranceFile;
-  File? _docResumeFile;
-  File? _docCertificateFile;
+  File? _docResumeFile; // Resume 1 ใบ A4
+  final List<File> _docCertificateFiles = []; // ประกาศนียบัตร เพิ่มได้หลายไฟล์
 
   final Color primaryColor = const Color(0xFF9B59B6);
   final Color darkPurple = const Color(0xFF7D3C98);
   final Color lightPurple = const Color(0xFFF3E5F5);
   final Color greyBorder = const Color(0xFFE1BEE7);
 
-  // 🌟 ชุดข้อมูล 77 จังหวัด (ใช้สำหรับทำ Autocomplete Dropdown)
   final List<String> _provinces = [
     "กรุงเทพมหานคร",
     "กระบี่",
@@ -271,35 +269,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     }
   }
 
-  // 🌟 ฟังก์ชันอัปโหลดรูปไป Cloudinary
-  Future<String?> _uploadToCloudinary(File file) async {
-    const cloudName = 'g0bpco6a'; // เปลี่ยนตรงนี้
-    const uploadPreset = 'ml_default'; // เปลี่ยนตรงนี้
-
-    final url = Uri.parse(
-      'https://api.cloudinary.com/v1_1/$cloudName/image/upload',
-    );
-    final request = http.MultipartRequest('POST', url)
-      ..fields['upload_preset'] = uploadPreset
-      ..files.add(await http.MultipartFile.fromPath('file', file.path));
-
-    try {
-      final response = await request.send();
-      if (response.statusCode == 200) {
-        final responseData = await response.stream.bytesToString();
-        final jsonMap = json.decode(responseData);
-        return jsonMap['secure_url']; // คืนค่า URL ของรูปภาพ
-      } else {
-        print('Upload failed: ${response.statusCode}');
-        return null;
-      }
-    } catch (e) {
-      print('Error uploading to Cloudinary: $e');
-      return null;
-    }
-  }
-
-  Future<void> _pickImage(Function(File) onImagePicked) async {
+  Future<void> _pickImage(Function(File, String) onImagePicked) async {
     final XFile? pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 80,
@@ -311,8 +281,9 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         _showErrorSnackBar('ขนาดไฟล์ต้องไม่เกิน 20MB');
         return;
       }
-      // 🌟 ส่งกลับแค่ File อย่างเดียว
-      onImagePicked(file);
+      List<int> imageBytes = await file.readAsBytes();
+      String base64String = base64Encode(imageBytes);
+      onImagePicked(file, base64String);
     }
   }
 
@@ -333,6 +304,30 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
             "${selectedDate.month.toString().padLeft(2, '0')}/"
             "${selectedDate.year + 543}";
       });
+    }
+  }
+
+  Future<void> _pickResumeImage(Function(File, String) onImagePicked) async {
+    final XFile? pickedFile = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+
+    if (pickedFile != null) {
+      File file = File(pickedFile.path);
+      int fileSizeInBytes = await file.length();
+      double fileSizeInKB = fileSizeInBytes / 1024; // แปลงเป็น KB
+
+      if (fileSizeInKB > 1500) {
+        _showErrorSnackBar(
+          'ขนาดไฟล์ใหญ่เกินไป (ต้องไม่เกิน 1,500 KB หรือ 1.5 MB)',
+        );
+        return;
+      }
+
+      List<int> imageBytes = await file.readAsBytes();
+      String base64String = base64Encode(imageBytes);
+      onImagePicked(file, base64String);
     }
   }
 
@@ -382,8 +377,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
       setState(() => _currentStep = 2);
     } else if (_currentStep == 2) {
       if (_step2FormKey.currentState!.validate()) {
-        // 🌟 แก้ไข: เปลี่ยนมาเช็กที่ตัวแปร File แทน Base64
-        if (_profileImageFile == null) {
+        if (_profilePhotoBase64 == null) {
           _showErrorSnackBar('กรุณาเลือกรูปโปรไฟล์ของคุณ');
           return;
         }
@@ -404,10 +398,9 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
           _showErrorSnackBar('กรุณาเลือกจังหวัดป้ายทะเบียนให้ถูกต้อง');
           return;
         }
-        // 🌟 แก้ไข: เปลี่ยนมาเช็กที่ตัวแปร File ของรถยนต์ทั้ง 3 มุม แทน Base64
-        if (_exteriorImageFile == null ||
-            _interiorImageFile == null ||
-            _storageImageFile == null) {
+        if (_exteriorPhotoBase64 == null ||
+            _interiorPhotoBase64 == null ||
+            _storagePhotoBase64 == null) {
           _showErrorSnackBar('กรุณาอัปโหลดรูปถ่ายรถยนต์ให้ครบทั้ง 3 มุม');
           return;
         }
@@ -427,115 +420,74 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         _docDriverLicenseFile == null ||
         _docVehicleRegFile == null ||
         _docInsuranceFile == null ||
-        _docResumeFile == null ||
-        _profileImageFile == null) {
-      // เช็ครูปโปรไฟล์ด้วย
-      _showErrorSnackBar('กรุณาอัปโหลดเอกสารและรูปภาพที่จำเป็น (*) ให้ครบถ้วน');
+        _docResumeFile == null) {
+      _showErrorSnackBar('กรุณาอัปโหลดเอกสารที่จำเป็น (*) ให้ครบถ้วน');
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      // 🌟 1. อัปโหลดรูปภาพทั้งหมดขึ้น Cloudinary และรับ URL กลับมา
-      // ใช้ Future.wait เพื่อให้อัปโหลดพร้อมกัน (จะเร็วกว่าอัปโหลดทีละรูปมาก)
-      final List<String?> uploadedUrls = await Future.wait([
-        _uploadToCloudinary(_profileImageFile!),
-        _uploadToCloudinary(_docIdCardFile!),
-        _uploadToCloudinary(_docDriverLicenseFile!),
-        _uploadToCloudinary(_docVehicleRegFile!),
-        _uploadToCloudinary(_docInsuranceFile!),
-        _uploadToCloudinary(_docResumeFile!),
-        _docCertificateFile != null
-            ? _uploadToCloudinary(_docCertificateFile!)
-            : Future.value(null),
-
-        // รูปรถยนต์
-        _exteriorImageFile != null
-            ? _uploadToCloudinary(_exteriorImageFile!)
-            : Future.value(null),
-        _interiorImageFile != null
-            ? _uploadToCloudinary(_interiorImageFile!)
-            : Future.value(null),
-        _storageImageFile != null
-            ? _uploadToCloudinary(_storageImageFile!)
-            : Future.value(null),
-      ]);
-
-      // ตรวจสอบว่าอัปโหลดสำเร็จครบไหม (ยกเว้นรูปรถและใบประกาศที่อาจจะ null ได้ถ้าไม่ได้บังคับ)
-      if (uploadedUrls.take(6).any((url) => url == null)) {
-        throw Exception("อัปโหลดไฟล์หลักไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
-      }
-
-      // ดึง URL ออกมาเก็บใส่ตัวแปร
-      final profileUrl = uploadedUrls[0]!;
-      final idCardUrl = uploadedUrls[1]!;
-      final driverLicenseUrl = uploadedUrls[2]!;
-      final vehicleRegUrl = uploadedUrls[3]!;
-      final insuranceUrl = uploadedUrls[4]!;
-      final resumeUrl = uploadedUrls[5]!;
-      final certUrl = uploadedUrls[6];
-
-      final exteriorUrl = uploadedUrls[7];
-      final interiorUrl = uploadedUrls[8];
-      final storageUrl = uploadedUrls[9];
-
-      // 🌟 2. จัดเตรียมข้อมูลเอกสาร (แทนที่ "base64_data" ด้วย URL ที่ได้มา)
+      // 1. จัดเตรียมข้อมูลเอกสาร
       List<DocumentModel> documentsList = [
         DocumentModel(
           documentId: "doc_idcard",
           documenttype: "สำเนาบัตรประชาชน",
-          filepath: idCardUrl, // 👈 ใช้ URL แทน
+          filepath: "base64_data",
           uploaddate: DateTime.now(),
-          status: "pending",
         ),
         DocumentModel(
           documentId: "doc_driver_license",
           documenttype: "สำเนาใบขับขี่",
-          filepath: driverLicenseUrl, // 👈 ใช้ URL แทน
+          filepath: "base64_data",
           uploaddate: DateTime.now(),
-          status: "pending",
         ),
         DocumentModel(
           documentId: "doc_vehicle_reg",
           documenttype: "สำเนาทะเบียนรถ",
-          filepath: vehicleRegUrl, // 👈 ใช้ URL แทน
+          filepath: "base64_data",
           uploaddate: DateTime.now(),
-          status: "pending",
         ),
         DocumentModel(
           documentId: "doc_insurance",
           documenttype: "สำเนาประกันภัยรถยนต์",
-          filepath: insuranceUrl, // 👈 ใช้ URL แทน
+          filepath: "base64_data",
           uploaddate: DateTime.now(),
-          status: "pending",
         ),
         DocumentModel(
           documentId: "doc_resume",
-          documenttype: "ประวัติการทำงาน",
-          filepath: resumeUrl, // 👈 ใช้ URL แทน
+          documenttype: "ประวัติการทำงาน (Resume)",
+          filepath: "base64_data",
           uploaddate: DateTime.now(),
-          status: "pending",
         ),
       ];
 
-      if (certUrl != null) {
+      // เพิ่มไฟล์ใบประกาศนียบัตร (ถ้ามีหลายไฟล์)
+      for (int i = 0; i < _docCertificateFiles.length; i++) {
         documentsList.add(
           DocumentModel(
-            documentId: "doc_certificate",
-            documenttype: "ใบประกาศนียบัตร",
-            filepath: certUrl, // 👈 ใช้ URL แทน
+            documentId: "doc_certificate_${i + 1}",
+            documenttype: "ใบประกาศนียบัตร ${i + 1}",
+            filepath: "base64_data",
             uploaddate: DateTime.now(),
-            status: "pending",
           ),
         );
       }
 
-      // 🌟 3. จัดเตรียมข้อมูลยานพาหนะและรูปรถ
+      // 2. จัดเตรียมข้อมูลยานพาหนะและรูปรถ
       List<VehiclePhotoModel> vehiclePhotos = [
-        VehiclePhotoModel(vehiclephotoid: "exterior_photo", photo: exteriorUrl),
-        VehiclePhotoModel(vehiclephotoid: "interior_photo", photo: interiorUrl),
-        VehiclePhotoModel(vehiclephotoid: "storage_photo", photo: storageUrl),
+        VehiclePhotoModel(
+          vehiclephotoid: "exterior_photo",
+          photo: _exteriorPhotoBase64,
+        ),
+        VehiclePhotoModel(
+          vehiclephotoid: "interior_photo",
+          photo: _interiorPhotoBase64,
+        ),
+        VehiclePhotoModel(
+          vehiclephotoid: "storage_photo",
+          photo: _storagePhotoBase64,
+        ),
       ];
 
       VehicleModel vehicleData = VehicleModel(
@@ -546,23 +498,23 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         licenseplate: _licensePlateController.text.trim(),
         province: _selectedProvince.trim(),
         color: _colorController.text.trim(),
-        vehiclephotos: vehiclePhotos, // 👈 รูปที่เป็น URL เข้าไปแล้ว
+        vehiclephotos: vehiclePhotos,
       );
 
-      // 🌟 4. ประกอบข้อมูล Caretaker ทั้งหมดเข้าด้วยกัน
+      // 3. ประกอบข้อมูล Caretaker ทั้งหมดเข้าด้วยกัน
       CaretakerModel caretaker = CaretakerModel(
         caretakerId: _idCardController.text.trim(),
         password: _passwordController.text.trim(),
         usertype: 'caretaker',
-        profilephoto: profileUrl, // 👈 เปลี่ยนจาก Base64 เป็น URL รูปโปรไฟล์
+        profilephoto: _profilePhotoBase64!,
         firstname: _firstNameController.text.trim(),
         lastname: _lastNameController.text.trim(),
         gender: _selectedGender,
         birthdate: _birthDate,
         phonenumber: _phoneController.text.trim(),
-        email: _emailController.text.trim(),
+        email: _emailController.text.trim(), // ส่งค่าว่างได้เนื่องจากไม่บังคับ
         experience: _experienceController.text.trim(),
-        servicestatus: "offline",
+        servicestatus: "Unavailable",
         accountstatus: "Pending",
         location: LocationModel(
           address: _serviceAreaController.text.trim(),
@@ -573,14 +525,15 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         documents: documentsList,
       );
 
-      // ส่งให้ AuthService สมัครสมาชิกต่อไป...
       var result = await _authService.registerCaretaker(
         password: _passwordController.text.trim(),
         caretaker: caretaker,
       );
 
       if (result != null) {
-        setState(() => _isRegistrationSuccess = true);
+        setState(() {
+          _isRegistrationSuccess = true;
+        });
       } else {
         setState(
           () => _submitErrorMessage = 'สมัครสมาชิกไม่สำเร็จ กรุณาลองใหม่',
@@ -763,19 +716,21 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                   return null;
                 },
               ),
-              _buildLabelField('อีเมล', isRequired: true),
+              // 🌟 ปรับปรุง: อีเมล ไม่บังคับกรอก (isRequired: false)
+              _buildLabelField('อีเมล (ถ้ามี)', isRequired: false),
               _buildTextField(
                 controller: _emailController,
                 hint: 'เช่น example@gmail.com',
                 keyboardType: TextInputType.emailAddress,
                 validator: (val) {
-                  if (val == null || val.trim().isEmpty)
-                    return 'กรุณากรอกอีเมล';
-                  if (!RegExp(
-                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                  ).hasMatch(val))
-                    return 'รูปแบบอีเมลไม่ถูกต้อง';
-                  return null;
+                  if (val != null && val.trim().isNotEmpty) {
+                    if (!RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    ).hasMatch(val.trim())) {
+                      return 'รูปแบบอีเมลไม่ถูกต้อง';
+                    }
+                  }
+                  return null; // ยินยอมให้ส่งเป็นค่าว่างได้
                 },
               ),
             ],
@@ -986,7 +941,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
-  // ================= STEP 3 : ข้อมูลยานพาหนะ (แก้ไขป้ายทะเบียน & จังหวัด) =================
+  // ================= STEP 3 : ข้อมูลยานพาหนะ =================
   Widget _buildStep3() {
     return Form(
       key: _step3FormKey,
@@ -1119,8 +1074,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                 hint: 'เช่น ขาว, ดำ, บรอนซ์เงิน',
                 validator: (val) => val!.isEmpty ? 'ระบุสีรถ' : null,
               ),
-
-              // 🌟 แยกส่วนป้ายทะเบียน และ จังหวัด ออกจากกัน
               _buildLabelField(
                 'ป้ายทะเบียนรถ (ไม่ต้องระบุจังหวัด)',
                 isRequired: true,
@@ -1150,13 +1103,16 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                 title: '1. รูปภายนอกรถ',
                 description: '(ถ่ายให้เห็นลักษณะของรถชัดเจน)',
                 imageFile: _exteriorImageFile,
-                onUpload: () => _pickImage((file) {
-                  // 👈 ลบ base64 ออก
+                onUpload: () => _pickImage((file, base64) {
                   setState(() {
                     _exteriorImageFile = file;
+                    _exteriorPhotoBase64 = base64;
                   });
                 }),
-                onRemove: () => setState(() => _exteriorImageFile = null),
+                onRemove: () => setState(() {
+                  _exteriorImageFile = null;
+                  _exteriorPhotoBase64 = null;
+                }),
               ),
               const SizedBox(height: 10),
 
@@ -1164,13 +1120,16 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                 title: '2. รูปภายในห้องโดยสาร',
                 description: '(ถ่ายเบาะหลังหรือบริเวณที่ผู้ป่วยนั่ง)',
                 imageFile: _interiorImageFile,
-                onUpload: () => _pickImage((file) {
-                  // 👈 ลบ base64 ออก
+                onUpload: () => _pickImage((file, base64) {
                   setState(() {
                     _interiorImageFile = file;
+                    _interiorPhotoBase64 = base64;
                   });
                 }),
-                onRemove: () => setState(() => _interiorImageFile = null),
+                onRemove: () => setState(() {
+                  _interiorImageFile = null;
+                  _interiorPhotoBase64 = null;
+                }),
               ),
               const SizedBox(height: 10),
 
@@ -1178,13 +1137,16 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                 title: '3. รูปที่เก็บสัมภาระ',
                 description: '(ถ่ายบริเวณที่เก็บอุปกรณ์สัมภาระของผู้ป่วย)',
                 imageFile: _storageImageFile,
-                onUpload: () => _pickImage((file) {
-                  // 👈 ลบ base64 ออก
+                onUpload: () => _pickImage((file, base64) {
                   setState(() {
                     _storageImageFile = file;
+                    _storagePhotoBase64 = base64;
                   });
                 }),
-                onRemove: () => setState(() => _storageImageFile = null),
+                onRemove: () => setState(() {
+                  _storageImageFile = null;
+                  _storagePhotoBase64 = null;
+                }),
               ),
             ],
           ),
@@ -1193,7 +1155,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
-  // 🌟 ฟังก์ชันวาด Autocomplete ค้นหาจังหวัด
   Widget _buildProvinceAutocomplete() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -1273,9 +1234,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
               "1. สำเนาบัตรประชาชน",
               _docIdCardFile,
               true,
-              () => _pickImage(
-                (f) => setState(() => _docIdCardFile = f),
-              ), // 👈 เปลี่ยน (f, b) เป็น (f)
+              () => _pickImage((f, b) => setState(() => _docIdCardFile = f)),
               () => setState(() => _docIdCardFile = null),
             ),
 
@@ -1283,30 +1242,26 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
               "2. สำเนาใบขับขี่",
               _docDriverLicenseFile,
               true,
-              () =>
-                  _pickImage((f) => setState(() => _docDriverLicenseFile = f)),
+              () => _pickImage(
+                (f, b) => setState(() => _docDriverLicenseFile = f),
+              ),
               () => setState(() => _docDriverLicenseFile = null),
             ),
 
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDocumentUploadWidget(
-                  "3. สำเนาทะเบียนรถ (ต้องตรงกับข้อมูลรถที่กรอกไว้)",
-                  _docVehicleRegFile,
-                  true,
-                  () =>
-                      _pickImage((f) => setState(() => _docVehicleRegFile = f)),
-                  () => setState(() => _docVehicleRegFile = null),
-                ),
-              ],
+            _buildDocumentUploadWidget(
+              "3. สำเนาทะเบียนรถ (ต้องตรงกับข้อมูลรถที่กรอกไว้)",
+              _docVehicleRegFile,
+              true,
+              () =>
+                  _pickImage((f, b) => setState(() => _docVehicleRegFile = f)),
+              () => setState(() => _docVehicleRegFile = null),
             ),
 
             _buildDocumentUploadWidget(
               "4. สำเนาประกันภัยรถยนต์",
               _docInsuranceFile,
               true,
-              () => _pickImage((f) => setState(() => _docInsuranceFile = f)),
+              () => _pickImage((f, b) => setState(() => _docInsuranceFile = f)),
               () => setState(() => _docInsuranceFile = null),
             ),
 
@@ -1314,17 +1269,16 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
               "5. ประวัติการทำงาน (Resume / CV)",
               _docResumeFile,
               true,
-              () => _pickImage((f) => setState(() => _docResumeFile = f)),
+              () => _pickResumeImage(
+                (f, b) => setState(() => _docResumeFile = f),
+              ),
               () => setState(() => _docResumeFile = null),
+              subTitle:
+                  "(ไฟล์ขนาดไม่เกิน 1.5 MB หรือ 1,500 KB | ส่งได้ 1 ใบ / ไฟล์)",
             ),
 
-            _buildDocumentUploadWidget(
-              "6. ใบประกาศนียบัตร",
-              _docCertificateFile,
-              false,
-              () => _pickImage((f) => setState(() => _docCertificateFile = f)),
-              () => setState(() => _docCertificateFile = null),
-            ),
+            // 🌟 ปรับปรุง 2: ใบประกาศนียบัตร - ไม่บังคับ และสามารถอัปโหลดได้หลายไฟล์
+            _buildMultipleCertificateUploadWidget(),
           ],
         ),
         if (_submitErrorMessage != null)
@@ -1359,6 +1313,116 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
               ),
             ),
           ),
+      ],
+    );
+  }
+
+  // Widget พิเศษรองรับการอัปโหลด "ใบประกาศนียบัตร" ได้หลายรูป/ไฟล์ (Optional)
+  Widget _buildMultipleCertificateUploadWidget() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabelField("6. ใบประกาศนียบัตร (ถ้ามี)", isRequired: false),
+        const Text(
+          '(สามารถอัปโหลดเพิ่มเติมได้หลายรูป/หลายไฟล์)',
+          style: TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+        const SizedBox(height: 8),
+
+        // รายการรูปที่อัปโหลดไปแล้ว
+        if (_docCertificateFiles.isNotEmpty)
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _docCertificateFiles.length,
+            itemBuilder: (context, index) {
+              final file = _docCertificateFiles[index];
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  border: Border.all(color: Colors.green.shade300, width: 1.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => _showImagePreview(file),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.file(
+                          file,
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'ใบประกาศนียบัตรที่ ${index + 1}',
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      tooltip: 'ลบรูปนี้',
+                      onPressed: () {
+                        setState(() {
+                          _docCertificateFiles.removeAt(index);
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+
+        // ปุ่มอัปโหลดเพิ่ม
+        InkWell(
+          onTap: () {
+            _pickImage((f, b) {
+              setState(() {
+                _docCertificateFiles.add(f);
+              });
+            });
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: greyBorder, width: 1.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.add_photo_alternate, color: primaryColor, size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  _docCertificateFiles.isEmpty
+                      ? 'แตะเพื่อเลือกไฟล์ ใบประกาศนียบัตร'
+                      : '+ เพิ่มรูป/ไฟล์ ใบประกาศนียบัตรอีก',
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 15),
       ],
     );
   }
@@ -1609,16 +1673,15 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
           children: [
             GestureDetector(
               onTap: () {
-                if (_profileImageFile == null) {
-                  // 🌟 แก้ไข: รับแค่พารามิเตอร์ (f) ตัวเดียว
+                if (_profileImageFile == null)
                   _pickImage(
-                    (f) => setState(() {
+                    (f, b) => setState(() {
                       _profileImageFile = f;
+                      _profilePhotoBase64 = b;
                     }),
                   );
-                } else {
+                else
                   _showImagePreview(_profileImageFile!);
-                }
               },
               child: CircleAvatar(
                 radius: 43,
@@ -1627,7 +1690,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                   radius: 40,
                   backgroundColor: Colors.white,
                   backgroundImage: _profileImageFile != null
-                      ? FileImage(_profileImageFile!) // โชว์รูปจาก File ได้เลย
+                      ? FileImage(_profileImageFile!)
                       : null,
                   child: _profileImageFile == null
                       ? const Icon(Icons.person, size: 55, color: Colors.black)
@@ -1636,10 +1699,10 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
               ),
             ),
             InkWell(
-              // 🌟 แก้ไข: รับแค่พารามิเตอร์ (f) ตัวเดียว
               onTap: () => _pickImage(
-                (f) => setState(() {
+                (f, b) => setState(() {
                   _profileImageFile = f;
+                  _profilePhotoBase64 = b;
                 }),
               ),
               child: Container(
@@ -1660,9 +1723,9 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                 top: 0,
                 right: 0,
                 child: InkWell(
-                  // 🌟 ล้างค่าแค่ File ไม่ต้องล้าง Base64 แล้ว
                   onTap: () => setState(() {
                     _profileImageFile = null;
+                    _profilePhotoBase64 = null;
                   }),
                   child: Container(
                     padding: const EdgeInsets.all(2),
@@ -1821,12 +1884,21 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     File? file,
     bool isRequired,
     VoidCallback onUpload,
-    VoidCallback onRemove,
-  ) {
+    VoidCallback onRemove, {
+    String? subTitle,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildLabelField(title, isRequired: isRequired),
+        if (subTitle != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              subTitle,
+              style: TextStyle(fontSize: 12, color: primaryColor),
+            ),
+          ),
         const SizedBox(height: 5),
         if (file == null)
           InkWell(

@@ -8,6 +8,7 @@ import 'package:miniproject/views/relative/edit_relative_info_page.dart';
 import 'package:miniproject/views/relative/list_request_page.dart';
 import 'package:miniproject/views/relative/track_status_notification_page.dart';
 import 'package:miniproject/views/relative/view_caretaker_profile_page.dart';
+import 'package:miniproject/views/relative/view_caretaker_review.dart'; // 🌟 นำเข้าหน้าดูรีวิว
 import 'package:miniproject/views/login_page.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
@@ -189,18 +190,23 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
                       Text(
-                        '• ครึ่งวัน (4 ชั่วโมง): 800 บาท',
+                        '• ครึ่งวัน (4 ชั่วโมง): 600 บาท/ครั้ง',
                         style: TextStyle(fontSize: 13),
                       ),
                       SizedBox(height: 4),
                       Text(
-                        '• เต็มวัน (8 ชั่วโมง): 1,350 บาท',
+                        '• เต็มวัน (8 ชั่วโมง): 1,000 บาท/ครั้ง',
                         style: TextStyle(fontSize: 13),
                       ),
                       SizedBox(height: 4),
                       Text(
-                        '• เกินเวลาที่กำหนด: คิดเพิ่มชั่วโมงละ 200 บาท',
+                        '• เกินเวลาที่กำหนด: คิดเพิ่มชั่วโมงละ 150 บาท',
                         style: TextStyle(fontSize: 13, color: Colors.black87),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '• ค่าบริการคิดตามแพ็กเกจที่เลือกในการจอง 1 ครั้ง',
+                        style: TextStyle(fontSize: 12.5, color: Colors.black87),
                       ),
                     ],
                   ),
@@ -231,7 +237,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                 const Padding(
                   padding: EdgeInsets.only(left: 8.0),
                   child: Text(
-                    'หากจุดรับส่งหรือพื้นที่ใช้บริการอยู่นอกเหนือเขตอำเภอที่ผู้ดูแลกำหนด จะคิดค่าเดินทางเพิ่มเติม กิโลเมตรละ 10 บาท (คำนวณตามระยะทางจริงจากระบบแอปพลิเคชัน)',
+                    'หากจุดรับส่งหรือพื้นที่ใช้บริการอยู่นอกเหนือเขตอำเภอที่ผู้ดูแลกำหนด จะคิดค่าเดินทางเพิ่มเติม กิโลเมตรละ 10 บาท โดยคำนวณตามระยะทางจริงจากระบบแอปพลิเคชัน',
                     style: TextStyle(
                       fontSize: 12.5,
                       color: Colors.black87,
@@ -513,11 +519,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                         Expanded(
                           child: TextField(
                             controller: _searchController,
-                            readOnly:
-                                _selectedFilterDate ==
-                                null, // ปล็อกไม่ให้พิมพ์ถ้ายังไม่เลือกวันที่
+                            readOnly: _selectedFilterDate == null,
                             onTap: () {
-                              // 🌟 ถ้ายังไม่เลือกวันที่ เมื่อแตะช่องพิมพ์ จะเด้งเปิดปฏิทินให้เลือกทันที (ไม่มีป๊อปอัปแจ้งเตือนแล้ว)
                               if (_selectedFilterDate == null) {
                                 _openFilterCalendar();
                               }
@@ -562,13 +565,11 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                       : Colors.grey.shade500,
                                   size: 22,
                                 ),
-                                // ปุ่มกากบาทล้างวันที่
                                 if (_selectedFilterDate != null)
                                   GestureDetector(
                                     onTap: () => setState(() {
                                       _selectedFilterDate = null;
-                                      _searchController
-                                          .clear(); // ล้างข้อความค้นหาเมื่อยกเลิกวันที่
+                                      _searchController.clear();
                                     }),
                                     child: const Padding(
                                       padding: EdgeInsets.only(left: 4.0),
@@ -588,7 +589,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   ),
                   const SizedBox(height: 12),
 
-                  // 🌟 แถวรวมปุ่ม: ค้นหาใกล้ฉัน + ดูรายละเอียดค่าใช้จ่าย (วางข้างกันแบบเดิม)
                   Row(
                     children: [
                       // ปุ่มค้นหาใกล้ฉัน
@@ -721,9 +721,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
                   final dynamic rootValue = snapshot.data!.snapshot.value;
                   List<Map<String, dynamic>> caretakersList = [];
-                  Map<String, List<double>> caregiverReviewsMap = {};
-
-                  // 🌟 ตัวแปรเก็บวันที่ไม่ว่างของอาสาแต่ละคน
+                  Map<String, List<Map<String, dynamic>>> caregiverReviewsMap = {};
                   Map<String, List<String>> busyDatesMap = {};
 
                   if (rootValue is Map) {
@@ -738,12 +736,36 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                             requests.forEach((reqId, reqData) {
                               if (reqData is Map &&
                                   reqData['caretakerId'] != null) {
-                                // ตรวจสอบว่าคำขอนี้มีการใส่ Review ไว้หรือไม่
+                                String cId = reqData['caretakerId'].toString();
+
+                                String status =
+                                    (reqData['requeststatus'] ?? '')
+                                        .toString()
+                                        .toLowerCase();
+                                if (status == 'pending' ||
+                                    status == 'accepted' ||
+                                    status == 'pending_advice') {
+                                  String apptDateStr =
+                                      reqData['appointmentdate'] ?? '';
+                                  if (apptDateStr.isNotEmpty) {
+                                    try {
+                                      DateTime d = DateTime.parse(
+                                        apptDateStr,
+                                      );
+                                      String formattedDate =
+                                          "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+                                      if (!busyDatesMap.containsKey(cId)) {
+                                        busyDatesMap[cId] = [];
+                                      }
+                                      busyDatesMap[cId]!.add(formattedDate);
+                                    } catch (e) {}
+                                  }
+                                }
+
+                                // 🌟 ดึงข้อมูลรีวิว พร้อมรูปโปรไฟล์ผู้รีวิว
                                 var reviewData =
                                     reqData['Review'] ?? reqData['review'];
-                                if (reviewData != null) {
-                                  String cId = reqData['caretakerId']
-                                      .toString();
+                                if (reviewData != null && reviewData is Map) {
                                   double ratingScore = 0.0;
                                   var rawRating =
                                       reviewData['rating'] ??
@@ -754,33 +776,32 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                         0.0;
                                   }
 
-                                  String status =
-                                      (reqData['requeststatus'] ?? '')
-                                          .toString()
-                                          .toLowerCase();
-                                  if (status == 'pending' ||
-                                      status == 'accepted' ||
-                                      status == 'pending_advice') {
-                                    String apptDateStr =
-                                        reqData['appointmentdate'] ?? '';
-                                    if (apptDateStr.isNotEmpty) {
-                                      try {
-                                        DateTime d = DateTime.parse(
-                                          apptDateStr,
-                                        );
-                                        String formattedDate =
-                                            "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
-                                        if (!busyDatesMap.containsKey(cId))
-                                          busyDatesMap[cId] = [];
-                                        busyDatesMap[cId]!.add(formattedDate);
-                                      } catch (e) {}
-                                    }
-                                  }
+                                  String commentStr =
+                                      reviewData['comment']?.toString() ?? '';
+                                  String reviewDateStr =
+                                      reviewData['reviewdate']?.toString() ??
+                                      DateTime.now().toIso8601String();
+                                  String reviewerName =
+                                      '${relativeNode['firstname'] ?? ''} ${relativeNode['lastname'] ?? ''}'
+                                          .trim();
+                                  String reviewerImage =
+                                      relativeNode['profilephoto']?.toString() ??
+                                      relativeNode['patient']?['patientphoto']?.toString() ??
+                                      '';
 
                                   if (!caregiverReviewsMap.containsKey(cId)) {
                                     caregiverReviewsMap[cId] = [];
                                   }
-                                  caregiverReviewsMap[cId]!.add(ratingScore);
+                                  
+                                  caregiverReviewsMap[cId]!.add({
+                                    'ratingscore': ratingScore,
+                                    'comment': commentStr,
+                                    'reviewdate': reviewDateStr,
+                                    'reviewerName': reviewerName.isEmpty
+                                        ? 'ผู้ใช้บริการ'
+                                        : reviewerName,
+                                    'reviewerImage': reviewerImage,
+                                  });
                                 }
                               }
                             });
@@ -798,8 +819,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                           final data = Map<String, dynamic>.from(
                             caretakerRawData as Map,
                           );
-                          data['id'] =
-                              userUidKey; // เก็บ UID เอาไว้กดดูรายละเอียด
+                          data['id'] = userUidKey;
 
                           if (userNodeValue.containsKey('Vehicle')) {
                             data['vehicle'] = Map<String, dynamic>.from(
@@ -807,18 +827,23 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                             );
                           }
 
-                          // คำนวณค่าเฉลี่ยดาวจาก Map ที่เราเตรียมไว้ด้านบน
                           String idCard = data['caretakerId']?.toString() ?? '';
-                          List<double> scores =
+                          List<Map<String, dynamic>> reviewList =
                               caregiverReviewsMap[idCard] ?? [];
 
-                          if (scores.isEmpty) {
+                          data['reviewsList'] = reviewList;
+
+                          if (reviewList.isEmpty) {
                             data['rating'] = 0.0;
                             data['comments'] = 0;
                           } else {
-                            double sum = scores.reduce((a, b) => a + b);
-                            data['rating'] = sum / scores.length;
-                            data['comments'] = scores.length;
+                            double sum = reviewList.fold(
+                              0.0,
+                              (prev, item) =>
+                                  prev + (item['ratingscore'] as double),
+                            );
+                            data['rating'] = sum / reviewList.length;
+                            data['comments'] = reviewList.length;
                           }
 
                           caretakersList.add(data);
@@ -835,7 +860,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
                   final searchQuery = _searchController.text.toLowerCase();
 
-                  // 🌟 3. คัดกรองข้อมูล (ตัดคนไม่พร้อมทำงานทิ้ง)
                   final filteredList = caretakersList.where((data) {
                     String rawStatus =
                         (data['servicestatus']?.toString() ??
@@ -846,7 +870,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                         rawStatus.toLowerCase() == 'on' ||
                         rawStatus == 'พร้อมให้บริการ';
 
-                    // ถ้าไม่พร้อมให้บริการ ตัดทิ้ง (return false ทันที)
                     if (!isAvailable) return false;
 
                     if (_selectedFilterDate != null) {
@@ -855,18 +878,17 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                       String idCard = data['caretakerId']?.toString() ?? '';
                       List<String> busyDates = busyDatesMap[idCard] ?? [];
                       if (busyDates.contains(filterDateStr)) {
-                        return false; // ติดคิว! ซ่อนคนนี้
+                        return false;
                       }
                     }
 
-                    // ค้นหาจากชื่อหรือที่อยู่
                     final name =
                         "${data['firstname'] ?? ''} ${data['lastname'] ?? ''}"
                             .toLowerCase();
                     var address = '';
                     if (data['address'] != null) {
                       address = (data['address'] ?? '').toLowerCase();
-                    } else if (data['Location']['address'] != null) {
+                    } else if (data['Location'] != null && data['Location']['address'] != null) {
                       address = (data['Location']['address'] ?? '')
                           .toLowerCase();
                     }
@@ -874,7 +896,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                         address.contains(searchQuery);
                   }).toList();
 
-                  // 🌟 4. เรียงลำดับเอาคนที่ดาวเยอะๆ ขึ้นก่อน (เรียงจากมากไปน้อย)
                   filteredList.sort((a, b) {
                     return (b['rating'] as double).compareTo(
                       a['rating'] as double,
@@ -1105,10 +1126,10 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
     if (data['address'] != null) {
       location = data['address'];
-    } else if (data['Location']['address'] != null) {
+    } else if (data['Location'] != null && data['Location']['address'] != null) {
       location = data['Location']['address'];
     } else {
-      location == 'ไม่พบข้อมูล';
+      location = 'ไม่พบข้อมูล';
     }
 
     String carDetail = 'ไม่ระบุ';
@@ -1132,6 +1153,22 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
         ? (data['rating'] as num).toDouble()
         : 0.0;
     int comments = data['comments'] ?? 0;
+    List<Map<String, dynamic>> reviewsList =
+        (data['reviewsList'] as List<Map<String, dynamic>>?) ?? [];
+
+    // 🌟 ดึงและทำความสะอาดสตรีม Base64 ให้แสดงรูปภาพได้อย่างถูกต้อง
+    String rawProfilePhoto = data['profilephoto']?.toString() ?? '';
+    String cleanedBase64 = rawProfilePhoto
+        .replaceAll('\n', '')
+        .replaceAll('\r', '')
+        .replaceAll(' ', '')
+        .trim();
+    
+    // เติม Padding `=` สำหรับสตรีม Base64 ที่ไม่สมบูรณ์
+    int pad = cleanedBase64.length % 4;
+    if (pad > 0) cleanedBase64 += '=' * (4 - pad);
+
+    bool hasProfileImage = cleanedBase64.isNotEmpty;
 
     return Container(
       width: double.infinity,
@@ -1153,25 +1190,15 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 🌟 ปรับปรุงการถอดรหัสและ Render รูปภาพโปรไฟล์
             CircleAvatar(
               radius: 30,
               backgroundColor: lightPurple,
-              backgroundImage:
-                  data['profilephoto'] != null &&
-                      data['profilephoto'].toString().isNotEmpty
-                  ? MemoryImage(
-                      base64Decode(
-                        data['profilephoto']
-                            .toString()
-                            .replaceAll('\n', '')
-                            .trim(),
-                      ),
-                    )
+              backgroundImage: hasProfileImage
+                  ? MemoryImage(base64Decode(cleanedBase64))
                   : null,
-              child:
-                  data['profilephoto'] == null ||
-                      data['profilephoto'].toString().isEmpty
-                  ? Icon(Icons.person, size: 28, color: primaryColor)
+              child: !hasProfileImage
+                  ? Icon(Icons.person, size: 32, color: primaryColor)
                   : null,
             ),
             const SizedBox(width: 14),
@@ -1235,6 +1262,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   ),
                   const SizedBox(height: 5),
 
+                  // 🌟 แถบแสดงคะแนนดาวและปุ่ม "ดูเพิ่มเติม >" เปิดหน้าดูรีวิว
                   Row(
                     children: [
                       Text(
@@ -1254,12 +1282,36 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                           );
                         }),
                       ),
-                      Text(
-                        comments == 0 ? '  ยังไม่มีรีวิว' : '  $comments รีวิว',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.black45,
-                          decoration: TextDecoration.underline,
+                      const SizedBox(width: 6),
+                      GestureDetector(
+                        onTap: () {
+                          if (comments > 0) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ViewCaretakerReview(
+                                  // 🌟 ส่ง docId/UID เพื่อให้ CaretakerService ดึงข้อมูลโปรไฟล์ได้ตรงกัน
+                                  caretakerId: data['id'] ??
+                                      data['caretakerId']?.toString() ??
+                                      '',
+                                  reviews: reviewsList,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        child: Text(
+                          comments == 0 ? 'ยังไม่มีรีวิว' : '($comments รีวิว) ดูเพิ่มเติม >',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: comments > 0
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: comments > 0 ? primaryColor : Colors.black45,
+                            decoration: comments > 0
+                                ? TextDecoration.underline
+                                : TextDecoration.none,
+                          ),
                         ),
                       ),
                     ],

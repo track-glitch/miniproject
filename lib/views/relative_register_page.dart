@@ -5,7 +5,6 @@ import 'package:latlong2/latlong.dart';
 import 'dart:convert';
 import 'dart:io';
 
-// --- เปลี่ยน Path ให้ตรงกับโฟลเดอร์ในโปรเจกต์ของคุณ ---
 import '../widgets/location_picker_widget.dart';
 import '../services/auth_service.dart';
 import '../models/relative_model.dart';
@@ -32,7 +31,6 @@ final List<String> _relationOptions = [
 class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
   final AuthService _authService = AuthService();
 
-  // 🌟 เปลี่ยนชื่อ FormKey ให้ตรงกับเนื้อหา
   final _patientFormKey = GlobalKey<FormState>();
   final _relativeFormKey = GlobalKey<FormState>();
 
@@ -48,7 +46,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
   String _selectedPatGender = "";
   String _selectedPatMobility = "";
   DateTime? _patBirthDate;
-  int? _patAge; // 🌟 เพิ่มตัวแปรเก็บอายุของผู้ป่วย
+  int? _patAge;
 
   LatLng _selectedLocation = const LatLng(18.2881, 99.4921);
   bool _hasPinned = false;
@@ -180,7 +178,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     }
   }
 
-  // 🌟 ปรับปรุงการเลือกวันเกิดผู้ป่วย ให้แสดงแค่วันเกิดใน Controller และคำนวณลงตัวแปร _patAge
   Future<void> _selectPatBirthDate() async {
     DateTime? selectedDate = await showDatePicker(
       context: context,
@@ -420,7 +417,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     );
   }
 
-  // 🌟 Step 1: ข้อตกลงและเงื่อนไข
+  // Step 1: ข้อตกลงและเงื่อนไข
   Widget _buildStep1() {
     final List<String> terms = [
       '1. ผู้ใช้บริการต้องลงทะเบียนและให้ข้อมูลส่วนบุคคลของตนเองและผู้สูงอายุที่ถูกต้อง ครบถ้วน และเป็นปัจจุบัน',
@@ -434,7 +431,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
       '9. ผู้ใช้บริการสามารถให้คะแนนและแสดงความคิดเห็นหลังเสร็จสิ้นการใช้บริการ โดยข้อมูลดังกล่าวต้องเป็นความจริงและไม่เป็นการหมิ่นประมาทผู้อื่น',
       '10. การกดยอมรับข้อตกลงและเงื่อนไขนี้ ถือว่าผู้ใช้บริการได้อ่าน ทำความเข้าใจ และยินยอมปฏิบัติตามเงื่อนไขทั้งหมด',
     ];
-    
+
     return Column(
       children: [
         const SizedBox(height: 20),
@@ -489,7 +486,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     );
   }
 
-  // 🌟 Step 2: ข้อมูลผู้ป่วย
+  // Step 2: ข้อมูลผู้ป่วย
   Widget _buildStep2() {
     return Form(
       key: _patientFormKey,
@@ -591,7 +588,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                           ),
                         ),
 
-                        // 🌟 เพิ่มการแสดงผลป้ายอายุของผู้ป่วยตามสไตล์หน้าผู้ดูแล
                         if (_patAge != null)
                           Padding(
                             padding: const EdgeInsets.only(left: 4, bottom: 12),
@@ -815,7 +811,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     );
   }
 
-  // 🌟 Step 3: ข้อมูลญาติ
+  // Step 3: ข้อมูลญาติ
   Widget _buildStep3() {
     return Form(
       key: _relativeFormKey,
@@ -896,21 +892,22 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                 ],
               ),
 
-              _buildLabelField('อีเมล', isRequired: true),
+              // 🌟 ปรับปรุง: เอาบังคับกรอกออก (isRequired: false)
+              _buildLabelField('อีเมล (ถ้ามี)', isRequired: false),
               _buildInputField(
                 hint: 'เช่น example@gmail.com',
                 controller: _relEmailController,
                 keyboardType: TextInputType.emailAddress,
                 validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'กรุณากรอกอีเมล';
+                  // หากมีการกรอกข้อมูลเข้ามา ค่อยตรวจสอบความถูกต้องของรูปแบบอีเมล
+                  if (val != null && val.trim().isNotEmpty) {
+                    if (!RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    ).hasMatch(val.trim())) {
+                      return 'รูปแบบอีเมลไม่ถูกต้อง';
+                    }
                   }
-                  if (!RegExp(
-                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                  ).hasMatch(val)) {
-                    return 'รูปแบบอีเมลไม่ถูกต้อง';
-                  }
-                  return null;
+                  return null; // ยินยอมให้เว้นว่างได้
                 },
               ),
 
