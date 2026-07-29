@@ -10,11 +10,15 @@ class LocationPickerWidget extends StatefulWidget {
   final String initialAddress;
   final Function(LatLng, String) onLocationChanged;
 
+  // 🌟 เพิ่ม Parameter สำหรับปิด-เปิดการแสดงผลช่องรายละเอียดที่อยู่
+  final bool showAddressTextField;
+
   const LocationPickerWidget({
     super.key,
     required this.initialLocation,
     required this.initialAddress,
     required this.onLocationChanged,
+    this.showAddressTextField = true, // 🌟 ตั้งค่าเริ่มต้นเป็น true เพื่อไม่กระทบหน้าอื่นที่ใช้อยู่
   });
 
   @override
@@ -26,14 +30,12 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
   late LatLng currentLocation;
 
   final TextEditingController _addressController = TextEditingController();
-
   TextEditingController addressController = TextEditingController();
 
-  // 🌟 1. ใส่ API Key ของ Longdo สำหรับระบบค้นหา (SmartSearch) และดึงที่อยู่ภาษาไทย
+  // 🌟 1. API Key ของ Longdo สำหรับระบบค้นหา (SmartSearch) และดึงที่อยู่ภาษาไทย
   final String longdoApiKey = '3f1eabefb61f80a37abf70743fe9fc33';
 
-  // 🌟 2. ใส่ API Key ของ MapTiler สำหรับดึงรูปภาพแผนที่ (กันโดน Access Block)
-  // สมัครฟรีได้ที่: https://cloud.maptiler.com/
+  // 🌟 2. API Key ของ MapTiler สำหรับดึงรูปภาพแผนที่
   final String maptilerApiKey = 'JCT1H6ehzlMaKZyrC5mp';
 
   @override
@@ -42,7 +44,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
     mapController = MapController();
     currentLocation = widget.initialLocation;
     addressController.text = widget.initialAddress;
-    _addressController.text = widget.initialAddress ?? ''; 
+    _addressController.text = widget.initialAddress;
   }
 
   @override
@@ -82,7 +84,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
     _getAddressFromLongdo(newPos);
   }
 
-  // ฟังก์ชันแปลงพิกัดเป็นที่อยู่ภาษาไทย (Reverse Geocoding ของ Longdo ยังแม่นยำที่สุด)
+  // ฟังก์ชันแปลงพิกัดเป็นที่อยู่ภาษาไทย
   Future<void> _getAddressFromLongdo(LatLng location) async {
     final url = Uri.parse(
       'https://api.longdo.com/map/services/address?lat=${location.latitude}&lon=${location.longitude}&format=json&key=$longdoApiKey',
@@ -137,7 +139,6 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                           },
                         ),
                         children: [
-                          // 🌟 ใช้ MapTiler รูปแบบ OpenStreetMap สไตล์สวยงาม คลีน และเร็ว
                           TileLayer(
                             urlTemplate:
                                 'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=$maptilerApiKey',
@@ -160,7 +161,6 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                           ),
                         ],
                       ),
-
                       Positioned(
                         top: 10,
                         right: 10,
@@ -170,7 +170,6 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                           onPressed: () => Navigator.pop(context),
                         ),
                       ),
-
                       Positioned(
                         top: 20,
                         left: 20,
@@ -189,7 +188,6 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                           ),
                         ),
                       ),
-
                       Positioned(
                         bottom: 20,
                         left: 20,
@@ -234,7 +232,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 🌟 1. ระบบค้นหาด้วย Longdo SmartSearch API ล่าสุด
+        // 🌟 1. ระบบค้นหาด้วย Longdo SmartSearch API
         Autocomplete<Map<String, dynamic>>(
           displayStringForOption: (Map<String, dynamic> option) =>
               option['name'] ?? '',
@@ -243,7 +241,6 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
               return const Iterable<Map<String, dynamic>>.empty();
             }
 
-            // 🌟 ยิง API SmartSearch (เพิ่ม limit=10 เพื่อความรวดเร็ว)
             final url = Uri.parse(
               'https://search.longdo.com/mapsearch/json/search?keyword=${textEditingValue.text}&limit=10&key=$longdoApiKey',
             );
@@ -327,37 +324,39 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
         ),
         const SizedBox(height: 12),
 
-        // 🌟 2. ช่องข้อความรายละเอียดที่อยู่
-        const Text(
-          'รายละเอียดที่อยู่',
-          style: TextStyle(
-            fontSize: 13,
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        TextFormField(
-          controller: addressController,
-          maxLines: 2,
-          decoration: InputDecoration(
-            hintText: 'กรอกที่อยู่ หรือปักหมุดบนแผนที่...',
-            filled: true,
-            fillColor: Colors.grey.shade50,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+        // 🌟 2. ช่องข้อความรายละเอียดที่อยู่ (จะแสดงผลเฉพาะเมื่อ showAddressTextField เป็น true)
+        if (widget.showAddressTextField) ...[
+          const Text(
+            'รายละเอียดที่อยู่',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          onChanged: (val) => widget.onLocationChanged(currentLocation, val),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 4),
+          TextFormField(
+            controller: addressController,
+            maxLines: 2,
+            decoration: InputDecoration(
+              hintText: 'กรอกที่อยู่ หรือปักหมุดบนแผนที่...',
+              filled: true,
+              fillColor: Colors.grey.shade50,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+            ),
+            onChanged: (val) => widget.onLocationChanged(currentLocation, val),
+          ),
+          const SizedBox(height: 12),
+        ],
 
-        // 🌟 3. แผนที่ขนาดย่อ (ใช้ MapTiler)
+        // 🌟 3. แผนที่ขนาดย่อ
         Stack(
           children: [
             Container(
@@ -378,7 +377,6 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                     ),
                   ),
                   children: [
-                    // 🌟 ใช้ MapTiler ในหน้าจอเล็กด้วย
                     TileLayer(
                       urlTemplate:
                           'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=$maptilerApiKey',
@@ -403,14 +401,12 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                 ),
               ),
             ),
-
             Positioned.fill(
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(onTap: _openFullScreenMap),
               ),
             ),
-
             Positioned(
               bottom: 10,
               right: 10,
@@ -420,7 +416,6 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                 child: const Icon(Icons.my_location, color: Color(0xFFA052BE)),
               ),
             ),
-
             Positioned(
               top: 10,
               right: 10,

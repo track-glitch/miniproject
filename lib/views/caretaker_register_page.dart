@@ -63,7 +63,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   final TextEditingController _colorController = TextEditingController();
 
   String _selectedVehicleType = "";
-  String _selectedProvince = ""; // 🌟 ตัวแปรเก็บค่าจังหวัด
+  String _selectedProvince = "";
   File? _exteriorImageFile;
   String? _exteriorPhotoBase64;
   File? _interiorImageFile;
@@ -76,15 +76,14 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   File? _docDriverLicenseFile;
   File? _docVehicleRegFile;
   File? _docInsuranceFile;
-  File? _docResumeFile;
-  File? _docCertificateFile;
+  File? _docResumeFile; // Resume 1 ใบ A4
+  final List<File> _docCertificateFiles = []; // ประกาศนียบัตร เพิ่มได้หลายไฟล์
 
   final Color primaryColor = const Color(0xFF9B59B6);
   final Color darkPurple = const Color(0xFF7D3C98);
   final Color lightPurple = const Color(0xFFF3E5F5);
   final Color greyBorder = const Color(0xFFE1BEE7);
 
-  // 🌟 ชุดข้อมูล 77 จังหวัด (ใช้สำหรับทำ Autocomplete Dropdown)
   final List<String> _provinces = [
     "กรุงเทพมหานคร",
     "กระบี่",
@@ -308,6 +307,30 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     }
   }
 
+  Future<void> _pickResumeImage(Function(File, String) onImagePicked) async {
+    final XFile? pickedFile = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+
+    if (pickedFile != null) {
+      File file = File(pickedFile.path);
+      int fileSizeInBytes = await file.length();
+      double fileSizeInKB = fileSizeInBytes / 1024; // แปลงเป็น KB
+
+      if (fileSizeInKB > 1500) {
+        _showErrorSnackBar(
+          'ขนาดไฟล์ใหญ่เกินไป (ต้องไม่เกิน 1,500 KB หรือ 1.5 MB)',
+        );
+        return;
+      }
+
+      List<int> imageBytes = await file.readAsBytes();
+      String base64String = base64Encode(imageBytes);
+      onImagePicked(file, base64String);
+    }
+  }
+
   void _showImagePreview(File imageFile) {
     showDialog(
       context: context,
@@ -433,17 +456,18 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         ),
         DocumentModel(
           documentId: "doc_resume",
-          documenttype: "ประวัติการทำงาน",
+          documenttype: "ประวัติการทำงาน (Resume)",
           filepath: "base64_data",
           uploaddate: DateTime.now(),
         ),
       ];
 
-      if (_docCertificateFile != null) {
+      // เพิ่มไฟล์ใบประกาศนียบัตร (ถ้ามีหลายไฟล์)
+      for (int i = 0; i < _docCertificateFiles.length; i++) {
         documentsList.add(
           DocumentModel(
-            documentId: "doc_certificate",
-            documenttype: "ใบประกาศนียบัตร",
+            documentId: "doc_certificate_${i + 1}",
+            documenttype: "ใบประกาศนียบัตร ${i + 1}",
             filepath: "base64_data",
             uploaddate: DateTime.now(),
           ),
@@ -472,7 +496,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         brand: _brandController.text.trim(),
         model: _modelController.text.trim(),
         licenseplate: _licensePlateController.text.trim(),
-        province: _selectedProvince.trim(), // 🌟 นำข้อมูลจังหวัดเข้า Model
+        province: _selectedProvince.trim(),
         color: _colorController.text.trim(),
         vehiclephotos: vehiclePhotos,
       );
@@ -488,7 +512,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         gender: _selectedGender,
         birthdate: _birthDate,
         phonenumber: _phoneController.text.trim(),
-        email: _emailController.text.trim(),
+        email: _emailController.text.trim(), // ส่งค่าว่างได้เนื่องจากไม่บังคับ
         experience: _experienceController.text.trim(),
         servicestatus: "Unavailable",
         accountstatus: "Pending",
@@ -692,19 +716,21 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                   return null;
                 },
               ),
-              _buildLabelField('อีเมล', isRequired: true),
+              // 🌟 ปรับปรุง: อีเมล ไม่บังคับกรอก (isRequired: false)
+              _buildLabelField('อีเมล (ถ้ามี)', isRequired: false),
               _buildTextField(
                 controller: _emailController,
                 hint: 'เช่น example@gmail.com',
                 keyboardType: TextInputType.emailAddress,
                 validator: (val) {
-                  if (val == null || val.trim().isEmpty)
-                    return 'กรุณากรอกอีเมล';
-                  if (!RegExp(
-                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                  ).hasMatch(val))
-                    return 'รูปแบบอีเมลไม่ถูกต้อง';
-                  return null;
+                  if (val != null && val.trim().isNotEmpty) {
+                    if (!RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    ).hasMatch(val.trim())) {
+                      return 'รูปแบบอีเมลไม่ถูกต้อง';
+                    }
+                  }
+                  return null; // ยินยอมให้ส่งเป็นค่าว่างได้
                 },
               ),
             ],
@@ -915,7 +941,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
-  // ================= STEP 3 : ข้อมูลยานพาหนะ (แก้ไขป้ายทะเบียน & จังหวัด) =================
+  // ================= STEP 3 : ข้อมูลยานพาหนะ =================
   Widget _buildStep3() {
     return Form(
       key: _step3FormKey,
@@ -1048,8 +1074,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                 hint: 'เช่น ขาว, ดำ, บรอนซ์เงิน',
                 validator: (val) => val!.isEmpty ? 'ระบุสีรถ' : null,
               ),
-
-              // 🌟 แยกส่วนป้ายทะเบียน และ จังหวัด ออกจากกัน
               _buildLabelField(
                 'ป้ายทะเบียนรถ (ไม่ต้องระบุจังหวัด)',
                 isRequired: true,
@@ -1131,7 +1155,6 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
-  // 🌟 ฟังก์ชันวาด Autocomplete ค้นหาจังหวัด
   Widget _buildProvinceAutocomplete() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -1225,19 +1248,13 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
               () => setState(() => _docDriverLicenseFile = null),
             ),
 
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDocumentUploadWidget(
-                  "3. สำเนาทะเบียนรถ (ต้องตรงกับข้อมูลรถที่กรอกไว้)",
-                  _docVehicleRegFile,
-                  true,
-                  () => _pickImage(
-                    (f, b) => setState(() => _docVehicleRegFile = f),
-                  ),
-                  () => setState(() => _docVehicleRegFile = null),
-                ),
-              ],
+            _buildDocumentUploadWidget(
+              "3. สำเนาทะเบียนรถ (ต้องตรงกับข้อมูลรถที่กรอกไว้)",
+              _docVehicleRegFile,
+              true,
+              () =>
+                  _pickImage((f, b) => setState(() => _docVehicleRegFile = f)),
+              () => setState(() => _docVehicleRegFile = null),
             ),
 
             _buildDocumentUploadWidget(
@@ -1252,18 +1269,16 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
               "5. ประวัติการทำงาน (Resume / CV)",
               _docResumeFile,
               true,
-              () => _pickImage((f, b) => setState(() => _docResumeFile = f)),
+              () => _pickResumeImage(
+                (f, b) => setState(() => _docResumeFile = f),
+              ),
               () => setState(() => _docResumeFile = null),
+              subTitle:
+                  "(ไฟล์ขนาดไม่เกิน 1.5 MB หรือ 1,500 KB | ส่งได้ 1 ใบ / ไฟล์)",
             ),
 
-            _buildDocumentUploadWidget(
-              "6. ใบประกาศนียบัตร",
-              _docCertificateFile,
-              false,
-              () =>
-                  _pickImage((f, b) => setState(() => _docCertificateFile = f)),
-              () => setState(() => _docCertificateFile = null),
-            ),
+            // 🌟 ปรับปรุง 2: ใบประกาศนียบัตร - ไม่บังคับ และสามารถอัปโหลดได้หลายไฟล์
+            _buildMultipleCertificateUploadWidget(),
           ],
         ),
         if (_submitErrorMessage != null)
@@ -1298,6 +1313,116 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
               ),
             ),
           ),
+      ],
+    );
+  }
+
+  // Widget พิเศษรองรับการอัปโหลด "ใบประกาศนียบัตร" ได้หลายรูป/ไฟล์ (Optional)
+  Widget _buildMultipleCertificateUploadWidget() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabelField("6. ใบประกาศนียบัตร (ถ้ามี)", isRequired: false),
+        const Text(
+          '(สามารถอัปโหลดเพิ่มเติมได้หลายรูป/หลายไฟล์)',
+          style: TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+        const SizedBox(height: 8),
+
+        // รายการรูปที่อัปโหลดไปแล้ว
+        if (_docCertificateFiles.isNotEmpty)
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _docCertificateFiles.length,
+            itemBuilder: (context, index) {
+              final file = _docCertificateFiles[index];
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  border: Border.all(color: Colors.green.shade300, width: 1.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => _showImagePreview(file),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.file(
+                          file,
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'ใบประกาศนียบัตรที่ ${index + 1}',
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      tooltip: 'ลบรูปนี้',
+                      onPressed: () {
+                        setState(() {
+                          _docCertificateFiles.removeAt(index);
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+
+        // ปุ่มอัปโหลดเพิ่ม
+        InkWell(
+          onTap: () {
+            _pickImage((f, b) {
+              setState(() {
+                _docCertificateFiles.add(f);
+              });
+            });
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: greyBorder, width: 1.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.add_photo_alternate, color: primaryColor, size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  _docCertificateFiles.isEmpty
+                      ? 'แตะเพื่อเลือกไฟล์ ใบประกาศนียบัตร'
+                      : '+ เพิ่มรูป/ไฟล์ ใบประกาศนียบัตรอีก',
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 15),
       ],
     );
   }
@@ -1759,12 +1884,21 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     File? file,
     bool isRequired,
     VoidCallback onUpload,
-    VoidCallback onRemove,
-  ) {
+    VoidCallback onRemove, {
+    String? subTitle,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildLabelField(title, isRequired: isRequired),
+        if (subTitle != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              subTitle,
+              style: TextStyle(fontSize: 12, color: primaryColor),
+            ),
+          ),
         const SizedBox(height: 5),
         if (file == null)
           InkWell(
