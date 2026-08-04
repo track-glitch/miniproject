@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io'; // 🌟 เพิ่มสำหรับการจัดการไฟล์รูปภาพ
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:image_picker/image_picker.dart'; // 🌟 เพิ่มสำหรับการเลือกรูปภาพ
 import 'package:miniproject/views/relative/view_doctor_advice_page.dart';
 
 import '../../widgets/custom_header_nav.dart';
@@ -43,6 +45,8 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   int caretakerReviewCount = 0;
 
   bool isReviewed = false;
+  bool isReported = false; // 🌟 เพิ่มตัวแปรสำหรับเช็คสถานะการรายงาน
+
   Map<dynamic, dynamic>? doctorAdviceData;
   String? caretakerUidForReview;
 
@@ -52,6 +56,9 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   @override
   void initState() {
     super.initState();
+    isReviewed = widget.requestModel.review != null;
+    isReported =
+        widget.requestModel.report != null; // 🌟 เช็คว่าเคยรายงานแล้วหรือไม่
     _setInitialStatus();
     _fetchDetailData();
   }
@@ -100,8 +107,9 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
           .get();
       if (requestSnap.exists && requestSnap.value is Map) {
         final reqData = requestSnap.value as Map;
-        isReviewed = reqData['isReviewed'] ?? false;
-        doctorAdviceData = reqData['DoctorAdvice'];
+        setState(() {
+          doctorAdviceData = reqData['DoctorAdvice'];
+        });
       }
 
       String? targetId = widget.requestModel.caretakerId;
@@ -120,12 +128,12 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
               }
             }
           });
-
           if (caretakerUidForReview != null) {
             final reviews = await CaretakerService().getAllReviews(
               caretakerUidForReview!,
             );
             caretakerReviewCount = reviews.length;
+
             if (reviews.isNotEmpty) {
               double sum = reviews
                   .map((r) => r['rating'] as double)
@@ -165,26 +173,411 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     ).then((value) {
       if (value == true) {
         setState(() {
-          _isLoading = true;
+          isReviewed = true;
         });
-        _fetchDetailData();
       }
     });
   }
 
-  // 🌟 ฟังก์ชันเปิดหน้าคำแนะนำจากแพทย์แบบเต็มจอ
   void _navigateToDoctorAdvicePage() {
     if (doctorAdviceData == null) return;
 
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ViewDoctorAdvicePage(
-          loggedUid: widget.loggedUid,
-          // 💡 หมายเหตุ: ตอนนี้หน้า ViewDoctorAdvicePage เป็นข้อมูลจำลอง (Mock Data)
-          // ในอนาคตคุณสามารถเพิ่ม Parameter เพื่อส่ง doctorAdviceData, patientData และ req ไปแสดงผลจริงได้ครับ
-        ),
+        builder: (context) => ViewDoctorAdvicePage(loggedUid: widget.loggedUid),
       ),
+    );
+  }
+
+  // 🌟 ฟังก์ชันแสดง Popup รายงานผู้ดูแล
+  void _showReportDialog() {
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+    String? selectedType;
+    final TextEditingController detailController = TextEditingController();
+
+    // สถานะสำหรับ Checkbox และรูปภาพ
+    bool hasImage = false;
+    File? imageFile;
+    String? imageBase64;
+    bool isSubmitting = false;
+
+    final List<String> reportTypes = [
+      'ผู้ดูแลมาสาย / ไม่มาตามนัด',
+      'พฤติกรรมไม่เหมาะสม / ไม่สุภาพ',
+      'ขับรถประมาท / ไม่ปลอดภัย',
+      'เรียกเก็บเงินเพิ่มเกินจริง',
+      'อื่นๆ',
+    ];
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        // ใช้ StatefulBuilder เพื่อให้ Popup สามารถอัปเดต UI ของตัวเองได้ (เช่น ติ๊ก Checkbox หรือโชว์รูป)
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            // ฟังก์ชันเลือกรูป
+            Future<void> pickImage() async {
+              final ImagePicker picker = ImagePicker();
+              final XFile? image = await picker.pickImage(
+                source: ImageSource.gallery,
+                imageQuality: 80,
+              );
+
+              if (image != null) {
+                final bytes = await image.readAsBytes();
+                setDialogState(() {
+                  imageFile = File(image.path);
+                  imageBase64 = base64Encode(bytes);
+                });
+              }
+            }
+
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // --- ส่วนหัว ---
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const SizedBox(
+                              width: 32,
+                            ), // ดันให้ Text อยู่ตรงกลาง
+                            const Text(
+                              'รายงาน',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFB13DF3), // สีม่วงอมชมพู
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.cancel_outlined,
+                                color: Colors.red,
+                                size: 28,
+                              ),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                if (!isSubmitting) Navigator.pop(context);
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+
+                        // --- ประเภทรายงาน ---
+                        const Text(
+                          'ประเภทรายงาน',
+                          style: TextStyle(fontSize: 14, color: Colors.black87),
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          value: selectedType,
+                          decoration: InputDecoration(
+                            hintText: 'เลือกประเภทรายงาน',
+                            hintStyle: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                          ),
+                          items: reportTypes
+                              .map(
+                                (type) => DropdownMenuItem(
+                                  value: type,
+                                  child: Text(
+                                    type,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (val) {
+                            setDialogState(() => selectedType = val);
+                          },
+                          validator: (val) =>
+                              val == null ? 'กรุณาเลือกประเภทรายงาน' : null,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // --- รายละเอียด ---
+                        const Text(
+                          'รายละเอียด',
+                          style: TextStyle(fontSize: 14, color: Colors.black87),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: detailController,
+                          maxLines: 4,
+                          decoration: InputDecoration(
+                            hintText: 'อธิบายรายละเอียด...',
+                            hintStyle: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                          ),
+                          validator: (val) => val == null || val.trim().isEmpty
+                              ? 'กรุณาระบุรายละเอียด'
+                              : null,
+                        ),
+                        const SizedBox(height: 12),
+
+                        // --- Checkbox มีรูปภาพประกอบ ---
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: hasImage,
+                              activeColor: primaryPurple,
+                              onChanged: (val) {
+                                setDialogState(() {
+                                  hasImage = val ?? false;
+                                  if (!hasImage) {
+                                    imageFile = null;
+                                    imageBase64 = null;
+                                  }
+                                });
+                              },
+                            ),
+                            const Text(
+                              'มีรูปภาพประกอบ (ถ้ามี)',
+                              style: TextStyle(fontSize: 14),
+                            ),
+                          ],
+                        ),
+
+                        // --- พื้นที่อัปโหลดรูปภาพ (แสดงเมื่อ Checkbox = true เท่านั้น) ---
+                        if (hasImage) ...[
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: pickImage,
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.grey.shade300,
+                                  style: BorderStyle.solid,
+                                ), //
+                              ),
+                              child: imageFile != null
+                                  ? Column(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          child: Image.file(
+                                            imageFile!,
+                                            height: 120,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        const Text(
+                                          'เปลี่ยนรูปภาพ',
+                                          style: TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: 12,
+                                            decoration:
+                                                TextDecoration.underline,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Column(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF3E5F5),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.arrow_upward,
+                                            color: primaryPurple,
+                                            size: 24,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        const Text(
+                                          'อัพโหลดรูปภาพ',
+                                          style: TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        const Text(
+                                          'PNG, JPG (สูงสุด 5MB)',
+                                          style: TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+
+                        // --- ปุ่มส่งรายงาน ---
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF9B59B6),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                            ),
+                            onPressed: isSubmitting
+                                ? null
+                                : () async {
+                                    if (formKey.currentState!.validate()) {
+                                      // ถ้าติ๊ก Checkbox ว่ามีรูปแต่ยังไม่ได้อัปโหลด
+                                      if (hasImage && imageBase64 == null) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'กรุณาอัปโหลดรูปภาพ หรือนำเครื่องหมายติ๊กถูกออก',
+                                            ),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                        return;
+                                      }
+
+                                      setDialogState(() => isSubmitting = true);
+                                      try {
+                                        String reportId =
+                                            'REP-${DateTime.now().millisecondsSinceEpoch}';
+
+                                        // ข้อมูลเตรียมส่งขึ้น Firebase
+                                        final newReport = {
+                                          'reportId': reportId,
+                                          'reporttype': selectedType,
+                                          'reportdetail': detailController.text,
+                                          'reportphoto':
+                                              imageBase64 ??
+                                              "", // ส่งรูป Base64 ถ้ามี
+                                          'reportdate': DateTime.now()
+                                              .toIso8601String(),
+                                        };
+
+                                        await FirebaseDatabase.instance
+                                            .ref(
+                                              'Login/${widget.loggedUid}/Relative/Request/${widget.requestModel.requestId}/Report',
+                                            )
+                                            .set(newReport);
+
+                                        if (context.mounted) {
+                                          Navigator.pop(context); // ปิด Popup
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('ส่งรายงานสำเร็จ'),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+
+                                          // อัปเดตหน้าหลักให้ปุ่มหายไป
+                                          setState(() {
+                                            isReported = true;
+                                          });
+                                        }
+                                      } catch (e) {
+                                        setDialogState(
+                                          () => isSubmitting = false,
+                                        );
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'เกิดข้อผิดพลาด: $e',
+                                              ),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    }
+                                  },
+                            child: isSubmitting
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text(
+                                    'ส่งรายงาน',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -718,7 +1111,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     );
   }
 
-  // 🌟 รวมปุ่มแยกให้ชัดเจนตรงนี้
   Widget _buildBottomActionButtons() {
     if (currentStatus == RequestStatus.cancelled)
       return const SizedBox.shrink();
@@ -726,14 +1118,13 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     if (currentStatus == RequestStatus.completed) {
       return Column(
         children: [
-          // ปุ่มที่ 1: ดูคำแนะนำจากแพทย์ (แสดงเมื่อมีข้อมูล)
           if (doctorAdviceData != null)
             SizedBox(
               width: double.infinity,
               height: 52,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryPurple, // สีม่วง
+                  backgroundColor: primaryPurple,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -753,14 +1144,13 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
           if (doctorAdviceData != null && !isReviewed)
             const SizedBox(height: 12),
 
-          // ปุ่มที่ 2: ให้คะแนนบริการ (แสดงเฉพาะตอนที่ยังไม่ได้รีวิว)
           if (!isReviewed)
             SizedBox(
               width: double.infinity,
               height: 52,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange, // สีส้ม
+                  backgroundColor: Colors.orange,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -779,19 +1169,30 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
 
           const SizedBox(height: 16),
 
-          GestureDetector(
-            onTap: () {},
-            child: const Text(
-              'รายงานผู้ดูแล',
+          // 🌟 เช็คว่าถ้ารายงานไปแล้ว ให้แสดงข้อความแทนปุ่ม
+          if (!isReported)
+            GestureDetector(
+              onTap: _showReportDialog,
+              child: const Text(
+                'รายงานผู้ดูแล',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  decoration: TextDecoration.underline,
+                  decorationColor: Colors.red,
+                ),
+              ),
+            )
+          else
+            const Text(
+              'คุณได้ส่งรายงานปัญหาสำหรับบริการนี้แล้ว',
               style: TextStyle(
-                color: Colors.red,
+                color: Colors.grey,
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                decoration: TextDecoration.underline,
-                decorationColor: Colors.red,
               ),
             ),
-          ),
         ],
       );
     }

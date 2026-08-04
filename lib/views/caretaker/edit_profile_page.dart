@@ -63,6 +63,25 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _loadProfileData();
   }
 
+  // เพิ่มฟังก์ชันนี้ไว้ในคลาส _EditProfilePageState
+  ImageProvider _getSafeBase64Image(String base64String) {
+    try {
+      String cleanBase64 = base64String;
+      if (cleanBase64.contains(',')) {
+        cleanBase64 = cleanBase64.split(',').last;
+      }
+      cleanBase64 = cleanBase64.replaceAll(RegExp(r'\s+'), '');
+      int padding = cleanBase64.length % 4;
+      if (padding > 0) {
+        cleanBase64 += '=' * (4 - padding);
+      }
+      return MemoryImage(base64Decode(cleanBase64));
+    } catch (e) {
+      // คืนค่ารูปเปล่าๆ หากเกิด Error
+      return MemoryImage(base64Decode('R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='));
+    }
+  }
+
   void _showLogoutConfirmation() {
     showDialog(
       context: context,
@@ -136,8 +155,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
           vehiclePlate = data['Vehicle']['licenseplate'] ?? '';
 
           // 🌟 แก้ไข: เปลี่ยนจาก 'vehiclephotos' เป็น 'VehiclePhoto' ให้ตรงกับ Database
-          if (data['Vehicle']['VehiclePhoto'] != null) {
-            for (var photo in data['Vehicle']['VehiclePhoto']) {
+          if (data['Vehicle']['vehiclephotos'] != null) {
+            for (var photo in data['Vehicle']['vehiclephotos']) {
               vehicleImages.add(photo['photo']);
             }
           }
@@ -448,8 +467,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                               );
                                             },
                                       )
-                                    : Image.memory(
-                                        base64Decode(img),
+                                    : Image(
+                                        image: _getSafeBase64Image(img),
                                         fit: BoxFit.cover,
                                         width: double.infinity,
                                         // 🌟 ดัก Error กรณีแปลง Base64 ไม่ผ่าน
@@ -573,12 +592,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 child: CircleAvatar(
                   radius: 41,
                   backgroundColor: Colors.white,
-                  // 🌟 แก้ไขตรงนี้ ใช้ startsWith('http') เช็กว่าเป็นลิ้งก์หรือไม่
+                  // เปลี่ยนจาก MemoryImage(base64Decode(profileImageUrl)) เป็น:
                   backgroundImage: profileImageUrl.isNotEmpty
                       ? (profileImageUrl.startsWith('http')
                             ? NetworkImage(profileImageUrl)
-                            : MemoryImage(base64Decode(profileImageUrl))
-                                  as ImageProvider)
+                            : _getSafeBase64Image(
+                                profileImageUrl,
+                              )) // ใช้ฟังก์ชันที่สร้างใหม่
                       : null,
                   child: profileImageUrl.isEmpty
                       ? Icon(

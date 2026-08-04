@@ -43,7 +43,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _serviceAreaController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
   final TextEditingController _birthDateController = TextEditingController();
   final TextEditingController _experienceController = TextEditingController();
 
@@ -73,11 +73,19 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
 
   // --- Step 4: เอกสาร ---
   File? _docIdCardFile;
+  String? _docIdCardBase64; // เพิ่มตัวแปรนี้
   File? _docDriverLicenseFile;
+  String? _docDriverLicenseBase64; // เพิ่มตัวแปรนี้
   File? _docVehicleRegFile;
+  String? _docVehicleRegBase64; // เพิ่มตัวแปรนี้
   File? _docInsuranceFile;
-  File? _docResumeFile; // Resume 1 ใบ A4
-  final List<File> _docCertificateFiles = []; // ประกาศนียบัตร เพิ่มได้หลายไฟล์
+  String? _docInsuranceBase64; // เพิ่มตัวแปรนี้
+  File? _docResumeFile;
+  String? _docResumeBase64; // เพิ่มตัวแปรนี้
+
+  final List<File> _docCertificateFiles = [];
+  final List<String> _docCertificateBase64List =
+      []; // เพิ่มลิสต์นี้สำหรับเก็บ Base64 ของประกาศนียบัตร
 
   final Color primaryColor = const Color(0xFF9B59B6);
   final Color darkPurple = const Color(0xFF7D3C98);
@@ -178,7 +186,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _phoneController.dispose();
-    _serviceAreaController.dispose();
+    _addressController.dispose();
     _birthDateController.dispose();
     _experienceController.dispose();
     _brandController.dispose();
@@ -196,7 +204,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
           _firstNameController,
           _lastNameController,
           _phoneController,
-          _serviceAreaController,
+          _addressController,
           _experienceController,
           _brandController,
           _modelController,
@@ -433,42 +441,41 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         DocumentModel(
           documentId: "doc_idcard",
           documenttype: "สำเนาบัตรประชาชน",
-          filepath: "base64_data",
+          filepath: _docIdCardBase64 ?? "", // เปลี่ยนจาก "base64_data"
           uploaddate: DateTime.now(),
         ),
         DocumentModel(
           documentId: "doc_driver_license",
           documenttype: "สำเนาใบขับขี่",
-          filepath: "base64_data",
+          filepath: _docDriverLicenseBase64 ?? "", // เปลี่ยนจาก "base64_data"
           uploaddate: DateTime.now(),
         ),
         DocumentModel(
           documentId: "doc_vehicle_reg",
           documenttype: "สำเนาทะเบียนรถ",
-          filepath: "base64_data",
+          filepath: _docVehicleRegBase64 ?? "", // เปลี่ยนจาก "base64_data"
           uploaddate: DateTime.now(),
         ),
         DocumentModel(
           documentId: "doc_insurance",
           documenttype: "สำเนาประกันภัยรถยนต์",
-          filepath: "base64_data",
+          filepath: _docInsuranceBase64 ?? "", // เปลี่ยนจาก "base64_data"
           uploaddate: DateTime.now(),
         ),
         DocumentModel(
           documentId: "doc_resume",
           documenttype: "ประวัติการทำงาน (Resume)",
-          filepath: "base64_data",
+          filepath: _docResumeBase64 ?? "", // เปลี่ยนจาก "base64_data"
           uploaddate: DateTime.now(),
         ),
       ];
 
-      // เพิ่มไฟล์ใบประกาศนียบัตร (ถ้ามีหลายไฟล์)
-      for (int i = 0; i < _docCertificateFiles.length; i++) {
+      for (int i = 0; i < _docCertificateBase64List.length; i++) {
         documentsList.add(
           DocumentModel(
             documentId: "doc_certificate_${i + 1}",
             documenttype: "ใบประกาศนียบัตร ${i + 1}",
-            filepath: "base64_data",
+            filepath: _docCertificateBase64List[i], // เปลี่ยนจาก "base64_data"
             uploaddate: DateTime.now(),
           ),
         );
@@ -517,7 +524,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         servicestatus: "Unavailable",
         accountstatus: "Pending",
         location: LocationModel(
-          address: _serviceAreaController.text.trim(),
+          address: _addressController.text.trim(),
           latitude: _currentLat,
           longitude: _currentLng,
         ),
@@ -927,6 +934,17 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                   },
                 ),
               ),
+              const SizedBox(height: 12), // เพิ่มระยะห่างนิดหน่อย
+              _buildLabelField('ที่อยู่', isRequired: true),
+              _buildTextField(
+                controller: _addressController,
+                hint:
+                    'ระบุที่อยู่ปัจจุบัน, จังหวัด, รหัสไปรษณีย์ หรือพื้นที่สะดวกรับงาน',
+                maxLines: 3,
+                validator: (val) => val == null || val.trim().isEmpty
+                    ? 'กรุณาระบุข้อมูลที่อยู่ จังหวัด และรหัสไปรษณีย์ ให้ครบถ้วน'
+                    : null,
+              ),
               _buildLabelField('รายละเอียดประสบการณ์ทำงานเพิ่มเติม (ถ้ามี)'),
               _buildTextField(
                 controller: _experienceController,
@@ -1234,8 +1252,16 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
               "1. สำเนาบัตรประชาชน",
               _docIdCardFile,
               true,
-              () => _pickImage((f, b) => setState(() => _docIdCardFile = f)),
-              () => setState(() => _docIdCardFile = null),
+              () => _pickImage(
+                (f, b) => setState(() {
+                  _docIdCardFile = f;
+                  _docIdCardBase64 = b; // เก็บค่า Base64
+                }),
+              ),
+              () => setState(() {
+                _docIdCardFile = null;
+                _docIdCardBase64 = null;
+              }),
             ),
 
             _buildDocumentUploadWidget(
@@ -1243,26 +1269,47 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
               _docDriverLicenseFile,
               true,
               () => _pickImage(
-                (f, b) => setState(() => _docDriverLicenseFile = f),
+                (f, b) => setState(() {
+                  _docDriverLicenseFile = f;
+                  _docDriverLicenseBase64 = b; // เก็บค่า Base64
+                }),
               ),
-              () => setState(() => _docDriverLicenseFile = null),
+              () => setState(() {
+                _docDriverLicenseFile = null;
+                _docDriverLicenseBase64 = null;
+              }),
             ),
 
             _buildDocumentUploadWidget(
               "3. สำเนาทะเบียนรถ (ต้องตรงกับข้อมูลรถที่กรอกไว้)",
               _docVehicleRegFile,
               true,
-              () =>
-                  _pickImage((f, b) => setState(() => _docVehicleRegFile = f)),
-              () => setState(() => _docVehicleRegFile = null),
+              () => _pickImage(
+                (f, b) => setState(() {
+                  _docVehicleRegFile = f;
+                  _docVehicleRegBase64 = b; // 🌟 เก็บค่า Base64
+                }),
+              ),
+              () => setState(() {
+                _docVehicleRegFile = null;
+                _docVehicleRegBase64 = null; // 🌟 เคลียร์ค่า Base64 เมื่อกดลบ
+              }),
             ),
 
             _buildDocumentUploadWidget(
               "4. สำเนาประกันภัยรถยนต์",
               _docInsuranceFile,
               true,
-              () => _pickImage((f, b) => setState(() => _docInsuranceFile = f)),
-              () => setState(() => _docInsuranceFile = null),
+              () => _pickImage(
+                (f, b) => setState(() {
+                  _docInsuranceFile = f;
+                  _docInsuranceBase64 = b; // 🌟 เก็บค่า Base64
+                }),
+              ),
+              () => setState(() {
+                _docInsuranceFile = null;
+                _docInsuranceBase64 = null; // 🌟 เคลียร์ค่า Base64 เมื่อกดลบ
+              }),
             ),
 
             _buildDocumentUploadWidget(
@@ -1270,9 +1317,15 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
               _docResumeFile,
               true,
               () => _pickResumeImage(
-                (f, b) => setState(() => _docResumeFile = f),
+                (f, b) => setState(() {
+                  _docResumeFile = f;
+                  _docResumeBase64 = b; // 🌟 เก็บค่า Base64
+                }),
               ),
-              () => setState(() => _docResumeFile = null),
+              () => setState(() {
+                _docResumeFile = null;
+                _docResumeBase64 = null; // 🌟 เคลียร์ค่า Base64 เมื่อกดลบ
+              }),
               subTitle:
                   "(ไฟล์ขนาดไม่เกิน 1.5 MB หรือ 1,500 KB | ส่งได้ 1 ใบ / ไฟล์)",
             ),

@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-// --- เปลี่ยน Path ให้ตรงกับโครงสร้างโฟลเดอร์ในโปรเจกต์ของคุณ ---
 import 'package:miniproject/models/patient_model.dart';
 import 'package:miniproject/models/relative_model.dart';
-import 'package:miniproject/services/function_service.dart';
+import 'package:miniproject/models/request_model.dart';
 import 'package:miniproject/views/relative/edit_relative_info_page.dart';
 import 'package:miniproject/views/login_page.dart';
 import 'package:miniproject/views/relative/list_request_page.dart';
@@ -13,10 +12,16 @@ import 'package:miniproject/views/relative/relative_home_page.dart';
 
 /// หน้าจอ "สถานะการแจ้งเตือน" (Track Status Notification Page)
 class TrackStatusNotificationPage extends StatefulWidget {
-  final String?
-  loggedUid; // เพิ่มเพื่อรับค่าผู้ใช้ที่ล็อกอินสำหรับแถบเมนูด้านล่าง
+  final String? loggedUid;
+  final RequestModel? requestModel; // 🌟 รับ Request Model มาใช้
+  final String? caretakerName; // 🌟 รับชื่อผู้ดูแลมาด้วย
 
-  const TrackStatusNotificationPage({super.key, this.loggedUid});
+  const TrackStatusNotificationPage({
+    super.key,
+    this.loggedUid,
+    this.requestModel,
+    this.caretakerName,
+  });
 
   @override
   State<TrackStatusNotificationPage> createState() =>
@@ -25,54 +30,102 @@ class TrackStatusNotificationPage extends StatefulWidget {
 
 class _TrackStatusNotificationPageState
     extends State<TrackStatusNotificationPage> {
-  // ---------- Mock Data ----------
-  final List<_NotificationItem> _items = const [
-    _NotificationItem(
-      dateTime: '22/02/2026 11:00 น.',
-      requestId: '#REQ-12345',
-      status: 'กำลังให้บริการ',
-      detailLabel: 'รายละเอียด:',
-      detail: 'กำลังเดินทางไปรับ\nผู้ดูแล: สมศักดิ์ ใจดี',
-      isLatest: false,
-    ),
-    _NotificationItem(
-      dateTime: '22/02/2026 11:00 น.',
-      requestId: '#REQ-12345',
-      status: 'กำลังให้บริการ',
-      detailLabel: 'รายละเอียด:',
-      detail: 'ถึงโรงพยาบาล\nผู้ดูแล: สมศักดิ์ ใจดี',
-      isLatest: false,
-    ),
-    _NotificationItem(
-      dateTime: '22/02/2026 11:15 น.',
-      requestId: '#REQ-12345',
-      status: 'กำลังให้บริการ',
-      detailLabel: 'รายละเอียด:',
-      detail: 'รอคิวพบแพทย์\nผู้ดูแล: สมศักดิ์ ใจดี',
-      isLatest: true,
-    ),
-  ];
+  // 🌟 เก็บรายการแบบ Dynamic ไม่ Mockup แล้ว
+  List<_NotificationItem> _items = [];
+  bool _isLoading = true;
 
   static const Color primaryPurple = Color(0xFF8E5DB8);
   static const Color lightPurpleBg = Color(0xFFE9DCF3);
-  static const Color cardBg = Colors.white;
   static const Color redAccent = Color(0xFFE53935);
-
-  // สีสำหรับเมนูด้านล่างและ Dialog ให้เหมือนหน้า Search
   final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
   final Color searchPrimaryColor = const Color(0xFF8763E6);
 
   @override
   void initState() {
     super.initState();
+    _fetchNotifications();
   }
 
-  @override
-  void dispose() {
-    super.dispose();
+  // 🌟 ฟังก์ชันดึงข้อมูลจาก Firebase
+  Future<void> _fetchNotifications() async {
+    if (widget.loggedUid == null || widget.requestModel!.requestId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    try {
+      final snap = await FirebaseDatabase.instance
+          .ref(
+            'Login/${widget.loggedUid}/Relative/Request/${widget.requestModel!.requestId}/Notification',
+          )
+          .get();
+
+      List<_NotificationItem> loadedItems = [];
+
+      if (snap.exists && snap.value != null) {
+        final data = snap.value;
+        List<Map<dynamic, dynamic>> rawList = [];
+
+        if (data is Map) {
+          rawList = data.values.map((e) => e as Map<dynamic, dynamic>).toList();
+        } else if (data is List) {
+          rawList = data
+              .where((e) => e != null)
+              .map((e) => e as Map<dynamic, dynamic>)
+              .toList();
+        }
+
+        // Sort เวลา เก่า -> ใหม่
+        rawList.sort((a, b) {
+          String timeA = a['notifydate'] ?? a['timestamp'] ?? "";
+          String timeB = b['notifydate'] ?? b['timestamp'] ?? "";
+          return timeA.compareTo(timeB);
+        });
+
+        for (int i = 0; i < rawList.length; i++) {
+          var item = rawList[i];
+          bool isLatest = (i == rawList.length - 1); // อันล่าสุดอยู่ท้ายสุด
+
+          // จัดรูปแบบเวลา
+          String rawDate = item['notifydate'] ?? item['timestamp'] ?? "";
+          String formattedDate = rawDate;
+          if (rawDate.isNotEmpty) {
+            try {
+              DateTime dt = DateTime.parse(rawDate).toLocal();
+              formattedDate =
+                  '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year + 543} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} น.';
+            } catch (_) {}
+          }
+
+          // จัดข้อความรายละเอียด
+          String detailText = item['notifydetail']?.toString().trim() ?? '';
+          String finalDetail = detailText.isNotEmpty
+              ? '$detailText\nผู้ดูแล: ${widget.caretakerName}'
+              : 'ผู้ดูแล: ${widget.caretakerName}';
+
+          loadedItems.add(
+            _NotificationItem(
+              dateTime: formattedDate,
+              requestId: '#${widget.requestModel!.requestId}',
+              status: item['notifystatus'] ?? item['status'] ?? 'อัปเดตสถานะ',
+              detailLabel: 'รายละเอียด:',
+              detail: finalDetail,
+              isLatest: isLatest,
+            ),
+          );
+        }
+      }
+
+      setState(() {
+        _items = loadedItems;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print("Error fetching tracking notifications: $e");
+      setState(() => _isLoading = false);
+    }
   }
 
-  // ฟังก์ชันแจ้งเตือนให้เข้าสู่ระบบ (ยกมาจากหน้า Search)
   void _showLoginRequiredDialog() {
     showDialog(
       context: context,
@@ -152,7 +205,6 @@ class _TrackStatusNotificationPageState
       appBar: AppBar(
         backgroundColor: primaryPurple,
         elevation: 0,
-        // ✅ เปลี่ยนปุ่มย้อนกลับให้เหมือนหน้า Search และกดได้
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -167,17 +219,37 @@ class _TrackStatusNotificationPageState
         ),
         centerTitle: true,
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        children: [
-          for (int i = 0; i < _items.length; i++) ...[
-            if (_items[i].isLatest) _buildLatestDivider(),
-            _NotificationCard(item: _items[i]),
-            const SizedBox(height: 14),
-          ],
-        ],
-      ),
-      // ✅ นำ BottomNavigationBar รูปแบบหน้า Search มาใช้
+      // 🌟 ใช้เงื่อนไขสลับหน้าจอ (กำลังโหลด / ว่างเปล่า / แสดงลิสต์)
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: primaryPurple))
+          : _items.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.notifications_off_outlined,
+                    size: 80,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'ยังไม่มีการแจ้งเตือนสถานะ',
+                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            )
+          : ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              children: [
+                for (int i = 0; i < _items.length; i++) ...[
+                  if (_items[i].isLatest) _buildLatestDivider(),
+                  _NotificationCard(item: _items[i]),
+                  const SizedBox(height: 14),
+                ],
+              ],
+            ),
       bottomNavigationBar: Container(
         height: 65,
         decoration: BoxDecoration(
@@ -221,7 +293,6 @@ class _TrackStatusNotificationPageState
                 );
               },
             ),
-
             _buildBottomNavItem(
               Icons.person_outline,
               'ญาติ',
@@ -231,25 +302,21 @@ class _TrackStatusNotificationPageState
                     widget.loggedUid ??
                     FirebaseAuth.instance.currentUser?.uid ??
                     '';
-
                 if (currentUid.isEmpty) {
                   _showLoginRequiredDialog();
                   return;
                 }
-
                 showDialog(
                   context: context,
                   barrierDismissible: false,
                   builder: (context) =>
                       const Center(child: CircularProgressIndicator()),
                 );
-
                 try {
                   final snapshot = await FirebaseDatabase.instance
                       .ref('Login')
                       .get();
                   if (context.mounted) Navigator.pop(context);
-
                   String targetRelativeId = '';
                   Map<String, dynamic> targetUserData = {};
                   bool isFound = false;
@@ -258,7 +325,6 @@ class _TrackStatusNotificationPageState
                     final allUsers = Map<String, dynamic>.from(
                       snapshot.value as Map,
                     );
-
                     for (var key in allUsers.keys) {
                       if (key == currentUid) {
                         targetRelativeId = key;
@@ -268,7 +334,6 @@ class _TrackStatusNotificationPageState
                         isFound = true;
                         break;
                       }
-
                       var childData = allUsers[key];
                       if (childData is Map) {
                         var relNode = childData['Relative'];
@@ -283,11 +348,9 @@ class _TrackStatusNotificationPageState
                       }
                     }
                   }
-
                   if (isFound && targetRelativeId.isNotEmpty) {
                     RelativeModel relative;
                     Map<String, dynamic> relativeMap = {};
-
                     if (targetUserData.containsKey('Relative')) {
                       relativeMap = Map<String, dynamic>.from(
                         targetUserData['Relative'] as Map,
@@ -311,7 +374,6 @@ class _TrackStatusNotificationPageState
                         email: '',
                       );
                     }
-
                     PatientModel patient;
                     if (relativeMap.containsKey('Patient')) {
                       final pData = Map<String, dynamic>.from(
@@ -340,7 +402,6 @@ class _TrackStatusNotificationPageState
                         gender: '',
                       );
                     }
-
                     if (context.mounted) {
                       Navigator.push(
                         context,
@@ -383,7 +444,6 @@ class _TrackStatusNotificationPageState
     );
   }
 
-  // Widget สร้างปุ่มด้านล่างเหมือนหน้า Search
   Widget _buildBottomNavItem(
     IconData icon,
     String label,

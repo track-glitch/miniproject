@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -234,28 +237,23 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
       decoration: _cardDecoration(),
       child: Column(
         children: [
-          _buildInfoRow('ผู้ป่วย', 'นาย ใจงาม จิตดี', Icons.person_outline),
+          // ลบ parameter รูปไอคอนออกทั้งหมด
+          _buildInfoRow('ผู้ป่วย', 'นาย ใจงาม จิตดี'),
           const Divider(height: 20, color: lightPink),
-          _buildInfoRow('วัน/เวลา', '22 ก.พ. 2569 10:30 น.', Icons.access_time),
+          _buildInfoRow('วัน/เวลา', '22 ก.พ. 2569 10:30 น.'),
           const Divider(height: 20, color: lightPink),
-          _buildInfoRow(
-            'สถานที่',
-            'โรงพยาบาลแม่โจ้',
-            Icons.local_hospital_outlined,
-          ),
+          _buildInfoRow('สถานที่', 'โรงพยาบาลแม่โจ้'),
           const Divider(height: 20, color: lightPink),
-          _buildInfoRow('แผนก', 'ตรวจสุขภาพ', Icons.domain),
+          _buildInfoRow('แผนก', 'ตรวจสุขภาพ'),
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value, IconData icon) {
+  Widget _buildInfoRow(String label, String value) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: Colors.grey.shade600),
-        const SizedBox(width: 8),
         SizedBox(
           width: 70,
           child: Text(
@@ -286,33 +284,26 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildLabeledField(
-            'แพทย์ผู้นัด',
-            'นาย ประกอบ จันทร์รักษา',
-            Icons.medical_services_outlined,
-          ),
+          // ลบ parameter รูปไอคอนออกทั้งหมด
+          _buildLabeledField('แพทย์ผู้นัด', 'นาย ประกอบ จันทร์รักษา'),
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(
-                child: _buildLabeledField('วันที่', '13/03/2569', Icons.event),
-              ),
+              Expanded(child: _buildLabeledField('วันที่', '13/03/2569')),
               const SizedBox(width: 12),
-              Expanded(
-                child: _buildLabeledField('เวลา', '8:00 น.', Icons.schedule),
-              ),
+              Expanded(child: _buildLabeledField('เวลา', '8:00 น.')),
             ],
           ),
           const SizedBox(height: 16),
-          _buildLabeledField('สถานที่', 'โรงพยาบาลแม่โจ้', Icons.business),
+          _buildLabeledField('สถานที่', 'โรงพยาบาลแม่โจ้'),
           const SizedBox(height: 16),
-          _buildLabeledField('แผนก', 'ตรวจสุขภาพ', Icons.meeting_room_outlined),
+          _buildLabeledField('แผนก', 'ตรวจสุขภาพ'),
         ],
       ),
     );
   }
 
-  Widget _buildLabeledField(String label, String value, IconData icon) {
+  Widget _buildLabeledField(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -333,28 +324,35 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: lightPink, width: 1.5),
           ),
-          child: Row(
-            children: [
-              Icon(icon, size: 18, color: primaryPurple),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildAdditionalNoteCard() {
+  // อย่าลืมส่งค่า base64 จากฐานข้อมูลเข้ามาในฟังก์ชันนี้แทนค่า String ว่างนะครับ
+  Widget _buildAdditionalNoteCard({String? base64String}) {
+    Uint8List? imageBytes;
+
+    // 🌟 ตรวจสอบและแปลง Base64 พร้อมจัดการ Padding ป้องกัน Error
+    if (base64String != null && base64String.isNotEmpty) {
+      try {
+        String normalized = base64String.replaceAll(RegExp(r'\s+'), '');
+        int padLength = (4 - (normalized.length % 4)) % 4;
+        normalized = normalized.padRight(normalized.length + padLength, '=');
+        imageBytes = base64Decode(normalized);
+      } catch (e) {
+        print("Error decoding image: $e");
+      }
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -380,7 +378,7 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
               border: Border.all(color: lightPink, width: 1.5),
             ),
             child: const Text(
-              'ร่างกายไม่ค่อยมีแรง พยายามเดินออกกำลังกายเบาๆ รับประทานอาหารให้ครบ 5 หมู่ และพักผ่อนให้เพียงพอ',
+              'ร่างกายไม่ค่อยมีแรง พยายามเดินออกกำลังกายเบาๆ รับประทานอาหารให้ครบ 5 หมู่ และพักผ่อนให้เพียงพอ', // ดึงข้อมูลจริงมาใส่แทน
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.black87,
@@ -388,66 +386,47 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
-          const Text(
-            'รูปภาพ / เอกสารแนบ',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.black54,
-              fontWeight: FontWeight.w500,
+
+          // 🌟 แสดงส่วนรูปภาพก็ต่อเมื่อมีการแปลงไฟล์สำเร็จเท่านั้น
+          if (imageBytes != null) ...[
+            const SizedBox(height: 20),
+            const Text(
+              'รูปภาพ / เอกสารแนบ',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.black54,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              width: double.infinity,
-              height: 160,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F9FA),
-                border: Border.all(color: Colors.grey.shade300),
+            const SizedBox(height: 6),
+            GestureDetector(
+              onTap: () {
+                // 🌟 กดเพื่อดูรูปขนาดเต็ม (InteractiveViewer ยืดขยายได้)
+                showDialog(
+                  context: context,
+                  builder: (_) => Dialog(
+                    backgroundColor: Colors.transparent,
+                    insetPadding: const EdgeInsets.all(10),
+                    child: InteractiveViewer(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.memory(imageBytes!),
+                      ),
+                    ),
+                  ),
+                );
+              },
+              child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  CustomPaint(
-                    size: const Size(double.infinity, 160),
-                    painter: _DocumentPlaceholderPainter(),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.image_outlined,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'รูปภาพตัวอย่าง',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                child: Image.memory(
+                  imageBytes,
+                  width: double.infinity,
+                  height: 160,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

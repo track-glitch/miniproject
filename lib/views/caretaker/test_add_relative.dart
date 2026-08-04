@@ -15,6 +15,10 @@ class TestAddRelative extends StatelessWidget {
       adminService.addMockupCompletedRequestForRelative();
     }
 
+    void addRelativePending() {
+      adminService.addMockupPendingRequestForRelative();
+    }
+
     void addRelative() {
       adminService.addMockRelative();
     }
@@ -45,6 +49,12 @@ class TestAddRelative extends StatelessWidget {
                 child: TextButton(
                   onPressed: addRequestWithReviewAndDoctorAdvice,
                   child: Text('AddRequestWithRevAndDoc'),
+                ),
+              ),
+              Expanded(
+                child: TextButton(
+                  onPressed: addRelativePending,
+                  child: Text('AddRequestPending'),
                 ),
               ),
             ],

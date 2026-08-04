@@ -506,4 +506,133 @@ class AdminService {
       "✅ เพิ่ม Mockup งานที่เสร็จสิ้น (Completed) ลงโหนด Relative เสร็จเรียบร้อย!",
     );
   }
+
+  Future<void> addMockupPendingRequestForRelative() async {
+    DateTime currentTime = DateTime.now();
+
+    // UID ของญาติจำลอง และ ID ของอาสา (แก้ให้ตรงกับที่ใช้เทสต์)
+    String relativeUid = "3HFu0p120SU021mZ8nH6tYuYLtr2";
+    String myCaretakerId = "1234567891011";
+
+    // ===============================================
+    // 🌟 Mockup 1: สถานะ "อยู่ระหว่างรอ" (pending)
+    // งานนัดหมายล่วงหน้า 3 วัน
+    // ===============================================
+    RequestModel reqPending1 = RequestModel(
+      requestId:
+          "REQ-PEND1-${currentTime.millisecondsSinceEpoch.toString().substring(7)}",
+      requestdetail: "พาผู้ป่วยไปตรวจสุขภาพประจำปี",
+      pickuplocation: LocationModel(
+        locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
+        address: "บ้านพัก ต.พระบาท จ.ลำปาง",
+        latitude: 18.2750,
+        longitude: 99.5050,
+      ),
+      dropofflocation: LocationModel(
+        locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
+        address: "โรงพยาบาลศูนย์ลำปาง",
+        latitude: 18.2900,
+        longitude: 99.5000,
+      ),
+      hospitalname: "โรงพยาบาลศูนย์ลำปาง",
+      departmentname: "แผนกตรวจสุขภาพ",
+      appointmentdate: currentTime.add(
+        const Duration(days: 3),
+      ), // 📅 นัดหมายในอีก 3 วันข้างหน้า
+      appointmenttime: currentTime.add(const Duration(days: 3)),
+      requestdate: currentTime, // 📅 เพิ่งกดสร้างคำขอวันนี้
+      requeststatus: "pending", // 🌟 สถานะอยู่ระหว่างรอ
+      caretakerId: myCaretakerId,
+      isReadCaretaker: false,
+    );
+
+    // ===============================================
+    // 🌟 Mockup 2: สถานะ "อยู่ระหว่างรอ" (pending)
+    // งานด่วน นัดหมายพรุ่งนี้
+    // ===============================================
+    RequestModel reqPending2 = RequestModel(
+      requestId:
+          "REQ-PEND2-${currentTime.millisecondsSinceEpoch.toString().substring(7)}",
+      requestdetail: "พาไปทำกายภาพบำบัดต่อเนื่อง",
+      pickuplocation: LocationModel(
+        locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
+        address: "บ้านพัก ต.พระบาท จ.ลำปาง",
+        latitude: 18.2750,
+        longitude: 99.5050,
+      ),
+      dropofflocation: LocationModel(
+        locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
+        address: "คลินิกกายภาพบำบัด",
+        latitude: 18.2850,
+        longitude: 99.4950,
+      ),
+      hospitalname: "คลินิกกายภาพบำบัด",
+      departmentname: "กายภาพบำบัด",
+      appointmentdate: currentTime.add(
+        const Duration(days: 1),
+      ), // 📅 นัดหมายพรุ่งนี้
+      appointmenttime: currentTime.add(const Duration(days: 1)),
+      requestdate: currentTime.subtract(
+        const Duration(hours: 2),
+      ), // 📅 สร้างคำขอเมื่อ 2 ชม. ที่แล้ว
+      requeststatus: "pending",
+      caretakerId: myCaretakerId,
+      isReadCaretaker: false,
+    );
+
+    // ===============================================
+    // 🌟 Mockup 3: สถานะ "อยู่ระหว่างรอ" (pending)
+    // งานด่วน นัดหมายตอนนี้เลย (สำหรับใช้ทดสอบ)
+    // ===============================================
+    RequestModel reqPending3 = RequestModel(
+      requestId:
+          "REQ-PEND3-${currentTime.millisecondsSinceEpoch.toString().substring(7)}",
+      requestdetail: "พาไปฟอกไต (งานถึงเวลาแล้ว)",
+      pickuplocation: LocationModel(
+        locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
+        address: "บ้านพัก ต.พระบาท จ.ลำปาง",
+        latitude: 18.2750,
+        longitude: 99.5050,
+      ),
+      dropofflocation: LocationModel(
+        locationId: "LOC-${FirebaseDatabase.instance.ref().push().key}",
+        address: "ศูนย์ฟอกไต โรงพยาบาลศูนย์ลำปาง",
+        latitude: 18.2900,
+        longitude: 99.5000,
+      ),
+      hospitalname: "โรงพยาบาลศูนย์ลำปาง",
+      departmentname: "ศูนย์ฟอกไต",
+      appointmentdate: currentTime, // 📅 นัดหมายตอนนี้เลย
+      appointmenttime: currentTime, // 📅 นัดหมายตอนนี้เลย
+      requestdate: currentTime.subtract(
+        const Duration(hours: 1),
+      ), // 📅 สร้างคำขอเมื่อ 1 ชม. ที่แล้ว
+      requeststatus: "pending",
+      caretakerId: myCaretakerId, // 🌟 รหัสของคุณ
+      isReadCaretaker: false,
+    );
+
+    // 🌟 นำ reqPending3 ใส่เข้าไปใน List เพื่อบันทึกพร้อมกัน
+    List<RequestModel> allPendingRequests = [
+      reqPending1,
+      reqPending2,
+      reqPending3,
+    ];
+
+    // 🌟 วนลูปบันทึกเข้าโหนด Relative -> Request
+    for (var req in allPendingRequests) {
+      await FirebaseDatabase.instance
+          .ref()
+          .child('Login')
+          .child(relativeUid)
+          .child('Relative')
+          .child('Request')
+          .child(req.requestId!)
+          .set(req.toJson());
+    }
+
+    print(
+      "✅ เพิ่ม Mockup งานที่อยู่ระหว่างรอ (Pending) ทั้ง 3 งาน ลงโหนด Relative เสร็จเรียบร้อย!",
+    );
+  }
 }

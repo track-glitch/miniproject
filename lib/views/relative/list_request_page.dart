@@ -239,10 +239,7 @@ class _ListRequestPageState extends State<ListRequestPage> {
               ),
             ),
           ),
-          Container(
-            height: 6,
-            color: bgColor,
-          ), // ระยะห่างเล็กน้อยใต้ TabBar แบบ Caretaker
+          Container(height: 6, color: bgColor),
           Expanded(
             child: _getCurrentTabRequests().isEmpty
                 ? Center(
@@ -372,26 +369,26 @@ class _ListRequestPageState extends State<ListRequestPage> {
 
     bool isInProgressTab = _currentTabIndex == 0;
 
+    // 🌟 ดึงจำนวน Notification มาจาก Model ของคุณโดยตรง
+    int notificationCount = request.requestModel.notifications?.length ?? 0;
+
     return Container(
-      // 🌟 ใช้รูปแบบ Margin เหมือนฝั่ง Caretaker เป๊ะ
       margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFFFFDF2),
-        borderRadius: BorderRadius.circular(10), // มุม 10
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.black.withOpacity(0.15), width: 1.2),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(10),
         child: Container(
           decoration: BoxDecoration(
-            // 🌟 เพิ่มแถบสีด้านซ้าย
             border: Border(left: BorderSide(color: mainColor, width: 6)),
           ),
-          padding: const EdgeInsets.all(12), // 🌟 บีบ Padding ลงเหลือ 12
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- แถวที่ 1: รหัสคำขอ + สถานะ ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -423,14 +420,11 @@ class _ListRequestPageState extends State<ListRequestPage> {
                   ),
                 ],
               ),
-
               Text(
                 'ส่งเมื่อ: ${_formatThaiDateShort(request.requestModel.requestdate)}',
                 style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
               ),
               const SizedBox(height: 8),
-
-              // --- แถวที่ 2: ชื่อบริการ ---
               Text(
                 request.serviceName,
                 maxLines: 1,
@@ -442,8 +436,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 ),
               ),
               const SizedBox(height: 10),
-
-              // --- แถวที่ 3: วันและเวลานัดหมาย (จัดเลย์เอาต์ใหม่เหมือนฝั่ง Caretaker) ---
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -484,8 +476,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 ],
               ),
               const SizedBox(height: 12),
-
-              // --- แถวที่ 4: ปุ่มกดด้านล่าง ---
               Row(
                 mainAxisAlignment: isInProgressTab
                     ? MainAxisAlignment.spaceBetween
@@ -497,11 +487,17 @@ class _ListRequestPageState extends State<ListRequestPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
+                            // 🌟 ส่ง RequestModel เข้าไปหน้าแสดงสถานะด้วย
                             builder: (context) => TrackStatusNotificationPage(
                               loggedUid: widget.loggedUid,
+                              requestModel: request.requestModel,
+                              caretakerName: request.caregiverName,
                             ),
                           ),
-                        );
+                        ).then((_) {
+                          // พอปิดหน้าต่าง ให้รีเฟรชยอดอัปเดตแจ้งเตือน
+                          _fetchMyRequests();
+                        });
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -513,16 +509,17 @@ class _ListRequestPageState extends State<ListRequestPage> {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Row(
-                          children: const [
-                            Icon(
+                          children: [
+                            const Icon(
                               Icons.notifications,
                               color: Color(0xFFF44336),
                               size: 16,
                             ),
-                            SizedBox(width: 6),
+                            const SizedBox(width: 6),
+                            // 🌟 ใส่จำนวน (notificationCount) ตรงนี้
                             Text(
-                              'ติดตามสถานะแจ้งเตือน',
-                              style: TextStyle(
+                              'ติดตามสถานะแจ้งเตือน ($notificationCount)',
+                              style: const TextStyle(
                                 color: Color(0xFFF44336),
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -534,7 +531,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
                         ),
                       ),
                     ),
-
                   GestureDetector(
                     onTap: () async {
                       await Navigator.push(

@@ -7,6 +7,8 @@ import 'package:intl/intl.dart'; // 🌟 เพิ่ม package สำหรั
 import 'package:miniproject/views/caretaker/list_relative_request_page.dart';
 import '../../services/caretaker_service.dart';
 import '../../widgets/custom_header_nav.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 
 class AddDoctorAdvicePage extends StatefulWidget {
   final String relativeUid;
@@ -55,24 +57,26 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
-      firstDate: DateTime.now(), // ป้องกันการเลือกวันในอดีต
+      firstDate: DateTime.now(),
       lastDate: DateTime(2101),
       builder: (context, child) {
         return Theme(
+          // ... (โค้ด Theme สีม่วงคงเดิม)
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFFA052BE), // Header background color
-              onPrimary: Colors.white, // Header text color
-              onSurface: Colors.black, // Body text color
+              primary: Color(0xFFA052BE),
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
             ),
           ),
           child: child!,
         );
       },
     );
+
     if (picked != null) {
       setState(() {
-        // จัดรูปแบบเป็น วัน/เดือน/ปี (ค.ศ. หรือ พ.ศ. ค่อยว่ากัน)
+        // ✅ ให้แสดงผลบนหน้าจอเป็น วัน/เดือน/ปี (เช่น 06/08/2026)
         _dateController.text = DateFormat('dd/MM/yyyy').format(picked);
       });
     }
@@ -301,6 +305,26 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                             }
                           }
 
+                          // 🌟 สร้างตัวแปรจัดการ Format เวลาก่อนเซฟลง Firebase
+                          String finalDateToSave = '';
+                          String finalTimeToSave = '';
+
+                          if (_hasNextAppointment) {
+                            // 1. แปลงข้อความจากหน้าจอ (dd/MM/yyyy) กลับเป็น DateTime
+                            DateTime parsedDate = DateFormat(
+                              'dd/MM/yyyy',
+                            ).parse(_dateController.text);
+
+                            // 2. Format ใหม่เป็น yyyy-MM-dd สำหรับเซฟลง Database
+                            finalDateToSave = DateFormat(
+                              'yyyy-MM-dd',
+                            ).format(parsedDate);
+
+                            // 3. นำวันที่ที่ Format ถูกต้องแล้ว มาต่อกับเวลา (เพิ่ม :00 วินาทีเข้าไปด้วย)
+                            finalTimeToSave =
+                                "$finalDateToSave ${_timeController.text}:00";
+                          }
+
                           setState(() => _isLoading = true);
 
                           try {
@@ -318,12 +342,8 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                               departmentname: _hasNextAppointment
                                   ? _deptController.text
                                   : '',
-                              appointmentdate: _hasNextAppointment
-                                  ? _dateController.text
-                                  : '',
-                              appointmenttime: _hasNextAppointment
-                                  ? _timeController.text
-                                  : '',
+                              appointmentdate: finalDateToSave,
+                              appointmenttime: finalTimeToSave,
                             );
 
                             await _service.updateRequestStatus(
