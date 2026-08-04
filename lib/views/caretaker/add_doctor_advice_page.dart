@@ -3,11 +3,10 @@ import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart'; // 🌟 เพิ่ม package สำหรับจัดการรูปแบบวันที่
+import 'package:intl/intl.dart';
 import 'package:miniproject/views/caretaker/list_relative_request_page.dart';
 import '../../services/caretaker_service.dart';
 import '../../widgets/custom_header_nav.dart';
-import 'dart:convert';
 import 'dart:typed_data';
 
 class AddDoctorAdvicePage extends StatefulWidget {
@@ -29,6 +28,14 @@ class AddDoctorAdvicePage extends StatefulWidget {
 class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
   final CaretakerService _service = CaretakerService();
 
+  // ── 🎨 ชุดสีหลักควบคุมธีม ─────────────────────────────────────────
+  final Color primaryPurple = const Color(0xFF8763E6);
+  final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
+  final Color lightPurple = const Color(0xFFECE2FE);
+  final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
+  final Color borderColor = const Color(0xFFD3C2F0);
+  final Color sectionBgColor = const Color(0xFFF8F5FF);
+
   // Controllers
   final TextEditingController _doctorController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
@@ -41,18 +48,15 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
   String? _base64Image;
   bool _isLoading = false;
 
-  // 🌟 1. เพิ่มตัวแปรสำหรับควบคุม Checkbox
   bool _hasNextAppointment = false;
 
   @override
   void initState() {
     super.initState();
-    // 🌟 2. Autofill ข้อมูลโรงพยาบาลและแผนก จากข้อมูลปัจจุบัน
     _hospitalController.text = widget.requestInfo['hospital'] ?? '';
     _deptController.text = widget.requestInfo['department'] ?? '';
   }
 
-  // 🌟 3. ฟังก์ชันสำหรับเลือกวันที่ (Date Picker)
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -61,10 +65,9 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
       lastDate: DateTime(2101),
       builder: (context, child) {
         return Theme(
-          // ... (โค้ด Theme สีม่วงคงเดิม)
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFFA052BE),
+            colorScheme: ColorScheme.light(
+              primary: primaryPurple,
               onPrimary: Colors.white,
               onSurface: Colors.black,
             ),
@@ -76,13 +79,11 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
 
     if (picked != null) {
       setState(() {
-        // ✅ ให้แสดงผลบนหน้าจอเป็น วัน/เดือน/ปี (เช่น 06/08/2026)
         _dateController.text = DateFormat('dd/MM/yyyy').format(picked);
       });
     }
   }
 
-  // 🌟 4. ฟังก์ชันสำหรับเลือกเวลา (Time Picker)
   Future<void> _selectTime(BuildContext context) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
@@ -90,7 +91,7 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: Color(0xFFA052BE)),
+            colorScheme: ColorScheme.light(primary: primaryPurple),
           ),
           child: child!,
         );
@@ -98,7 +99,6 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
     );
     if (picked != null) {
       setState(() {
-        // แปลงเวลาเป็น 24 ชม. Format (เช่น 08:30)
         final now = DateTime.now();
         final dt = DateTime(
           now.year,
@@ -125,6 +125,22 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
     }
   }
 
+  // 🌟 Helper สร้างกรอบ Card คุมสไตล์ธีม
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: borderColor, width: 1.5),
+      boxShadow: [
+        BoxShadow(
+          color: primaryPurple.withOpacity(0.12),
+          blurRadius: 10,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -141,7 +157,7 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
         );
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF4EDFB),
+        backgroundColor: bgColor,
         appBar: const CustomHeader(
           title: 'เพิ่มวันนัดและคำแนะนำ',
           showBackButton: false,
@@ -153,6 +169,7 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
               // 1. ส่วน ข้อมูลบริการปัจจุบัน
               _buildSectionCard(
                 title: "ข้อมูลบริการปัจจุบัน",
+                icon: Icons.medical_information_outlined,
                 child: Column(
                   children: [
                     _infoRow(
@@ -172,13 +189,13 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
               // 2. ส่วน การนัดหมายครั้งต่อไป
               _buildSectionCard(
                 title: "การนัดหมายครั้งต่อไป",
+                icon: Icons.calendar_month_outlined,
                 trailing: Checkbox(
                   value: _hasNextAppointment,
-                  activeColor: const Color(0xFFA052BE),
+                  activeColor: primaryPurple,
                   onChanged: (bool? value) {
                     setState(() {
                       _hasNextAppointment = value ?? false;
-                      // เคลียร์ข้อมูลถ้าเอาติ๊กออก (ยกเว้นรพ.และแผนกที่เป็นค่า Default)
                       if (!_hasNextAppointment) {
                         _doctorController.clear();
                         _dateController.clear();
@@ -188,12 +205,12 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                   },
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       "ติ๊กถูกหากมีการนัดหมายในครั้งถัดไป",
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                     ),
-                    // 🌟 5. ใช้ Visibility เพื่อซ่อน/แสดง ฟอร์มตามการติ๊กถูก
                     Visibility(
                       visible: _hasNextAppointment,
                       child: Column(
@@ -203,11 +220,8 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                             "แพทย์ผู้นัด (ไม่บังคับ)",
                             _doctorController,
                           ),
-
-                          // 🌟 เปลี่ยนเป็น Picker แทน TextField
                           _datePickerField("วันที่", _dateController, context),
                           _timePickerField("เวลา", _timeController, context),
-
                           _textField("สถานที่", _hospitalController),
                           _textField("แผนก", _deptController),
                         ],
@@ -220,6 +234,7 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
               // 3. ส่วน รายละเอียด/คำแนะนำ
               _buildSectionCard(
                 title: "รายละเอียด/คำแนะนำเพิ่มเติม",
+                icon: Icons.speaker_notes_outlined,
                 child: Column(
                   children: [
                     TextField(
@@ -227,55 +242,71 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                       maxLines: 3,
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: borderColor),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: borderColor, width: 1.2),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: primaryPurple, width: 1.5),
                         ),
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: sectionBgColor,
                         hintText: "พิมพ์คำแนะนำหรือรายละเอียดเพิ่มเติม...",
+                        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     GestureDetector(
                       onTap: _pickImage,
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 20),
                         decoration: BoxDecoration(
+                          color: sectionBgColor,
                           border: Border.all(
-                            color: const Color(0xFFA052BE),
+                            color: primaryPurple,
                             style: BorderStyle.solid,
+                            width: 1.2,
                           ),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: _imageFile == null
-                            ? const Center(
+                            ? Center(
                                 child: Text(
                                   "📎 เพิ่มรูปถ่ายใบนัดหมาย (ถ้ามี)",
-                                  style: TextStyle(color: Color(0xFFA052BE)),
+                                  style: TextStyle(
+                                    color: primaryPurple,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               )
-                            : Image.file(_imageFile!, height: 100),
+                            : Image.file(_imageFile!, height: 120),
                       ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
               SizedBox(
-                width: 250,
-                height: 50,
+                width: double.infinity,
+                height: 52,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFA052BE),
+                    backgroundColor: primaryPurple,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
+                      borderRadius: BorderRadius.circular(26),
                     ),
+                    elevation: 4,
+                    shadowColor: primaryPurple.withOpacity(0.4),
                   ),
                   onPressed: _isLoading
                       ? null
                       : () async {
-                          // ล็อคบังคับ 1: เช็ครายละเอียดหรือรูป
                           if (_adviceController.text.trim().isEmpty &&
                               _base64Image == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -289,7 +320,6 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                             return;
                           }
 
-                          // ล็อคบังคับ 2: ถ้าติ๊กถูกว่ามีนัดหมาย ต้องกรอกวันและเวลา
                           if (_hasNextAppointment) {
                             if (_dateController.text.isEmpty ||
                                 _timeController.text.isEmpty) {
@@ -305,22 +335,18 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                             }
                           }
 
-                          // 🌟 สร้างตัวแปรจัดการ Format เวลาก่อนเซฟลง Firebase
                           String finalDateToSave = '';
                           String finalTimeToSave = '';
 
                           if (_hasNextAppointment) {
-                            // 1. แปลงข้อความจากหน้าจอ (dd/MM/yyyy) กลับเป็น DateTime
                             DateTime parsedDate = DateFormat(
                               'dd/MM/yyyy',
                             ).parse(_dateController.text);
 
-                            // 2. Format ใหม่เป็น yyyy-MM-dd สำหรับเซฟลง Database
                             finalDateToSave = DateFormat(
                               'yyyy-MM-dd',
                             ).format(parsedDate);
 
-                            // 3. นำวันที่ที่ Format ถูกต้องแล้ว มาต่อกับเวลา (เพิ่ม :00 วินาทีเข้าไปด้วย)
                             finalTimeToSave =
                                 "$finalDateToSave ${_timeController.text}:00";
                           }
@@ -361,9 +387,6 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                                 ),
                               );
 
-                              // 🌟 ลบของเก่าออก: Navigator.of(context).popUntil((route) => route.isFirst);
-
-                              // 🌟 ใช้โค้ดใหม่นี้แทน: ล้าง Stack แล้วบังคับโหลดหน้า List ใหม่ทั้งหมด
                               Navigator.pushAndRemoveUntil(
                                 context,
                                 MaterialPageRoute(
@@ -371,8 +394,7 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                                     uid: FirebaseAuth.instance.currentUser!.uid,
                                   ),
                                 ),
-                                (route) =>
-                                    false, // false คือลบประวัติการย้อนกลับออกทั้งหมด
+                                (route) => false,
                               );
                             }
                           } catch (e) {
@@ -394,7 +416,7 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                           "บันทึกและจบงาน",
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -410,35 +432,38 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
 
   Widget _buildSectionCard({
     required String title,
+    required IconData icon,
     Widget? trailing,
     required Widget child,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
+      padding: const EdgeInsets.all(18),
+      decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Color(0xFFA052BE), // เปลี่ยนสีหัวข้อให้สวยขึ้น
-                ),
+              Row(
+                children: [
+                  Icon(icon, color: primaryPurple, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: primaryPurple,
+                    ),
+                  ),
+                ],
               ),
               if (trailing != null) trailing,
             ],
           ),
-          const Divider(),
+          const Divider(height: 20, thickness: 1.2, color: Color(0xFFECE2FE)),
           child,
         ],
       ),
@@ -451,12 +476,12 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
       children: [
         SizedBox(
           width: 70,
-          child: Text(label, style: const TextStyle(color: Colors.grey)),
+          child: Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
         ),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF241C2B), fontSize: 14),
           ),
         ),
       ],
@@ -469,16 +494,20 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
       controller: controller,
       decoration: InputDecoration(
         labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+        filled: true,
+        fillColor: sectionBgColor,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor, width: 1.2)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryPurple, width: 1.5)),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 10,
+          horizontal: 14,
+          vertical: 12,
         ),
       ),
     ),
   );
 
-  // 🌟 Widget พิเศษสำหรับกดเลือกวันที่
   Widget _datePickerField(
     String label,
     TextEditingController controller,
@@ -487,25 +516,29 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
     padding: const EdgeInsets.only(bottom: 10),
     child: TextField(
       controller: controller,
-      readOnly: true, // ป้องกันการพิมพ์เอง
+      readOnly: true,
       onTap: () => _selectDate(context),
       decoration: InputDecoration(
         labelText: label,
-        suffixIcon: const Icon(
+        labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+        filled: true,
+        fillColor: sectionBgColor,
+        suffixIcon: Icon(
           Icons.calendar_today,
-          color: Color(0xFFA052BE),
+          color: primaryPurple,
           size: 20,
         ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor, width: 1.2)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryPurple, width: 1.5)),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 10,
+          horizontal: 14,
+          vertical: 12,
         ),
       ),
     ),
   );
 
-  // 🌟 Widget พิเศษสำหรับกดเลือกเวลา
   Widget _timePickerField(
     String label,
     TextEditingController controller,
@@ -514,19 +547,24 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
     padding: const EdgeInsets.only(bottom: 10),
     child: TextField(
       controller: controller,
-      readOnly: true, // ป้องกันการพิมพ์เอง
+      readOnly: true,
       onTap: () => _selectTime(context),
       decoration: InputDecoration(
         labelText: label,
-        suffixIcon: const Icon(
+        labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+        filled: true,
+        fillColor: sectionBgColor,
+        suffixIcon: Icon(
           Icons.access_time,
-          color: Color(0xFFA052BE),
+          color: primaryPurple,
           size: 20,
         ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor, width: 1.2)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryPurple, width: 1.5)),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 10,
+          horizontal: 14,
+          vertical: 12,
         ),
       ),
     ),

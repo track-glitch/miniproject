@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:io'; // 🌟 เพิ่มสำหรับการจัดการไฟล์รูปภาพ
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:image_picker/image_picker.dart'; // 🌟 เพิ่มสำหรับการเลือกรูปภาพ
+import 'package:image_picker/image_picker.dart';
 import 'package:miniproject/views/relative/view_doctor_advice_page.dart';
 
 import '../../widgets/custom_header_nav.dart';
@@ -35,6 +35,20 @@ class ViewRequestDetailPage extends StatefulWidget {
 }
 
 class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
+  // ── 🎨 ชุดสีหลักของธีม ─────────────────────────────────────────
+  final Color primaryColor = const Color(0xFF8763E6);
+  final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
+  final Color lightPurple = const Color(0xFFECE2FE);
+  final Color accentTeal = const Color(0xFF0F766E);
+  final Color accentPink = const Color(0xFFBE185D);
+  final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
+  final Color greyBorder = const Color(0xFFD3C2F0);
+
+  // ── 🌟 ชุดสีเสริมสำหรับกรอบและสถานะ ───────────────────────────
+  final Color sectionBgColor = const Color(0xFFF8F5FF);
+  final Color cardBgColor = Colors.white;
+  final Color labelColor = const Color(0xFF241C2B);
+
   late RequestStatus currentStatus;
   bool _isLoading = true;
 
@@ -45,20 +59,16 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   int caretakerReviewCount = 0;
 
   bool isReviewed = false;
-  bool isReported = false; // 🌟 เพิ่มตัวแปรสำหรับเช็คสถานะการรายงาน
+  bool isReported = false;
 
   Map<dynamic, dynamic>? doctorAdviceData;
   String? caretakerUidForReview;
-
-  final Color primaryPurple = const Color(0xFF8763E6);
-  final Color bgGray = const Color(0xFFF4EDFB);
 
   @override
   void initState() {
     super.initState();
     isReviewed = widget.requestModel.review != null;
-    isReported =
-        widget.requestModel.report != null; // 🌟 เช็คว่าเคยรายงานแล้วหรือไม่
+    isReported = widget.requestModel.report != null;
     _setInitialStatus();
     _fetchDetailData();
   }
@@ -190,13 +200,11 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     );
   }
 
-  // 🌟 ฟังก์ชันแสดง Popup รายงานผู้ดูแล
   void _showReportDialog() {
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
     String? selectedType;
     final TextEditingController detailController = TextEditingController();
 
-    // สถานะสำหรับ Checkbox และรูปภาพ
     bool hasImage = false;
     File? imageFile;
     String? imageBase64;
@@ -214,10 +222,8 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        // ใช้ StatefulBuilder เพื่อให้ Popup สามารถอัปเดต UI ของตัวเองได้ (เช่น ติ๊ก Checkbox หรือโชว์รูป)
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            // ฟังก์ชันเลือกรูป
             Future<void> pickImage() async {
               final ImagePicker picker = ImagePicker();
               final XFile? image = await picker.pickImage(
@@ -247,19 +253,16 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // --- ส่วนหัว ---
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const SizedBox(
-                              width: 32,
-                            ), // ดันให้ Text อยู่ตรงกลาง
-                            const Text(
+                            const SizedBox(width: 32),
+                            Text(
                               'รายงาน',
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFFB13DF3), // สีม่วงอมชมพู
+                                color: accentPink,
                               ),
                             ),
                             IconButton(
@@ -278,10 +281,9 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                         ),
                         const SizedBox(height: 20),
 
-                        // --- ประเภทรายงาน ---
-                        const Text(
+                        Text(
                           'ประเภทรายงาน',
-                          style: TextStyle(fontSize: 14, color: Colors.black87),
+                          style: TextStyle(fontSize: 14, color: labelColor),
                         ),
                         const SizedBox(height: 8),
                         DropdownButtonFormField<String>(
@@ -298,15 +300,15 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(
-                                color: Colors.grey.shade300,
-                              ),
+                              borderSide: BorderSide(color: greyBorder),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(
-                                color: Colors.grey.shade300,
-                              ),
+                              borderSide: BorderSide(color: greyBorder),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: primaryColor),
                             ),
                           ),
                           items: reportTypes
@@ -328,10 +330,9 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                         ),
                         const SizedBox(height: 16),
 
-                        // --- รายละเอียด ---
-                        const Text(
+                        Text(
                           'รายละเอียด',
-                          style: TextStyle(fontSize: 14, color: Colors.black87),
+                          style: TextStyle(fontSize: 14, color: labelColor),
                         ),
                         const SizedBox(height: 8),
                         TextFormField(
@@ -345,15 +346,15 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(
-                                color: Colors.grey.shade300,
-                              ),
+                              borderSide: BorderSide(color: greyBorder),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(
-                                color: Colors.grey.shade300,
-                              ),
+                              borderSide: BorderSide(color: greyBorder),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: primaryColor),
                             ),
                           ),
                           validator: (val) => val == null || val.trim().isEmpty
@@ -362,12 +363,11 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                         ),
                         const SizedBox(height: 12),
 
-                        // --- Checkbox มีรูปภาพประกอบ ---
                         Row(
                           children: [
                             Checkbox(
                               value: hasImage,
-                              activeColor: primaryPurple,
+                              activeColor: primaryColor,
                               onChanged: (val) {
                                 setDialogState(() {
                                   hasImage = val ?? false;
@@ -385,7 +385,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                           ],
                         ),
 
-                        // --- พื้นที่อัปโหลดรูปภาพ (แสดงเมื่อ Checkbox = true เท่านั้น) ---
                         if (hasImage) ...[
                           const SizedBox(height: 8),
                           GestureDetector(
@@ -394,20 +393,15 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                               width: double.infinity,
                               padding: const EdgeInsets.symmetric(vertical: 20),
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
+                                color: sectionBgColor,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.grey.shade300,
-                                  style: BorderStyle.solid,
-                                ), //
+                                border: Border.all(color: greyBorder),
                               ),
                               child: imageFile != null
                                   ? Column(
                                       children: [
                                         ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
+                                          borderRadius: BorderRadius.circular(8),
                                           child: Image.file(
                                             imageFile!,
                                             height: 120,
@@ -431,12 +425,12 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                         Container(
                                           padding: const EdgeInsets.all(12),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFFF3E5F5),
+                                            color: lightPurple,
                                             shape: BoxShape.circle,
                                           ),
                                           child: Icon(
                                             Icons.arrow_upward,
-                                            color: primaryPurple,
+                                            color: primaryColor,
                                             size: 24,
                                           ),
                                         ),
@@ -462,13 +456,12 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                         ],
                         const SizedBox(height: 24),
 
-                        // --- ปุ่มส่งรายงาน ---
                         SizedBox(
                           width: double.infinity,
                           height: 50,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF9B59B6),
+                              backgroundColor: accentPink,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(25),
                               ),
@@ -477,7 +470,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                 ? null
                                 : () async {
                                     if (formKey.currentState!.validate()) {
-                                      // ถ้าติ๊ก Checkbox ว่ามีรูปแต่ยังไม่ได้อัปโหลด
                                       if (hasImage && imageBase64 == null) {
                                         ScaffoldMessenger.of(
                                           context,
@@ -497,14 +489,11 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                         String reportId =
                                             'REP-${DateTime.now().millisecondsSinceEpoch}';
 
-                                        // ข้อมูลเตรียมส่งขึ้น Firebase
                                         final newReport = {
                                           'reportId': reportId,
                                           'reporttype': selectedType,
                                           'reportdetail': detailController.text,
-                                          'reportphoto':
-                                              imageBase64 ??
-                                              "", // ส่งรูป Base64 ถ้ามี
+                                          'reportphoto': imageBase64 ?? "",
                                           'reportdate': DateTime.now()
                                               .toIso8601String(),
                                         };
@@ -516,7 +505,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                             .set(newReport);
 
                                         if (context.mounted) {
-                                          Navigator.pop(context); // ปิด Popup
+                                          Navigator.pop(context);
                                           ScaffoldMessenger.of(
                                             context,
                                           ).showSnackBar(
@@ -526,7 +515,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                             ),
                                           );
 
-                                          // อัปเดตหน้าหลักให้ปุ่มหายไป
                                           setState(() {
                                             isReported = true;
                                           });
@@ -731,6 +719,44 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     return '${DateTime.now().year - birth.year}';
   }
 
+  // 🌟 Helper สร้างกรอบคลุมแต่ละ Section ให้สวยงามตรงตามชุดสี
+  Widget _buildSectionWrapper({
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: sectionBgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: greyBorder, width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: primaryColor, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: labelColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -739,7 +765,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
           title: 'รายละเอียดคำขอ',
           showBackButton: true,
         ),
-        body: Center(child: CircularProgressIndicator(color: primaryPurple)),
+        body: Center(child: CircularProgressIndicator(color: primaryColor)),
       );
     }
 
@@ -751,8 +777,8 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     if (currentStatus == RequestStatus.acceptedEarly ||
         currentStatus == RequestStatus.acceptedReady) {
       statusText = 'ตอบรับแล้ว';
-      statusColor = primaryPurple;
-      statusBgColor = const Color(0xFFF3E5F5);
+      statusColor = primaryColor;
+      statusBgColor = lightPurple;
     } else if (currentStatus == RequestStatus.completed) {
       statusText = 'สิ้นสุดบริการ';
       statusColor = const Color(0xFF00B14F);
@@ -764,7 +790,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     }
 
     return Scaffold(
-      backgroundColor: bgGray,
+      backgroundColor: bgColor,
       appBar: const CustomHeader(title: 'รายละเอียดคำขอ', showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -773,26 +799,23 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade300),
+                color: cardBgColor,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: greyBorder, width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.purple.withOpacity(0.03),
+                    color: primaryColor.withValues(alpha: 0.15),
                     blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // --- ส่วนหัวคำขอ ---
                   Padding(
-                    padding: const EdgeInsets.only(
-                      left: 20,
-                      right: 20,
-                      top: 20,
-                    ),
+                    padding: const EdgeInsets.all(20),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -805,17 +828,17 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                 'ใบคำขอรับบริการ',
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: Colors.grey.shade500,
+                                  color: Colors.grey.shade600,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 '#${req.requestId}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
+                                  color: labelColor,
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -823,7 +846,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                 'ส่งคำขอเมื่อ: ${_formatThaiDateFull(req.requestdate)}',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey.shade500,
+                                  color: Colors.grey.shade600,
                                 ),
                               ),
                             ],
@@ -852,10 +875,10 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                     ),
                   ),
 
-                  _buildSectionDivider('ข้อมูลการนัดหมาย'),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                  // ── 🌟 Section 1: ข้อมูลการนัดหมาย ──
+                  _buildSectionWrapper(
+                    title: 'ข้อมูลการนัดหมาย',
+                    icon: Icons.calendar_month_rounded,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -903,11 +926,12 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                     ),
                   ),
 
+                  // ── 🌟 Section 2: ผู้ดูแลที่ได้รับมอบหมาย ──
                   if (caretakerData != null &&
-                      widget.caretakerName != 'รอผู้ดูแลตอบรับ') ...[
-                    _buildSectionDivider('ผู้ดูแลที่ได้รับมอบหมาย'),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 20, right: 20),
+                      widget.caretakerName != 'รอผู้ดูแลตอบรับ')
+                    _buildSectionWrapper(
+                      title: 'ผู้ดูแลที่ได้รับมอบหมาย',
+                      icon: Icons.support_agent_rounded,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -927,7 +951,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
-                                        color: primaryPurple,
+                                        color: primaryColor,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -990,11 +1014,11 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                         ],
                       ),
                     ),
-                  ],
 
-                  _buildSectionDivider('ข้อมูลผู้ป่วย'),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                  // ── 🌟 Section 3: ข้อมูลผู้ป่วย ──
+                  _buildSectionWrapper(
+                    title: 'ข้อมูลผู้ป่วย',
+                    icon: Icons.person_rounded,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1039,7 +1063,8 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -1055,7 +1080,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   Widget _buildDocField(
     String label,
     String value, {
-    Color color = Colors.black87,
+    Color? color,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1073,7 +1098,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
           value,
           style: TextStyle(
             fontSize: 14,
-            color: color,
+            color: color ?? labelColor,
             fontWeight: FontWeight.bold,
           ),
           maxLines: 2,
@@ -1083,37 +1108,10 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     );
   }
 
-  Widget _buildSectionDivider(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20.0),
-      child: Row(
-        children: [
-          const SizedBox(
-            width: 0,
-            child: Divider(color: Color(0xFFE8E8E8), thickness: 1),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: primaryPurple,
-              ),
-            ),
-          ),
-          const Expanded(
-            child: Divider(color: Color(0xFFE8E8E8), thickness: 1),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildBottomActionButtons() {
-    if (currentStatus == RequestStatus.cancelled)
+    if (currentStatus == RequestStatus.cancelled) {
       return const SizedBox.shrink();
+    }
 
     if (currentStatus == RequestStatus.completed) {
       return Column(
@@ -1124,9 +1122,10 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
               height: 52,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryPurple,
+                  backgroundColor: primaryColor,
+                  elevation: 3,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 onPressed: _navigateToDoctorAdvicePage,
@@ -1151,8 +1150,9 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange,
+                  elevation: 3,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 onPressed: _showReviewPage,
@@ -1169,18 +1169,17 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
 
           const SizedBox(height: 16),
 
-          // 🌟 เช็คว่าถ้ารายงานไปแล้ว ให้แสดงข้อความแทนปุ่ม
           if (!isReported)
             GestureDetector(
               onTap: _showReportDialog,
-              child: const Text(
+              child: Text(
                 'รายงานผู้ดูแล',
                 style: TextStyle(
-                  color: Colors.red,
+                  color: accentPink,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                   decoration: TextDecoration.underline,
-                  decorationColor: Colors.red,
+                  decorationColor: accentPink,
                 ),
               ),
             )
@@ -1205,7 +1204,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
           style: OutlinedButton.styleFrom(
             side: const BorderSide(color: Color(0xFFF44336), width: 1.5),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
           onPressed: _cancelRequest,
@@ -1238,10 +1237,10 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     }
     return CircleAvatar(
       radius: radius,
-      backgroundColor: const Color(0xFFF3E5F5),
+      backgroundColor: lightPurple,
       backgroundImage: imgProv,
       child: imgProv == null
-          ? Icon(Icons.person, color: Colors.black54, size: radius + 5)
+          ? Icon(Icons.person, color: primaryColor, size: radius + 5)
           : null,
     );
   }

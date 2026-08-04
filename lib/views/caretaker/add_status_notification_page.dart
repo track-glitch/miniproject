@@ -52,10 +52,14 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
   Timer? _clockTimer;
   DateTime _currentTime = DateTime.now();
 
-  final Color bgColor = const Color(0xFFF3E5FF);
-  final Color primaryPurple = const Color(0xFF7D3C98);
-  final Color completePurple = const Color(0xFF6A1B9A);
-  final Color warningYellow = const Color(0xFFFFCA28);
+  // ── 🎨 ชุดสีหลักควบคุมธีม ─────────────────────────────────────────
+  final Color primaryPurple = const Color(0xFF8763E6);
+  final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
+  final Color lightPurple = const Color(0xFFECE2FE);
+  final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
+  final Color borderColor = const Color(0xFFD3C2F0);
+  final Color sectionBgColor = const Color(0xFFF8F5FF);
+  final Color completePurple = const Color(0xFF8763E6);
 
   @override
   void initState() {
@@ -134,7 +138,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // ปิดป๊อปอัพโดยไม่ทำอะไร
+                Navigator.of(context).pop();
               },
               child: Text(
                 'ยกเลิก',
@@ -149,8 +153,8 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                 ),
               ),
               onPressed: () {
-                Navigator.of(context).pop(); // ปิดป๊อปอัพก่อน
-                _submitStatus(); // 🌟 ค่อยเรียกฟังก์ชันส่งข้อมูลจริง
+                Navigator.of(context).pop();
+                _submitStatus();
               },
               child: const Text(
                 'ยืนยัน',
@@ -245,6 +249,22 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     }
   }
 
+  // 🌟 Helper สร้างกรอบ Card คุมสไตล์ธีม
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: borderColor, width: 1.5),
+      boxShadow: [
+        BoxShadow(
+          color: primaryPurple.withOpacity(0.12),
+          blurRadius: 10,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     List<String> dateParts = widget.requestData.date.split('·');
@@ -270,20 +290,10 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 🌟 1. กล่องข้อมูลบริการ (UI แบบ Card)
+                        // 🌟 1. กล่องข้อมูลบริการ (UI แบบ Card คุมโทน)
                         Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: primaryPurple.withOpacity(0.08),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
+                          padding: const EdgeInsets.all(18),
+                          decoration: _cardDecoration(),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -291,24 +301,35 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    'ข้อมูลบริการปัจจุบัน',
-                                    style: TextStyle(
-                                      color: primaryPurple,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.medical_information_outlined,
+                                        color: primaryPurple,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'ข้อมูลบริการปัจจุบัน',
+                                        style: TextStyle(
+                                          color: primaryPurple,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   Text(
                                     widget.requestData.id,
                                     style: TextStyle(
                                       fontSize: 13,
-                                      color: Colors.grey.shade500,
+                                      color: Colors.grey.shade600,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ],
                               ),
-                              const Divider(height: 20, thickness: 1),
+                              const Divider(height: 20, thickness: 1.2, color: Color(0xFFECE2FE)),
                               _buildInfoRow(
                                 'ผู้ป่วย:',
                                 widget.requestData.patient,
@@ -334,18 +355,8 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
 
                         // 🌟 2. กล่องฟอร์มสำหรับเลือกและส่งการแจ้งเตือน
                         Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: primaryPurple.withOpacity(0.08),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
+                          padding: const EdgeInsets.all(18),
+                          decoration: _cardDecoration(),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -353,13 +364,23 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    'อัปเดตสถานะการบริการ',
-                                    style: TextStyle(
-                                      color: primaryPurple,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.update_rounded,
+                                        color: primaryPurple,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'อัปเดตสถานะการบริการ',
+                                        style: TextStyle(
+                                          color: primaryPurple,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   Row(
                                     children: [
@@ -388,28 +409,23 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                                 value: _selectedStatus,
                                 decoration: InputDecoration(
                                   labelText: 'สถานะปัจจุบัน',
+                                  labelStyle: TextStyle(color: primaryPurple, fontSize: 13),
                                   filled: true,
-                                  fillColor: const Color(0xFFF9F9F9),
+                                  fillColor: sectionBgColor,
                                   border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(
-                                      color: Colors.grey.shade300,
-                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: borderColor),
                                   ),
                                   enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(
-                                      color: Colors.grey.shade300,
-                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: borderColor, width: 1.2),
                                   ),
                                   focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(
-                                      color: primaryPurple,
-                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: primaryPurple, width: 1.5),
                                   ),
                                   contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
+                                    horizontal: 14,
                                     vertical: 12,
                                   ),
                                 ),
@@ -419,7 +435,10 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                                         value: s,
                                         child: Text(
                                           s,
-                                          style: const TextStyle(fontSize: 14),
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Color(0xFF241C2B),
+                                          ),
                                         ),
                                       ),
                                     )
@@ -433,6 +452,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                                 maxLines: 2,
                                 decoration: InputDecoration(
                                   labelText: 'รายละเอียดเพิ่มเติม (ถ้ามี)',
+                                  labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                                   hintText:
                                       'เช่น ถึงก่อนเวลา 10 นาที, ผู้ป่วยขึ้นรถเรียบร้อย',
                                   hintStyle: TextStyle(
@@ -440,27 +460,21 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                                     fontSize: 13,
                                   ),
                                   filled: true,
-                                  fillColor: const Color(0xFFF9F9F9),
+                                  fillColor: sectionBgColor,
                                   border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(
-                                      color: Colors.grey.shade300,
-                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: borderColor),
                                   ),
                                   enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(
-                                      color: Colors.grey.shade300,
-                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: borderColor, width: 1.2),
                                   ),
                                   focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(
-                                      color: primaryPurple,
-                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: primaryPurple, width: 1.5),
                                   ),
                                   contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
+                                    horizontal: 14,
                                     vertical: 12,
                                   ),
                                 ),
@@ -473,32 +487,29 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
 
                         // 🌟 3. กล่องแสดงประวัติสถานะที่ส่งไปแล้ว (Timeline ประวัติ)
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 20,
-                          ),
+                          padding: const EdgeInsets.all(18),
                           width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: primaryPurple.withOpacity(0.08),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
+                          decoration: _cardDecoration(),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'ประวัติการส่งสถานะ',
-                                style: TextStyle(
-                                  color: primaryPurple,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                ),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.history_rounded,
+                                    color: primaryPurple,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'ประวัติการส่งสถานะ',
+                                    style: TextStyle(
+                                      color: primaryPurple,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 16),
                               _buildTimeline(),
@@ -530,7 +541,6 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
       );
     }
 
-    // จัดเรียงตามเวลาเก่าไปใหม่
     _notificationHistory.sort((a, b) {
       String timeA = a['notifydate'] ?? a['timestamp'] ?? "";
       String timeB = b['notifydate'] ?? b['timestamp'] ?? "";
@@ -557,14 +567,13 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
         (index) => Container(
           width: 2,
           height: 4,
-          color: Colors.grey.shade300,
+          color: borderColor,
           margin: const EdgeInsets.symmetric(vertical: 2.5),
         ),
       ),
     );
   }
 
-  // 🌟 สร้าง UI สำหรับประวัติที่สำเร็จแล้วเท่านั้น
   Widget _buildTimelineTile({
     required Map<dynamic, dynamic> item,
     required bool isLast,
@@ -604,7 +613,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
           child: Container(
             padding: const EdgeInsets.only(bottom: 12),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
@@ -616,7 +625,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                         style: const TextStyle(
                           fontSize: 14.5,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: Color(0xFF241C2B),
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -624,7 +633,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                         "${timeText.isNotEmpty ? '$timeText — ' : ''}ส่งแล้ว",
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey.shade500,
+                          color: Colors.grey.shade600,
                         ),
                       ),
                       if (detailText.isNotEmpty)
@@ -634,7 +643,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                             detailText,
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade600,
+                              color: Colors.grey.shade700,
                               fontStyle: FontStyle.italic,
                             ),
                           ),
@@ -669,7 +678,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-                color: Colors.black87,
+                color: const Color(0xFF241C2B),
               ),
             ),
           ),
@@ -685,7 +694,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: primaryPurple.withOpacity(0.1),
             offset: const Offset(0, -4),
             blurRadius: 10,
           ),
@@ -693,16 +702,16 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
       ),
       child: SizedBox(
         width: double.infinity,
+        height: 52,
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryPurple,
-            padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(26),
             ),
-            elevation: 0,
+            elevation: 4,
+            shadowColor: primaryPurple.withOpacity(0.4),
           ),
-          // 🌟 แก้ไขตรงนี้ จาก _submitStatus เป็น _showConfirmationDialog
           onPressed: _isLoading ? null : _showConfirmationDialog,
           child: _isLoading
               ? const SizedBox(
