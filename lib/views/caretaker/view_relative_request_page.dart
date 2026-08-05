@@ -39,6 +39,14 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
   int _bottomNavIndex = 0;
   bool _isLoading = true;
 
+  // ── 🎨 ชุดสีหลักควบคุมธีม ─────────────────────────────────────────
+  final Color primaryPurple = const Color(0xFF8763E6);
+  final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
+  final Color lightPurple = const Color(0xFFECE2FE);
+  final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
+  final Color borderColor = const Color(0xFFD3C2F0);
+  final Color sectionBgColor = const Color(0xFFF8F5FF);
+
   LatLng pointA = const LatLng(18.8055, 98.9950);
   LatLng pointB = const LatLng(18.8236, 99.0068);
   List<LatLng> routePoints = [];
@@ -270,22 +278,76 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     );
   }
 
+  // 🌟 Helper สร้างกรอบ Card คุมสไตล์ธีม
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: borderColor, width: 1.5),
+      boxShadow: [
+        BoxShadow(
+          color: primaryPurple.withOpacity(0.12),
+          blurRadius: 10,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    );
+  }
+
+  // 🌟 Helper สร้างกรอบแต่ละ Section ด้านใน
+  Widget _buildSectionWrapper({
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: sectionBgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor, width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: primaryPurple, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: primaryPurple,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF4EDFB),
+        backgroundColor: bgColor,
         appBar: const CustomHeader(
           title: 'รายละเอียดคำขอ',
           showBackButton: true,
         ),
-        body: const Center(
+        body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: Color(0xFF9B59B6)),
-              SizedBox(height: 16),
-              Text(
+              CircularProgressIndicator(color: primaryPurple),
+              const SizedBox(height: 16),
+              const Text(
                 'กำลังโหลดเส้นทางและข้อมูล...',
                 style: TextStyle(color: Colors.grey, fontSize: 14),
               ),
@@ -369,18 +431,18 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
         break;
       case RequestStatus.acceptedEarly:
       case RequestStatus.acceptedReady:
-        statusColor = const Color(0xFF9B59B6);
-        statusBgColor = const Color(0xFFF4EDFB);
+        statusColor = primaryPurple;
+        statusBgColor = lightPurple;
         statusText = 'ตอบรับแล้ว';
         break;
       case RequestStatus.completed:
         statusColor = const Color(0xFF00B14F);
-        statusBgColor = Colors.white;
+        statusBgColor = const Color(0xFFE8F5E9);
         statusText = 'สิ้นสุดบริการ';
         break;
       case RequestStatus.cancelled:
         statusColor = const Color(0xFFFF5C5C);
-        statusBgColor = Colors.white;
+        statusBgColor = const Color(0xFFFFEBEE);
         statusText = 'ยกเลิกบริการ';
         break;
       default:
@@ -393,7 +455,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     String timeOnly = dateParts.length > 1 ? dateParts[1].trim() : '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FA),
+      backgroundColor: bgColor,
       appBar: const CustomHeader(title: 'รายละเอียดคำขอ', showBackButton: true),
       body: Column(
         children: [
@@ -419,24 +481,12 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                 children: [
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(24.0),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300, width: 1),
-                      boxShadow: [
-                        BoxShadow(
-                          // เปลี่ยนสีเงาให้เป็นโทนม่วง
-                          color: Colors.purple.withOpacity(0.03),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
+                    padding: const EdgeInsets.all(20.0),
+                    decoration: _cardDecoration(),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 🌟 ส่วนหัวฟอร์ม (ดัดแปลงรูปแบบมาจากฝั่ง Relative เพื่อความเรียบร้อย)[cite: 6]
+                        // 🌟 ส่วนหัวฟอร์ม
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -449,7 +499,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                                     'ใบคำขอรับบริการ',
                                     style: TextStyle(
                                       fontSize: 13,
-                                      color: Colors.grey.shade500,
+                                      color: Colors.grey.shade600,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -459,15 +509,15 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
+                                      color: Color(0xFF241C2B),
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'ส่งคำขอเมื่อ: ${widget.requestData.submitDate}', // 🌟 วันที่ถูกดันขึ้นมาอยู่ส่วนหัว
+                                    'ส่งคำขอเมื่อ: ${widget.requestData.submitDate}',
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: Colors.grey.shade500,
+                                      color: Colors.grey.shade600,
                                     ),
                                   ),
                                 ],
@@ -497,258 +547,315 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
 
-                        // --- ข้อมูลบริการ ---
-                        // 🌟 ใช้เส้น Divider ที่เป็นสไตล์ของฝั่ง Caretaker[cite: 5]
-                        _buildSectionDivider('ข้อมูลการนัดหมาย'),
-
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: _buildInfoField('วันที่นัดหมาย', dateOnly),
-                            ),
-                            Expanded(
-                              child: _buildInfoField('เวลานัดหมาย', timeOnly),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: _buildInfoField(
-                                'สถานพยาบาล',
-                                widget.requestData.serviceName,
-                                maxLines: 2,
-                              ),
-                            ),
-                            Expanded(
-                              child: _buildInfoField(
-                                'แผนก',
-                                widget.requestData.category,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _buildInfoField(
-                          'รายละเอียดคำขอ',
-                          requestDetail,
-                          maxLines: 5,
-                        ),
-                        const SizedBox(height: 16),
-
-                        _buildSectionDivider('ข้อมูลผู้ป่วย'),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            CircleAvatar(
-                              radius: 26,
-                              backgroundColor: Colors.grey.shade100,
-                              backgroundImage: patImage.length > 100
-                                  ? MemoryImage(base64Decode(patImage))
-                                  : null,
-                              child: patImage.isEmpty
-                                  ? const Icon(
-                                      Icons.person,
-                                      size: 26,
-                                      color: Colors.grey,
-                                    )
-                                  : null,
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildInfoField('ชื่อ-นามสกุล', patName),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(child: _buildInfoField('อายุ', patAge)),
-                            Expanded(child: _buildInfoField('เพศ', patGender)),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: _buildInfoField('โรคประจำตัว', patDisease),
-                            ),
-                            Expanded(
-                              child: _buildInfoField(
-                                'สภาพร่างกาย',
-                                patMobility,
-                              ),
-                            ),
-                          ],
-                        ),
-                        _buildSectionDivider('ข้อมูลญาติผู้ติดต่อ'),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: _buildInfoField('ชื่อ-นามสกุล', relName),
-                            ),
-                            Expanded(
-                              child: _buildInfoField(
-                                'ความสัมพันธ์',
-                                relRelation,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: _buildInfoField('เบอร์โทรศัพท์', relPhone),
-                            ),
-                            Expanded(
-                              child: _buildInfoField('LINE ID', relLine),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _buildInfoField('เบอร์โทรศัพท์', patPhone),
-
-                        _buildSectionDivider('ข้อมูลจุดรับ-จุดส่ง'),
-                        Container(
-                          height: 150,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Stack(
-                              children: [
-                                IgnorePointer(
-                                  child: FlutterMap(
-                                    options: MapOptions(
-                                      initialCameraFit: CameraFit.bounds(
-                                        bounds: LatLngBounds.fromPoints([
-                                          pointA,
-                                          pointB,
-                                        ]),
-                                        padding: const EdgeInsets.all(30.0),
-                                      ),
-                                      interactionOptions:
-                                          const InteractionOptions(
-                                            flags: InteractiveFlag.none,
-                                          ),
+                        // --- Section 1: ข้อมูลบริการ ---
+                        _buildSectionWrapper(
+                          title: 'ข้อมูลการนัดหมาย',
+                          icon: Icons.calendar_month_rounded,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: _buildInfoField(
+                                      'วันที่นัดหมาย',
+                                      dateOnly,
                                     ),
+                                  ),
+                                  Expanded(
+                                    child: _buildInfoField(
+                                      'เวลานัดหมาย',
+                                      timeOnly,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: _buildInfoField(
+                                      'สถานพยาบาล',
+                                      widget.requestData.serviceName,
+                                      maxLines: 2,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: _buildInfoField(
+                                      'แผนก',
+                                      widget.requestData.category,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              _buildInfoField(
+                                'รายละเอียดคำขอ',
+                                requestDetail,
+                                maxLines: 5,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // --- Section 2: ข้อมูลผู้ป่วย ---
+                        _buildSectionWrapper(
+                          title: 'ข้อมูลผู้ป่วย',
+                          icon: Icons.person_rounded,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 26,
+                                    backgroundColor: lightPurple,
+                                    backgroundImage: patImage.length > 100
+                                        ? MemoryImage(base64Decode(patImage))
+                                        : null,
+                                    child: patImage.isEmpty
+                                        ? Icon(
+                                            Icons.person,
+                                            size: 26,
+                                            color: primaryPurple,
+                                          )
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: _buildInfoField(
+                                      'ชื่อ-นามสกุล',
+                                      patName,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: _buildInfoField('อายุ', patAge),
+                                  ),
+                                  Expanded(
+                                    child: _buildInfoField('เพศ', patGender),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: _buildInfoField(
+                                      'โรคประจำตัว',
+                                      patDisease,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: _buildInfoField(
+                                      'สภาพร่างกาย',
+                                      patMobility,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              _buildInfoField('เบอร์โทรศัพท์ผู้ป่วย', patPhone),
+                            ],
+                          ),
+                        ),
+
+                        // --- Section 3: ข้อมูลญาติผู้ติดต่อ ---
+                        _buildSectionWrapper(
+                          title: 'ข้อมูลญาติผู้ติดต่อ',
+                          icon: Icons.family_restroom_rounded,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: _buildInfoField(
+                                      'ชื่อ-นามสกุล',
+                                      relName,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: _buildInfoField(
+                                      'ความสัมพันธ์',
+                                      relRelation,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: _buildInfoField(
+                                      'เบอร์โทรศัพท์',
+                                      relPhone,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: _buildInfoField('LINE ID', relLine),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // --- Section 4: จุดรับ-จุดส่ง ---
+                        _buildSectionWrapper(
+                          title: 'ข้อมูลจุดรับ-จุดส่ง',
+                          icon: Icons.alt_route_rounded,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                height: 150,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: borderColor),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Stack(
                                     children: [
-                                      TileLayer(
-                                        urlTemplate:
-                                            'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=$maptilerApiKey',
-                                      ),
-                                      PolylineLayer(
-                                        polylines: [
-                                          Polyline(
-                                            points: routePoints,
-                                            color: Colors.blue.shade400,
-                                            strokeWidth: 4.0,
+                                      IgnorePointer(
+                                        child: FlutterMap(
+                                          options: MapOptions(
+                                            initialCameraFit: CameraFit.bounds(
+                                              bounds: LatLngBounds.fromPoints([
+                                                pointA,
+                                                pointB,
+                                              ]),
+                                              padding:
+                                                  const EdgeInsets.all(30.0),
+                                            ),
+                                            interactionOptions:
+                                                const InteractionOptions(
+                                                  flags: InteractiveFlag.none,
+                                                ),
                                           ),
-                                        ],
+                                          children: [
+                                            TileLayer(
+                                              urlTemplate:
+                                                  'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=$maptilerApiKey',
+                                            ),
+                                            PolylineLayer(
+                                              polylines: [
+                                                Polyline(
+                                                  points: routePoints,
+                                                  color: Colors.blue.shade400,
+                                                  strokeWidth: 4.0,
+                                                ),
+                                              ],
+                                            ),
+                                            MarkerLayer(
+                                              markers: [
+                                                Marker(
+                                                  point: pointA,
+                                                  width: 24,
+                                                  height: 24,
+                                                  child: _buildMapPin(
+                                                    'A',
+                                                    const Color(0xFF2196F3),
+                                                  ),
+                                                ),
+                                                Marker(
+                                                  point: pointB,
+                                                  width: 24,
+                                                  height: 24,
+                                                  child: _buildMapPin(
+                                                    'B',
+                                                    const Color(0xFFF44336),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                      MarkerLayer(
-                                        markers: [
-                                          Marker(
-                                            point: pointA,
-                                            width: 24,
-                                            height: 24,
-                                            child: _buildMapPin(
-                                              'A',
-                                              const Color(0xFF2196F3),
+                                      Positioned(
+                                        bottom: 8,
+                                        right: 8,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black87,
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: const Text(
+                                            'กดเพื่อดูแผนที่เต็ม',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
                                             ),
                                           ),
-                                          Marker(
-                                            point: pointB,
-                                            width: 24,
-                                            height: 24,
-                                            child: _buildMapPin(
-                                              'B',
-                                              const Color(0xFFF44336),
-                                            ),
+                                        ),
+                                      ),
+                                      Positioned.fill(
+                                        child: Material(
+                                          color: Colors.transparent,
+                                          child: InkWell(
+                                            onTap: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      FullScreenMapPage(
+                                                        pointA: pointA,
+                                                        pointB: pointB,
+                                                        routePoints:
+                                                            routePoints,
+                                                        distanceText:
+                                                            _distanceText,
+                                                        maptilerApiKey:
+                                                            maptilerApiKey,
+                                                      ),
+                                                ),
+                                              );
+                                            },
                                           ),
-                                        ],
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                Positioned(
-                                  bottom: 8,
-                                  right: 8,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black87,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Text(
-                                      'กดเพื่อดูแผนที่เต็ม',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Positioned.fill(
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                FullScreenMapPage(
-                                                  pointA: pointA,
-                                                  pointB: pointB,
-                                                  routePoints: routePoints,
-                                                  distanceText: _distanceText,
-                                                  maptilerApiKey:
-                                                      maptilerApiKey,
-                                                ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(height: 16),
+                              _buildLocationField(
+                                'A',
+                                const Color(0xFF2196F3),
+                                ' จุดรับ',
+                                pickupAddress,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildLocationField(
+                                'B',
+                                const Color(0xFFF44336),
+                                ' จุดส่ง',
+                                dropoffAddress,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildInfoField('ระยะทางประเมิน', _distanceText),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        _buildLocationField(
-                          'A',
-                          const Color(0xFF2196F3),
-                          ' จุดรับ',
-                          pickupAddress,
-                        ),
-                        const SizedBox(height: 12),
-                        // 🌟 ใช้ฟังก์ชันใหม่ ใส่สีแดงให้ตัว B
-                        _buildLocationField(
-                          'B',
-                          const Color(0xFFF44336),
-                          ' จุดส่ง',
-                          dropoffAddress,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildInfoField('ระยะทางประเมิน', _distanceText),
                       ],
                     ),
                   ),
@@ -771,7 +878,6 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     );
   }
 
-  // 🌟 ฟังก์ชันสร้างฟิลด์ข้อมูลตามเรฟเฟอเรนซ์ (Label สีเทาเล็ก Value สีดำใหญ่)[cite: 5]
   Widget _buildInfoField(String label, String value, {int maxLines = 1}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -780,7 +886,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
           label,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade500,
+            color: Colors.grey.shade600,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -792,7 +898,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: Color(0xFF241C2B),
             height: 1.4,
           ),
         ),
@@ -800,7 +906,6 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     );
   }
 
-  // 🌟 ฟังก์ชันใหม่สำหรับแยกสีตัวอักษร A และ B โดยเฉพาะ
   Widget _buildLocationField(
     String letter,
     Color color,
@@ -816,7 +921,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
               letter,
               style: TextStyle(
                 fontSize: 14,
-                color: color, // สีน้ำเงินหรือแดงจะถูกส่งเข้ามาตรงนี้
+                color: color,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -838,40 +943,11 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
           style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: Color(0xFF241C2B),
             height: 1.4,
           ),
         ),
       ],
-    );
-  }
-
-  // 🌟 ฟังก์ชันสร้างเส้นคั่นพร้อมข้อความตรงกลาง ตามเรฟเฟอเรนซ์[cite: 5]
-  Widget _buildSectionDivider(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24.0),
-      child: Row(
-        children: [
-          // เปลี่ยน Expanded ตรงนี้เป็น SizedBox ดันข้อความไปทางซ้าย
-          const SizedBox(
-            child: Divider(color: Color(0xFFE8E8E8), thickness: 1),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 0),
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF8E44AD), // สีม่วง
-              ),
-            ),
-          ),
-          const Expanded(
-            child: Divider(color: Color(0xFFE8E8E8), thickness: 1),
-          ),
-        ],
-      ),
     );
   }
 
@@ -938,7 +1014,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: isReady
-              ? const Color(0xFF8E44AD)
+              ? primaryPurple
               : Colors.grey.shade400,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
@@ -1019,7 +1095,7 @@ class FullScreenMapPage extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: const Color(0xFFA052BE),
+        backgroundColor: const Color(0xFF8763E6),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Stack(
@@ -1087,14 +1163,14 @@ class FullScreenMapPage extends StatelessWidget {
                   children: [
                     const Icon(
                       Icons.directions_car,
-                      color: Color(0xFFA052BE),
+                      color: Color(0xFF8763E6),
                       size: 20,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       distanceText,
                       style: const TextStyle(
-                        color: Color(0xFFA052BE),
+                        color: Color(0xFF8763E6),
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),

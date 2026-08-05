@@ -334,7 +334,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
       // 🔽 1. ลดระยะห่างระหว่างการ์ด (Margin)
       margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFDF2),
+        color: const Color.fromARGB(255, 221, 221, 221),
         borderRadius: BorderRadius.circular(10), // ปรับขอบให้มนน้อยลงนิดนึง
         border: Border.all(color: Colors.black.withOpacity(0.15), width: 1.2),
       ),

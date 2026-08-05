@@ -23,16 +23,12 @@ class ViewDoctorAdvicePage extends StatefulWidget {
 }
 
 class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
-  // ── 🎨 โทนสีเดียวกับหน้า view_request_detail_page ──
+  // ── 🎨 ชุดสีหลักของธีม ──
   static const Color primaryPurple = Color(0xFF8763E6);
   static const Color darkPurple = Color.fromARGB(255, 153, 116, 255);
   static const Color lightPink = Color(0xFFECE2FE);
-  static const Color bgGray = Color.fromARGB(
-    255,
-    245,
-    239,
-    255,
-  ); // ปรับให้อ่อนลงนิดนึงเพื่อให้การ์ดดูเด่นขึ้น
+  static const Color bgGray = Color.fromARGB(255, 225, 202, 255);
+  static const Color borderColor = Color(0xFFD3C2F0);
 
   final Color bottomNavPurple = const Color.fromARGB(255, 153, 116, 255);
   final Color searchPrimaryColor = const Color(0xFF8763E6);
@@ -127,30 +123,15 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionTitle(
-                      Icons.medical_information_outlined,
-                      'ข้อมูลบริการปัจจุบัน',
-                    ),
-                    const SizedBox(height: 12),
                     _buildCurrentServiceCard(),
+                    const SizedBox(height: 16),
 
-                    const SizedBox(height: 24),
-                    _buildSectionTitle(
-                      Icons.calendar_month_outlined,
-                      'การนัดหมายครั้งต่อไป',
-                    ),
-                    const SizedBox(height: 12),
                     _buildNextAppointmentCard(),
+                    const SizedBox(height: 16),
 
-                    const SizedBox(height: 24),
-                    _buildSectionTitle(
-                      Icons.speaker_notes_outlined,
-                      'คำแนะนำจากแพทย์',
-                    ),
-                    const SizedBox(height: 12),
                     _buildAdditionalNoteCard(),
+                    const SizedBox(height: 24),
 
-                    const SizedBox(height: 30),
                     _buildConfirmButton(),
                   ],
                 ),
@@ -165,19 +146,26 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
 
   // ---------------- UI Components ----------------
 
-  Widget _buildSectionTitle(IconData icon, String title) {
-    return Row(
+  Widget _buildSectionHeaderInside(IconData icon, String title) {
+    return Column(
       children: [
-        Icon(icon, color: primaryPurple, size: 22),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: darkPurple,
-          ),
+        Row(
+          children: [
+            Icon(icon, color: primaryPurple, size: 22),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: darkPurple,
+              ),
+            ),
+          ],
         ),
+        const SizedBox(height: 12),
+        const Divider(height: 1, color: borderColor, thickness: 1),
+        const SizedBox(height: 14),
       ],
     );
   }
@@ -219,12 +207,13 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
   BoxDecoration _cardDecoration() {
     return BoxDecoration(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: borderColor, width: 1.5),
       boxShadow: [
         BoxShadow(
-          color: primaryPurple.withOpacity(0.08),
-          blurRadius: 15,
-          offset: const Offset(0, 5),
+          color: primaryPurple.withOpacity(0.12),
+          blurRadius: 10,
+          offset: const Offset(0, 3),
         ),
       ],
     );
@@ -237,7 +226,10 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
       decoration: _cardDecoration(),
       child: Column(
         children: [
-          // ลบ parameter รูปไอคอนออกทั้งหมด
+          _buildSectionHeaderInside(
+            Icons.medical_information_outlined,
+            'ข้อมูลบริการปัจจุบัน',
+          ),
           _buildInfoRow('ผู้ป่วย', 'นาย ใจงาม จิตดี'),
           const Divider(height: 20, color: lightPink),
           _buildInfoRow('วัน/เวลา', '22 ก.พ. 2569 10:30 น.'),
@@ -284,7 +276,10 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ลบ parameter รูปไอคอนออกทั้งหมด
+          _buildSectionHeaderInside(
+            Icons.calendar_month_outlined,
+            'การนัดหมายครั้งต่อไป',
+          ),
           _buildLabeledField('แพทย์ผู้นัด', 'นาย ประกอบ จันทร์รักษา'),
           const SizedBox(height: 16),
           Row(
@@ -322,7 +317,7 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
           decoration: BoxDecoration(
             color: lightPink.withOpacity(0.4),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: lightPink, width: 1.5),
+            border: Border.all(color: borderColor, width: 1.2),
           ),
           child: Text(
             value,
@@ -337,11 +332,9 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
     );
   }
 
-  // อย่าลืมส่งค่า base64 จากฐานข้อมูลเข้ามาในฟังก์ชันนี้แทนค่า String ว่างนะครับ
   Widget _buildAdditionalNoteCard({String? base64String}) {
     Uint8List? imageBytes;
 
-    // 🌟 ตรวจสอบและแปลง Base64 พร้อมจัดการ Padding ป้องกัน Error
     if (base64String != null && base64String.isNotEmpty) {
       try {
         String normalized = base64String.replaceAll(RegExp(r'\s+'), '');
@@ -360,6 +353,10 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildSectionHeaderInside(
+            Icons.speaker_notes_outlined,
+            'คำแนะนำจากแพทย์',
+          ),
           const Text(
             'รายละเอียดเพิ่มเติม',
             style: TextStyle(
@@ -375,10 +372,10 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
             decoration: BoxDecoration(
               color: lightPink.withOpacity(0.4),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: lightPink, width: 1.5),
+              border: Border.all(color: borderColor, width: 1.2),
             ),
             child: const Text(
-              'ร่างกายไม่ค่อยมีแรง พยายามเดินออกกำลังกายเบาๆ รับประทานอาหารให้ครบ 5 หมู่ และพักผ่อนให้เพียงพอ', // ดึงข้อมูลจริงมาใส่แทน
+              'ร่างกายไม่ค่อยมีแรง พยายามเดินออกกำลังกายเบาๆ รับประทานอาหารให้ครบ 5 หมู่ และพักผ่อนให้เพียงพอ',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.black87,
@@ -387,7 +384,6 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
             ),
           ),
 
-          // 🌟 แสดงส่วนรูปภาพก็ต่อเมื่อมีการแปลงไฟล์สำเร็จเท่านั้น
           if (imageBytes != null) ...[
             const SizedBox(height: 20),
             const Text(
@@ -401,7 +397,6 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
             const SizedBox(height: 6),
             GestureDetector(
               onTap: () {
-                // 🌟 กดเพื่อดูรูปขนาดเต็ม (InteractiveViewer ยืดขยายได้)
                 showDialog(
                   context: context,
                   builder: (_) => Dialog(
@@ -508,7 +503,7 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
             'ญาติ',
             false,
             onTap: () {
-              // ลอจิกเดิมของคุณ...
+              // ลอจิกเดิม...
             },
           ),
         ],
