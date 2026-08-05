@@ -147,23 +147,36 @@ class AdminService {
   }
 
   // =======================================================
-  // 🌟 3. ฟังก์ชันอัปเดตสถานะ (ดัดแปลงให้หา UID ก่อนอัปเดต)
+  // 🌟 3. ฟังก์ชันอัปเดตสถานะ (แก้ไขให้บันทึกสถานะเอกสารรายใบ)
   // =======================================================
-  Future<void> approveCaretaker(String caretakerId) async {
-    String? uid = await _findUidByCaretakerId(
-      caretakerId,
-    ); // 🔎 ให้ลูกมือไปหา UID ให้
+  Future<void> approveCaretaker(
+    String caretakerId,
+    List<DocumentModel> docs,
+  ) async {
+    String? uid = await _findUidByCaretakerId(caretakerId);
     if (uid != null) {
+      // 1. อัปเดตสถานะบัญชีเป็น Approved
       await _dbRef.child('Login').child(uid).child('Caretaker').update({
         'accountstatus': 'Approved',
       });
+
+      // 2. ปรับสถานะเอกสารทุกใบให้เป็น APPROVED (เพราะแอดมินให้ผ่านหมด)
+      for (var doc in docs) {
+        doc.status = 'APPROVED';
+      }
+
+      // 3. บันทึกรายการเอกสารกลับลง Firebase
+      await _dbRef
+          .child('Login')
+          .child(uid)
+          .child('Caretaker')
+          .child('Document')
+          .set(docs.map((e) => e.toJson()).toList());
     }
   }
 
   Future<void> suspendCaretaker(String caretakerId) async {
-    String? uid = await _findUidByCaretakerId(
-      caretakerId,
-    ); // 🔎 ให้ลูกมือไปหา UID ให้
+    String? uid = await _findUidByCaretakerId(caretakerId);
     if (uid != null) {
       await _dbRef.child('Login').child(uid).child('Caretaker').update({
         'accountstatus': 'Suspended',
@@ -171,41 +184,35 @@ class AdminService {
     }
   }
 
-  Future<void> rejectCaretaker(String caretakerId, String reason) async {
+  // 🌟 รับ Parameter รูปแบบเอกสาร และ สถานะการติ๊ก (_documentStatuses) มาจากหน้า UI
+  Future<void> rejectCaretaker(
+    String caretakerId,
+    String reason,
+    List<DocumentModel> docs,
+    Map<int, bool> docStatuses,
+  ) async {
     String? uid = await _findUidByCaretakerId(caretakerId);
     if (uid != null) {
-      // 1. อัปเดตสถานะบัญชีหลัก
+      // 1. อัปเดตสถานะบัญชีหลักเป็น Rejected พร้อมใส่ Comment
       await _dbRef.child('Login').child(uid).child('Caretaker').update({
         'accountstatus': 'Rejected',
         'admincomment': reason,
       });
 
-      // 2. 🌟 ค้นหาเอกสารทั้งหมดและอัปเดตสถานะเป็น REJECTED
-      DatabaseEvent docEvent = await _dbRef
+      // 2. ปรับสถานะเอกสารแต่ละใบ ตามที่แอดมินติ๊ก ผ่าน/ไม่ผ่าน
+      for (int i = 0; i < docs.length; i++) {
+        bool isPassed =
+            docStatuses[i] ?? false; // ถ้าดึงค่าไม่ได้ ถือว่าไม่ผ่านไว้ก่อน
+        docs[i].status = isPassed ? 'APPROVED' : 'REJECTED';
+      }
+
+      // 3. บันทึกรายการเอกสารทับลงไปใหม่
+      await _dbRef
           .child('Login')
           .child(uid)
           .child('Caretaker')
           .child('Document')
-          .once();
-
-      if (docEvent.snapshot.exists && docEvent.snapshot.value != null) {
-        Map<dynamic, dynamic> docs =
-            docEvent.snapshot.value as Map<dynamic, dynamic>;
-        Map<String, dynamic> updates = {};
-
-        // วนลูปเพื่อสร้างคำสั่งอัปเดตสถานะเอกสารทุกชิ้น
-        docs.forEach((key, value) {
-          updates['$key/status'] = 'REJECTED';
-        });
-
-        // สั่งอัปเดตรวดเดียว
-        await _dbRef
-            .child('Login')
-            .child(uid)
-            .child('Caretaker')
-            .child('Document')
-            .update(updates);
-      }
+          .set(docs.map((e) => e.toJson()).toList());
     }
   }
 

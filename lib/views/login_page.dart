@@ -8,6 +8,7 @@ import 'package:miniproject/views/caretaker/list_relative_request_page.dart';
 import 'package:miniproject/views/relative/view_caretaker_profile_page.dart';
 import 'package:miniproject/views/relative_register_page.dart';
 import 'package:miniproject/views/vehicle_register_page.dart';
+import 'package:miniproject/widgets/suspend_page.dart';
 import '../services/auth_service.dart';
 import 'relative/relative_home_page.dart';
 import 'caretaker/caretaker_home_page.dart';
@@ -107,14 +108,35 @@ class _LoginPageState extends State<LoginPage> {
           );
           return;
         } else if (accountStatus == 'Rejected') {
-          // ไปหน้าแจ้งเตือนการปฏิเสธ พร้อมเหตุผล[cite: 1]
+          // ไปหน้าแจ้งเตือนการปฏิเสธ พร้อมเหตุผล
           String comment =
               result['admincomment'] ??
               'ข้อมูลไม่ผ่านเกณฑ์ โปรดตรวจสอบและแก้ไขข้อมูลใหม่';
+
+          // 🌟 1. ดึงข้อมูล Document ออกมาจาก result
+          dynamic userDocs =
+              result['Document']; // โครงสร้างใน Login อาจซ้อนอยู่ใน Caretaker หรือข้างนอก ขึ้นอยู่กับ API
+
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => RejectedPage(adminComment: comment),
+              builder: (context) => RejectedPage(
+                adminComment: comment,
+                uid: uid, // 🌟 2. ส่ง uid ไปด้วย
+                documents: userDocs, // 🌟 3. ส่งเอกสารไปด้วย
+              ),
+            ),
+          );
+          return;
+        } else if (accountStatus == 'Suspended') {
+          String comment =
+              result['admincomment'] ??
+              'มีการละเมิดข้อตกลงการใช้งาน โปรดติดต่อผู้ดูแลระบบ';
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SuspendPage(adminComment: comment),
             ),
           );
           return;

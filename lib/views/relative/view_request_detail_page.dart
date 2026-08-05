@@ -191,6 +191,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   }
 
   // 🌟 ฟังก์ชันแสดง Popup รายงานผู้ดูแล
+  // 🌟 ฟังก์ชันแสดง Popup รายงานผู้ดูแล (แก้ไขประเภทรายงานแล้ว)
   void _showReportDialog() {
     final GlobalKey<FormState> formKey = GlobalKey<FormState>();
     String? selectedType;
@@ -202,11 +203,10 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     String? imageBase64;
     bool isSubmitting = false;
 
+    // 🌟 แก้ไข: จำกัดประเภทการรายงานเหลือ 3 ประเภท
     final List<String> reportTypes = [
-      'ผู้ดูแลมาสาย / ไม่มาตามนัด',
-      'พฤติกรรมไม่เหมาะสม / ไม่สุภาพ',
-      'ขับรถประมาท / ไม่ปลอดภัย',
-      'เรียกเก็บเงินเพิ่มเกินจริง',
+      'ใช้ความรุนแรง',
+      'กิริยามารยาทไม่เหมาะสม',
       'อื่นๆ',
     ];
 
@@ -214,22 +214,23 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        // ใช้ StatefulBuilder เพื่อให้ Popup สามารถอัปเดต UI ของตัวเองได้ (เช่น ติ๊ก Checkbox หรือโชว์รูป)
+        // ใช้ StatefulBuilder เพื่อให้ Popup สามารถอัปเดต UI ของตัวเองได้
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            // ฟังก์ชันเลือกรูป
+            // ฟังก์ชันเลือกรูปและแปลงเป็น Base64
             Future<void> pickImage() async {
               final ImagePicker picker = ImagePicker();
               final XFile? image = await picker.pickImage(
                 source: ImageSource.gallery,
-                imageQuality: 80,
+                imageQuality:
+                    50, // 🌟 ปรับลด Quality เพื่อไม่ให้ String Base64 ยาวเกินไป
               );
 
               if (image != null) {
                 final bytes = await image.readAsBytes();
                 setDialogState(() {
                   imageFile = File(image.path);
-                  imageBase64 = base64Encode(bytes);
+                  imageBase64 = base64Encode(bytes); // 🌟 แปลงรูปเป็น Base64
                 });
               }
             }
@@ -251,15 +252,13 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const SizedBox(
-                              width: 32,
-                            ), // ดันให้ Text อยู่ตรงกลาง
+                            const SizedBox(width: 32),
                             const Text(
                               'รายงาน',
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFFB13DF3), // สีม่วงอมชมพู
+                                color: Color(0xFFB13DF3),
                               ),
                             ),
                             IconButton(
@@ -320,9 +319,8 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                 ),
                               )
                               .toList(),
-                          onChanged: (val) {
-                            setDialogState(() => selectedType = val);
-                          },
+                          onChanged: (val) =>
+                              setDialogState(() => selectedType = val),
                           validator: (val) =>
                               val == null ? 'กรุณาเลือกประเภทรายงาน' : null,
                         ),
@@ -385,7 +383,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                           ],
                         ),
 
-                        // --- พื้นที่อัปโหลดรูปภาพ (แสดงเมื่อ Checkbox = true เท่านั้น) ---
+                        // --- พื้นที่อัปโหลดรูปภาพ ---
                         if (hasImage) ...[
                           const SizedBox(height: 8),
                           GestureDetector(
@@ -399,7 +397,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                 border: Border.all(
                                   color: Colors.grey.shade300,
                                   style: BorderStyle.solid,
-                                ), //
+                                ),
                               ),
                               child: imageFile != null
                                   ? Column(
@@ -477,7 +475,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                 ? null
                                 : () async {
                                     if (formKey.currentState!.validate()) {
-                                      // ถ้าติ๊ก Checkbox ว่ามีรูปแต่ยังไม่ได้อัปโหลด
+                                      // ตรวจสอบรูปภาพ
                                       if (hasImage && imageBase64 == null) {
                                         ScaffoldMessenger.of(
                                           context,
@@ -494,21 +492,20 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
 
                                       setDialogState(() => isSubmitting = true);
                                       try {
+                                        // 🌟 ตรงกับ ReportModel ทุกประการ
                                         String reportId =
                                             'REP-${DateTime.now().millisecondsSinceEpoch}';
 
-                                        // ข้อมูลเตรียมส่งขึ้น Firebase
                                         final newReport = {
                                           'reportId': reportId,
                                           'reporttype': selectedType,
                                           'reportdetail': detailController.text,
-                                          'reportphoto':
-                                              imageBase64 ??
-                                              "", // ส่งรูป Base64 ถ้ามี
+                                          'reportphoto': imageBase64 ?? "",
                                           'reportdate': DateTime.now()
                                               .toIso8601String(),
                                         };
 
+                                        // บันทึกลง Firebase (ใช้ Path เดิมของคุณ)
                                         await FirebaseDatabase.instance
                                             .ref(
                                               'Login/${widget.loggedUid}/Relative/Request/${widget.requestModel.requestId}/Report',
@@ -516,7 +513,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                             .set(newReport);
 
                                         if (context.mounted) {
-                                          Navigator.pop(context); // ปิด Popup
+                                          Navigator.pop(context);
                                           ScaffoldMessenger.of(
                                             context,
                                           ).showSnackBar(
@@ -525,11 +522,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                               backgroundColor: Colors.green,
                                             ),
                                           );
-
-                                          // อัปเดตหน้าหลักให้ปุ่มหายไป
-                                          setState(() {
-                                            isReported = true;
-                                          });
+                                          setState(() => isReported = true);
                                         }
                                       } catch (e) {
                                         setDialogState(

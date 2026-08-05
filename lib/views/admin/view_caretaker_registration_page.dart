@@ -260,11 +260,14 @@ class _ViewCaretakerRegistrationPageState
             onPressed: () => Navigator.pop(context),
             child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey)),
           ),
+          // ค้นหาจุดนี้แล้วแก้ตามได้เลยครับ
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
             onPressed: () async {
               await _adminService.approveCaretaker(
                 widget.caretaker.caretakerId!,
+                widget.caretaker.documents ??
+                    [], // 🌟 เพิ่มการส่ง List เอกสารเข้าไป
               );
               if (mounted) {
                 Navigator.pop(context);
@@ -331,6 +334,8 @@ class _ViewCaretakerRegistrationPageState
               await _adminService.rejectCaretaker(
                 widget.caretaker.caretakerId!,
                 _reasonController.text.trim(),
+                widget.caretaker.documents ?? [], // 🌟 1. ส่ง List เอกสาร
+                _documentStatuses, // 🌟 2. ส่งสถานะที่ติ๊กผ่าน/ไม่ผ่าน
               );
               if (mounted) {
                 Navigator.pop(context);
