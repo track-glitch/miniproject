@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:miniproject/views/caretaker_edit_register_page.dart';
 import '../views/login_page.dart';
-// 🌟 นำเข้าไฟล์หน้า Edit ของคุณ (สมมติชื่อไฟล์)
-// import '../views/caretaker/caretaker_edit_register_page.dart';
+// 🌟 นำเข้าไฟล์หน้า Edit (ปรับ Path ให้ตรงกับโครงสร้างโปรเจกต์ของคุณ)
+import '../views/caretaker_edit_register_page.dart';
 
 class RejectedPage extends StatelessWidget {
   final String adminComment;
-  final String uid; // 🌟 เพิ่มรับค่า uid
-  final dynamic
-  documents; // 🌟 เพิ่มรับค่ารายการเอกสาร (เป็น dynamic เผื่อกรณี Firebase คืนค่ามาเป็น Map หรือ List)
+  final String uid; // 🌟 รับค่า uid
+  final dynamic documents; // 🌟 รับค่ารายการเอกสาร
 
   const RejectedPage({
     super.key,
@@ -38,6 +38,8 @@ class RejectedPage extends StatelessWidget {
     final Color errorColor = const Color(0xFFF44336);
     final Color lightErrorColor = const Color(0xFFFFEBEE);
     final Color primaryColor = const Color(0xFF9B59B6);
+    final Color successColor =
+        Colors.green; // 🌟 เพิ่มสีเขียวสำหรับสถานะที่ผ่าน
 
     final parsedDocs = _getParsedDocuments();
 
@@ -136,7 +138,7 @@ class RejectedPage extends StatelessWidget {
                               ),
                               const SizedBox(width: 10),
                               const Text(
-                                'ข้อเสนอแนะจากผู้ดูแลระบบ:',
+                                'ข้อความจากผู้ดูแลระบบ:',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
@@ -160,8 +162,9 @@ class RejectedPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    // 🌟 กล่องแสดงรายการเอกสาร (ตาม Mockup)
+                    // 🌟 กล่องแสดงรายการเอกสารพร้อมสถานะ ติ๊กถูก / ติ๊กผิด
                     if (parsedDocs.isNotEmpty)
+                      // 🌟 กล่องแสดงรายการเอกสารพร้อมสถานะ ติ๊กถูก / ติ๊กผิด
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
@@ -181,57 +184,89 @@ class RejectedPage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'สถานะเอกสารของคุณ',
+                              'สถานะการตรวจสอบเอกสาร',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
                             ),
                             const SizedBox(height: 16),
-                            ...parsedDocs.map((doc) {
-                              String docName =
-                                  doc['documenttype'] ?? 'เอกสารไม่ระบุชื่อ';
-                              String status = doc['status'] ?? 'PENDING';
-                              bool isApproved = status == 'APPROVED';
 
-                              // แปลงชื่อให้ดูสวยงาม
-                              if (docName == 'driver_license')
-                                docName = 'ใบอนุญาตขับขี่';
-                              if (docName == 'car_insurance')
-                                docName = 'ประกันภัยรถยนต์';
+                            // 🌟 ถ้าไม่มีข้อมูลเอกสาร ให้แสดงข้อความเตือน
+                            if (parsedDocs.isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 10),
+                                child: Text(
+                                  'ไม่พบข้อมูลสถานะเอกสาร',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              )
+                            else
+                              ...parsedDocs.map((doc) {
+                                String docName =
+                                    doc['documenttype'] ??
+                                    doc['documentId'] ??
+                                    'เอกสารไม่ระบุชื่อ';
+                                String status =
+                                    doc['status']?.toString().toUpperCase() ??
+                                    'REJECTED';
 
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        docName,
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          color: Colors.black87,
+                                bool isApproved = status == 'APPROVED';
+
+                                if (docName == 'driver_license' ||
+                                    docName == 'doc_driver_license') {
+                                  docName = 'ใบอนุญาตขับขี่';
+                                } else if (docName == 'car_insurance' ||
+                                    docName == 'doc_insurance') {
+                                  docName = 'ประกันภัยรถยนต์';
+                                } else if (docName == 'id_card' ||
+                                    docName == 'doc_idcard') {
+                                  docName = 'สำเนาบัตรประชาชน';
+                                } else if (docName == 'vehicle_registration' ||
+                                    docName == 'doc_vehicle_reg') {
+                                  docName = 'ใบคู่มือจดทะเบียนรถ';
+                                } else if (docName == 'resume' ||
+                                    docName == 'doc_resume') {
+                                  docName = 'ประวัติการทำงาน (Resume)';
+                                }
+
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 14),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          docName,
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            color: Colors.black87,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    // 🌟 ไอคอนวงกลมสีเทา ติ๊กถูก/กากบาท ตาม Mockup
-                                    Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey.shade300,
-                                        shape: BoxShape.circle,
+                                      Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: isApproved
+                                              ? successColor.withOpacity(0.15)
+                                              : errorColor.withOpacity(0.15),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          isApproved
+                                              ? Icons.check
+                                              : Icons.close,
+                                          color: isApproved
+                                              ? successColor
+                                              : errorColor,
+                                          size: 18,
+                                        ),
                                       ),
-                                      child: Icon(
-                                        isApproved ? Icons.check : Icons.close,
-                                        color: Colors.black87,
-                                        size: 20,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
                           ],
                         ),
                       ),
@@ -260,27 +295,18 @@ class RejectedPage extends StatelessWidget {
                     height: 50,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            primaryColor, // ใช้สีหลักเพื่อเน้นให้ไปแก้ไข
+                        backgroundColor: primaryColor,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                       onPressed: () {
                         // 🌟 นำทางไปหน้า Edit พร้อมส่ง UID ไป เพื่อให้หน้า Edit ไป Fetch ข้อมูลต่อ
-                        /*
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => CaretakerEditRegisterPage(uid: uid),
-                          ),
-                        );
-                        */
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'กำลังไปหน้าแก้ไขข้อมูล... (เชื่อมหน้า Edit ที่นี่)',
-                            ),
+                            builder: (context) =>
+                                CaretakerEditRegisterPage(uid: uid),
                           ),
                         );
                       },

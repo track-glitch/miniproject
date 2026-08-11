@@ -319,7 +319,7 @@ class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
                           style: const TextStyle(fontSize: 12),
                         ),
                         Text(
-                          '🚗 ยี่ห้อรถ: ${widget.caretaker.vehicle?.brand ?? '-'}',
+                          'ยี่ห้อรถ: ${widget.caretaker.vehicle?.brand ?? '-'}',
                           style: const TextStyle(fontSize: 12),
                         ),
                       ],

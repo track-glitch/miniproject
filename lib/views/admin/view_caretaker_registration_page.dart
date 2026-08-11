@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import '../../models/caretaker_model.dart';
+import '../../models/document_model.dart';
 import '../../services/admin_service.dart';
 
 class ViewCaretakerRegistrationPage extends StatefulWidget {
@@ -21,39 +22,18 @@ class _ViewCaretakerRegistrationPageState
   final Color backgroundColor = const Color(0xFFF9F9F9);
   final Color borderColor = Colors.black87;
 
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
-  int _currentCarImageIndex = 0;
-
-  // 🌟 เก็บสถานะผ่าน(true)/ไม่ผ่าน(false) ของเอกสารแต่ละอัน (Key = index)
+  // เก็บสถานะผ่าน(true)/ไม่ผ่าน(false) ของเอกสารแต่ละอัน (Key = index)
   final Map<int, bool> _documentStatuses = {};
 
   @override
   void dispose() {
     _reasonController.dispose();
-    _pageController.dispose();
     super.dispose();
   }
 
-  void _nextPage() {
-    if (_currentPage < 2) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  void _previousPage() {
-    if (_currentPage > 0) {
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  // 🌟 รองรับ URL รูปภาพจากอินเทอร์เน็ต
+  // ---------------------------------------------------------
+  // Helper: การจัดการรูปภาพ
+  // ---------------------------------------------------------
   ImageProvider? _getImageProvider(String? data, {String folder = 'Profile'}) {
     if (data == null || data.trim().isEmpty) return null;
     if (data.startsWith('http')) return NetworkImage(data);
@@ -65,7 +45,6 @@ class _ViewCaretakerRegistrationPageState
     }
   }
 
-  // 🌟 รองรับ URL รูปภาพจากอินเทอร์เน็ตสำหรับ Widget
   Widget _buildImageWidget(
     String? data, {
     String folder = 'Document',
@@ -170,60 +149,12 @@ class _ViewCaretakerRegistrationPageState
     return '$age ปี';
   }
 
-  Widget _buildCardContainer({required Widget child}) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor.withOpacity(0.2), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value.isEmpty ? '-' : value,
-              style: const TextStyle(fontSize: 16, color: Colors.black),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 🌟 กด Submit แล้วเช็กเงื่อนไข (บังคับ Reject ถ้ามีเอกสารไม่ผ่าน)
+  // ---------------------------------------------------------
+  // Logic: ตรวจสอบและบันทึก
+  // ---------------------------------------------------------
   void _handleSubmitReview() {
     final docsCount = widget.caretaker.documents?.length ?? 0;
 
-    // 1. เช็กว่ากดตรวจเอกสารครบทุกใบหรือยัง
     if (_documentStatuses.length < docsCount) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -233,13 +164,12 @@ class _ViewCaretakerRegistrationPageState
       return;
     }
 
-    // 2. เช็กว่ามีอันไหน "ไม่ผ่าน" (false) ไหม
     bool hasRejectedDoc = _documentStatuses.values.contains(false);
 
     if (hasRejectedDoc) {
-      _showRejectDialog(); // บังคับให้เด้งไปกรอก Comment
+      _showRejectDialog();
     } else {
-      _showApproveDialog(); // ผ่านหมด ให้ยืนยัน
+      _showApproveDialog();
     }
   }
 
@@ -260,14 +190,12 @@ class _ViewCaretakerRegistrationPageState
             onPressed: () => Navigator.pop(context),
             child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey)),
           ),
-          // ค้นหาจุดนี้แล้วแก้ตามได้เลยครับ
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
             onPressed: () async {
               await _adminService.approveCaretaker(
                 widget.caretaker.caretakerId!,
-                widget.caretaker.documents ??
-                    [], // 🌟 เพิ่มการส่ง List เอกสารเข้าไป
+                widget.caretaker.documents ?? [],
               );
               if (mounted) {
                 Navigator.pop(context);
@@ -287,7 +215,7 @@ class _ViewCaretakerRegistrationPageState
   void _showRejectDialog() {
     showDialog(
       context: context,
-      barrierDismissible: false, // บังคับให้ต้องกรอกหรือยกเลิก
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
@@ -334,8 +262,8 @@ class _ViewCaretakerRegistrationPageState
               await _adminService.rejectCaretaker(
                 widget.caretaker.caretakerId!,
                 _reasonController.text.trim(),
-                widget.caretaker.documents ?? [], // 🌟 1. ส่ง List เอกสาร
-                _documentStatuses, // 🌟 2. ส่งสถานะที่ติ๊กผ่าน/ไม่ผ่าน
+                widget.caretaker.documents ?? [],
+                _documentStatuses,
               );
               if (mounted) {
                 Navigator.pop(context);
@@ -359,7 +287,11 @@ class _ViewCaretakerRegistrationPageState
     );
   }
 
-  Widget _buildPage1() {
+  // ---------------------------------------------------------
+  // UI: Components สำหรับแสดงข้อมูลเชื่อมโยงกับเอกสาร
+  // ---------------------------------------------------------
+
+  Widget _buildIdCardInfo() {
     String dobString = '-';
     if (widget.caretaker.birthdate != null) {
       final date = widget.caretaker.birthdate!;
@@ -367,77 +299,50 @@ class _ViewCaretakerRegistrationPageState
           "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year + 543}";
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.purple.shade50,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildCardContainer(
+          GestureDetector(
+            onTap: () =>
+                _showFullScreenImage(widget.caretaker.profilephoto, 'Profile'),
+            child: CircleAvatar(
+              radius: 35,
+              backgroundColor: primaryColor.withOpacity(0.2),
+              backgroundImage: _getImageProvider(widget.caretaker.profilephoto),
+              child: (widget.caretaker.profilephoto?.isEmpty ?? true)
+                  ? const Icon(Icons.person, size: 35, color: Colors.grey)
+                  : null,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 50,
-                  backgroundColor: primaryColor.withOpacity(0.1),
-                  backgroundImage: _getImageProvider(
-                    widget.caretaker.profilephoto,
-                  ),
-                  child: (widget.caretaker.profilephoto?.isEmpty ?? true)
-                      ? const Icon(Icons.person, size: 50, color: Colors.grey)
-                      : null,
-                ),
-                const SizedBox(height: 12),
                 Text(
-                  '${widget.caretaker.firstname} ${widget.caretaker.lastname}',
+                  'เลขบัตร: ${widget.caretaker.caretakerId ?? "-"}',
                   style: const TextStyle(
-                    fontSize: 22,
                     fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.red,
                   ),
                 ),
-                const SizedBox(height: 4),
                 Text(
-                  'ID: ${widget.caretaker.caretakerId}',
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  'ชื่อ: ${widget.caretaker.firstname} ${widget.caretaker.lastname}',
                 ),
-              ],
-            ),
-          ),
-          _buildCardContainer(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.person_outline, size: 28),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'ข้อมูลส่วนตัว',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildInfoRow('เพศ:', widget.caretaker.gender ?? ''),
-                _buildInfoRow(
-                  'อายุ:',
-                  _calculateAge(widget.caretaker.birthdate),
-                ),
-                _buildInfoRow('วันเกิด:', dobString),
-                _buildInfoRow(
-                  'เบอร์โทรศัพท์:',
-                  widget.caretaker.phonenumber ?? '',
-                ),
-                _buildInfoRow('อีเมล:', widget.caretaker.email ?? ''),
-                const Divider(height: 24),
-                const Text(
-                  'เกี่ยวกับฉัน:',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 4),
                 Text(
-                  widget.caretaker.experience ?? '-',
-                  style: const TextStyle(fontSize: 15),
+                  'วันเกิด: $dobString (อายุ ${_calculateAge(widget.caretaker.birthdate)})',
+                ),
+                Text(
+                  'ที่อยู่: ${widget.caretaker.location?.address ?? "-"}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                 ),
               ],
             ),
@@ -447,369 +352,328 @@ class _ViewCaretakerRegistrationPageState
     );
   }
 
-  Widget _buildPage2() {
-    final vehicle = widget.caretaker.vehicle;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+  Widget _buildVehicleInfo() {
+    final v = widget.caretaker.vehicle;
+    if (v == null) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildCardContainer(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on,
-                      size: 28,
-                      color: Colors.red.shade600,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'ข้อมูลที่อยู่',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  widget.caretaker.location?.address ?? 'ไม่มีข้อมูลที่อยู่',
-                  style: const TextStyle(fontSize: 16, height: 1.5),
-                ),
-              ],
+          Text(
+            '🚗 ข้อมูลรถ: ${v.brand ?? "-"} ${v.model ?? "-"}',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          Text(
+            'ทะเบียน: ${v.licenseplate ?? "-"} ${v.province ?? "-"}',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: Colors.red,
             ),
           ),
-          if (vehicle != null)
-            _buildCardContainer(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'ยานพาหนะ',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.directions_car,
-                          color: primaryColor,
-                          size: 30,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              vehicle.vehicletype ?? '-',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              '${vehicle.brand ?? ''} ${vehicle.model ?? ''}, สี${vehicle.color ?? ''}',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  if (vehicle.vehiclephotos != null &&
-                      vehicle.vehiclephotos!.isNotEmpty) ...[
-                    Container(
+          Text('ประเภท: ${v.vehicletype ?? "-"} | สี: ${v.color ?? "-"}'),
+          const SizedBox(height: 8),
+          if (v.vehiclephotos != null && v.vehiclephotos!.isNotEmpty)
+            SizedBox(
+              height: 70,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: v.vehiclephotos!.length,
+                itemBuilder: (context, i) {
+                  return GestureDetector(
+                    onTap: () => _showFullScreenImage(
+                      v.vehiclephotos![i].photo,
+                      'Vehicle',
+                    ),
+                    child: Container(
+                      width: 70,
+                      margin: const EdgeInsets.only(right: 8),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: borderColor.withOpacity(0.2),
-                          width: 1,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade400),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: _buildImageWidget(
+                          v.vehiclephotos![i].photo,
+                          folder: 'Vehicle',
+                          fit: BoxFit.cover,
+                          height: 70,
                         ),
                       ),
-                      child: Column(
-                        children: [
-                          SizedBox(
-                            height: 200,
-                            child: ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(15),
-                              ),
-                              child: PageView.builder(
-                                itemCount: vehicle.vehiclephotos!.length,
-                                onPageChanged: (index) => setState(
-                                  () => _currentCarImageIndex = index,
-                                ),
-                                itemBuilder: (context, index) {
-                                  return GestureDetector(
-                                    onTap: () => _showFullScreenImage(
-                                      vehicle.vehiclephotos![index].photo,
-                                      'Vehicle',
-                                    ),
-                                    child: _buildImageWidget(
-                                      vehicle.vehiclephotos![index].photo,
-                                      folder: 'Vehicle',
-                                      fit: BoxFit.cover,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: List.generate(
-                                vehicle.vehiclephotos!.length,
-                                (index) => Container(
-                                  margin: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                  ),
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: _currentCarImageIndex == index
-                                        ? Colors.black
-                                        : Colors.grey.shade400,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'ป้ายทะเบียน:',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                      Text(
-                        vehicle.licenseplate ?? '-',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            )
-          else
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Text("ไม่มีข้อมูลยานพาหนะ"),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  // 🌟 หน้าที่ 3: ระบบตรวจสอบเอกสาร
-  Widget _buildPage3() {
-    final docs = widget.caretaker.documents ?? [];
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: _buildCardContainer(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'ตรวจสอบเอกสาร',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            if (docs.isEmpty)
-              const Text(
-                'ไม่มีเอกสารแนบมา',
-                style: TextStyle(color: Colors.grey),
-              )
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: docs.length,
-                itemBuilder: (context, index) {
-                  final doc = docs[index];
-                  bool? currentStatus = _documentStatuses[index];
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 20),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: currentStatus == true
-                            ? Colors.green.shade300
-                            : currentStatus == false
-                            ? Colors.red.shade300
-                            : Colors.grey.shade300,
-                        width: 2,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      color: currentStatus == true
-                          ? Colors.green.shade50
-                          : currentStatus == false
-                          ? Colors.red.shade50
-                          : Colors.white,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          doc.documenttype == 'driver_license'
-                              ? 'ใบอนุญาตขับขี่'
-                              : doc.documenttype == 'car_insurance'
-                              ? 'ประกันภัยรถยนต์'
-                              : doc.documenttype == 'first_aid_certificate'
-                              ? 'ใบรับรองปฐมพยาบาล'
-                              : (doc.documenttype ?? 'เอกสาร'),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        GestureDetector(
-                          onTap: () =>
-                              _showFullScreenImage(doc.filepath, 'Document'),
-                          child: Container(
-                            height: 180,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: _buildImageWidget(
-                                doc.filepath,
-                                folder: 'Document',
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // 🌟 ปุ่ม ติ๊กถูก / กากบาท
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  setState(
-                                    () => _documentStatuses[index] = true,
-                                  );
-                                },
-                                icon: const Icon(Icons.check_circle),
-                                label: const Text('ผ่าน'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: currentStatus == true
-                                      ? Colors.green
-                                      : Colors.grey.shade300,
-                                  foregroundColor: currentStatus == true
-                                      ? Colors.white
-                                      : Colors.grey.shade700,
-                                  elevation: currentStatus == true ? 2 : 0,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  setState(
-                                    () => _documentStatuses[index] = false,
-                                  );
-                                },
-                                icon: const Icon(Icons.cancel),
-                                label: const Text('ไม่ผ่าน'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: currentStatus == false
-                                      ? Colors.red
-                                      : Colors.grey.shade300,
-                                  foregroundColor: currentStatus == false
-                                      ? Colors.white
-                                      : Colors.grey.shade700,
-                                  elevation: currentStatus == false ? 2 : 0,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
                     ),
                   );
                 },
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
 
+  Widget _buildDriverLicenseInfo() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'ตรวจสอบชื่อผู้ถือบัตร: ${widget.caretaker.firstname} ${widget.caretaker.lastname}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 🌟 เพิ่ม Widget สำหรับแสดงข้อมูลเทียบใบรับรอง
+  Widget _buildCertificateInfo() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.teal.shade50,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'ตรวจสอบชื่อในใบรับรอง: ${widget.caretaker.firstname} ${widget.caretaker.lastname}',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.teal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------
+  // UI: หน้าจอหลัก
+  // ---------------------------------------------------------
   @override
   Widget build(BuildContext context) {
+    final docs = widget.caretaker.documents ?? [];
+
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
         backgroundColor: primaryColor,
         title: const Text(
-          'ตรวจสอบข้อมูล',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          'ตรวจสอบข้อมูลและเอกสาร',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
         ),
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Column(
         children: [
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildStepIndicator(0, 'ข้อมูลส่วนตัว'),
-                _buildStepLine(),
-                _buildStepIndicator(1, 'ที่อยู่/รถยนต์'),
-                _buildStepLine(),
-                _buildStepIndicator(2, 'เอกสาร'),
-              ],
-            ),
-          ),
-
+          // พื้นที่ Scroll หลัก (ข้อมูลเรียงตามเอกสาร)
           Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
-              onPageChanged: (index) => setState(() => _currentPage = index),
-              children: [_buildPage1(), _buildPage2(), _buildPage3()],
-            ),
+            child: docs.isEmpty
+                ? const Center(
+                    child: Text(
+                      'ไม่มีเอกสารแนบมา',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final doc = docs[index];
+                      bool? currentStatus = _documentStatuses[index];
+
+                      String docId = doc.documentId ?? '';
+                      String docType = doc.documenttype ?? '';
+                      String title = 'เอกสารอื่นๆ';
+                      Widget? infoWidget;
+
+                      // จับคู่ Data (Text) กับ Document (Image)
+                      if (docId == 'doc_idcard' || docType == 'id_card') {
+                        title = 'สำเนาบัตรประชาชน';
+                        infoWidget = _buildIdCardInfo();
+                      } else if (docId == 'doc_vehicle_reg' ||
+                          docType == 'vehicle_registration') {
+                        title = 'สำเนาทะเบียนรถ';
+                        infoWidget = _buildVehicleInfo();
+                      } else if (docId == 'doc_driver_license' ||
+                          docType == 'driver_license') {
+                        title = 'สำเนาใบขับขี่';
+                        infoWidget = _buildDriverLicenseInfo();
+                      } else if (docId == 'doc_insurance' ||
+                          docType == 'car_insurance') {
+                        title = 'สำเนาประกันภัยรถยนต์';
+                        infoWidget = _buildVehicleInfo();
+                      } else if (docId == 'doc_resume' || docType == 'resume') {
+                        title = 'ประวัติการทำงาน (Resume)';
+                        infoWidget = Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Text(
+                            'ประสบการณ์: ${widget.caretaker.experience ?? "-"}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        );
+                      } else if (docId == 'doc_certificate' ||
+                          docType == 'first_aid_certificate') {
+                        // 🌟 นำ Certificate กลับมาแสดงผล
+                        title = 'ใบรับรอง (Certificate / First Aid)';
+                        infoWidget = _buildCertificateInfo();
+                      } else {
+                        // 🌟 Fallback กันเหนียว เผื่อมีเอกสารประเภทอื่น
+                        title = docType.isNotEmpty ? docType : docId;
+                      }
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 24),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: currentStatus == true
+                              ? Colors.green.shade50
+                              : currentStatus == false
+                              ? Colors.red.shade50
+                              : Colors.white,
+                          border: Border.all(
+                            color: currentStatus == true
+                                ? Colors.green.shade300
+                                : currentStatus == false
+                                ? Colors.red.shade300
+                                : Colors.grey.shade300,
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${index + 1}. $title',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+
+                            // แปะข้อมูล Text ไว้เหนือรูปเอกสาร
+                            if (infoWidget != null) infoWidget,
+
+                            // รูปเอกสาร
+                            GestureDetector(
+                              onTap: () => _showFullScreenImage(
+                                doc.filepath,
+                                'Document',
+                              ),
+                              child: Container(
+                                height: 180,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: _buildImageWidget(
+                                    doc.filepath,
+                                    folder: 'Document',
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // ปุ่ม ผ่าน / ไม่ผ่าน
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => setState(
+                                      () => _documentStatuses[index] = true,
+                                    ),
+                                    icon: const Icon(
+                                      Icons.check_circle,
+                                      size: 20,
+                                    ),
+                                    label: const Text(
+                                      'ผ่าน',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: currentStatus == true
+                                          ? Colors.green
+                                          : Colors.grey.shade200,
+                                      foregroundColor: currentStatus == true
+                                          ? Colors.white
+                                          : Colors.grey.shade700,
+                                      elevation: currentStatus == true ? 2 : 0,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => setState(
+                                      () => _documentStatuses[index] = false,
+                                    ),
+                                    icon: const Icon(Icons.cancel, size: 20),
+                                    label: const Text(
+                                      'ไม่ผ่าน',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: currentStatus == false
+                                          ? Colors.red
+                                          : Colors.grey.shade200,
+                                      foregroundColor: currentStatus == false
+                                          ? Colors.white
+                                          : Colors.grey.shade700,
+                                      elevation: currentStatus == false ? 2 : 0,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
           ),
 
+          // ปุ่ม Submit ติดอยู่ด้านล่างตลอดเวลา
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -822,123 +686,29 @@ class _ViewCaretakerRegistrationPageState
                 ),
               ],
             ),
-            child: Row(
-              children: [
-                if (_currentPage > 0) ...[
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: _previousPage,
-                      child: const Text(
-                        'ย้อนกลับ',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  const SizedBox(width: 16),
-                ],
-
-                if (_currentPage < 2) ...[
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: _nextPage,
-                      child: const Text(
-                        'ถัดไป',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                ),
+                onPressed: _handleSubmitReview,
+                child: const Text(
+                  'ส่งผลการตรวจสอบ',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
-                ] else ...[
-                  // 🌟 หน้าสุดท้าย โชว์ปุ่มส่งผลการตรวจสอบ ปุ่มเดียว
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: _handleSubmitReview,
-                      child: const Text(
-                        'ส่งผลการตรวจสอบ',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStepIndicator(int stepIndex, String title) {
-    bool isActive = _currentPage >= stepIndex;
-    return Column(
-      children: [
-        Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isActive ? primaryColor : Colors.grey.shade300,
-          ),
-          child: Center(
-            child: Text(
-              '${stepIndex + 1}',
-              style: TextStyle(
-                color: isActive ? Colors.white : Colors.grey.shade600,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 10,
-            color: isActive ? primaryColor : Colors.grey.shade500,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStepLine() {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 15, left: 8, right: 8),
-        height: 2,
-        color: Colors.grey.shade300,
+        ],
       ),
     );
   }

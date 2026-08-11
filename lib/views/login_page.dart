@@ -114,8 +114,7 @@ class _LoginPageState extends State<LoginPage> {
               'ข้อมูลไม่ผ่านเกณฑ์ โปรดตรวจสอบและแก้ไขข้อมูลใหม่';
 
           // 🌟 1. ดึงข้อมูล Document ออกมาจาก result
-          dynamic userDocs =
-              result['Document']; // โครงสร้างใน Login อาจซ้อนอยู่ใน Caretaker หรือข้างนอก ขึ้นอยู่กับ API
+          dynamic userDocs = result['documents'];
 
           Navigator.pushReplacement(
             context,

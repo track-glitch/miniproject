@@ -137,7 +137,7 @@ class AdminService {
       final snapshot = await _dbRef.child('Login').child(uid).get();
       if (snapshot.exists && snapshot.value != null) {
         Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
-        return data['usertype']?.toString() ?? 'unknow';
+        return data['Admin']['usertype']?.toString() ?? 'unknow';
       } else {
         return 'ไม่พบผู้ใช้ในระบบ';
       }

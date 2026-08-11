@@ -149,11 +149,11 @@ class AuthService {
         password: password,
       );
 
-      // 6. จัดเตรียมข้อมูลส่งกลับให้หน้า Login แยกตามประเภทผู้ใช้
       if (role == 'caretaker') {
         String status = userData!['Caretaker']['accountstatus'] ?? 'Pending';
         String reason = userData['Caretaker']['admincomment'] ?? '';
         bool hasVehicle = false;
+
         if (userData['Caretaker']['Vehicle'] != null) {
           var vehicleData = userData['Caretaker']['Vehicle'];
           if (vehicleData['licenseplate'] != null &&
@@ -161,6 +161,7 @@ class AuthService {
             hasVehicle = true;
           }
         }
+
         return {
           'success': true,
           'uid': userCredential.user!.uid,
@@ -168,6 +169,10 @@ class AuthService {
           'accountstatus': status,
           'admincomment': reason,
           'hasVehicle': hasVehicle,
+          // 🌟 เพิ่มบรรทัดนี้ เพื่อดึงข้อมูลเอกสารส่งกลับไปด้วย (เช็กชื่อคีย์ให้ตรงกับในฐานข้อมูลของคุณ อาจจะเป็น 'Document' หรือ 'documents')
+          'documents':
+              userData['Caretaker']['Document'] ??
+              userData['Caretaker']['documents'],
         };
       } else if (role == 'admin') {
         // กรณีเป็นแอดมิน (Admin)

@@ -32,8 +32,8 @@ class VehicleModel {
       licenseplate: json['licenseplate'],
       province: json['province'],
       color: json['color'],
-      vehiclephotos: json['vehiclephotos'] != null
-          ? (json['vehiclephotos'] as List)
+      vehiclephotos: json['VehiclePhoto'] != null
+          ? (json['VehiclePhoto'] as List)
                 .map((e) => VehiclePhotoModel.fromJson(e))
                 .toList()
           : null,
