@@ -13,8 +13,8 @@ import 'package:miniproject/views/relative/relative_home_page.dart';
 /// หน้าจอ "สถานะการแจ้งเตือน" (Track Status Notification Page)
 class TrackStatusNotificationPage extends StatefulWidget {
   final String? loggedUid;
-  final RequestModel? requestModel; // 🌟 รับ Request Model มาใช้
-  final String? caretakerName; // 🌟 รับชื่อผู้ดูแลมาด้วย
+  final RequestModel? requestModel;
+  final String? caretakerName;
 
   const TrackStatusNotificationPage({
     super.key,
@@ -30,7 +30,6 @@ class TrackStatusNotificationPage extends StatefulWidget {
 
 class _TrackStatusNotificationPageState
     extends State<TrackStatusNotificationPage> {
-  // 🌟 เก็บรายการแบบ Dynamic ไม่ Mockup แล้ว
   List<_NotificationItem> _items = [];
   bool _isLoading = true;
 
@@ -75,16 +74,17 @@ class _TrackStatusNotificationPageState
               .toList();
         }
 
-        // Sort เวลา เก่า -> ใหม่
+        // 🌟 1. Sort เวลา ใหม่ -> เก่า (ล่าสุดอยู่บนสุด)[cite: 17]
         rawList.sort((a, b) {
           String timeA = a['notifydate'] ?? a['timestamp'] ?? "";
           String timeB = b['notifydate'] ?? b['timestamp'] ?? "";
-          return timeA.compareTo(timeB);
+          return timeB.compareTo(timeA);
         });
 
         for (int i = 0; i < rawList.length; i++) {
           var item = rawList[i];
-          bool isLatest = (i == rawList.length - 1); // อันล่าสุดอยู่ท้ายสุด
+          // 🌟 เมื่อใหม่สุดอยู่บนสุด ดังนั้น index 0 คืออันล่าสุดเสมอ
+          bool isLatest = (i == 0);
 
           // จัดรูปแบบเวลา
           String rawDate = item['notifydate'] ?? item['timestamp'] ?? "";
@@ -97,11 +97,8 @@ class _TrackStatusNotificationPageState
             } catch (_) {}
           }
 
-          // จัดข้อความรายละเอียด
+          // 🌟 2. ดึงเฉพาะรายละเอียด ไม่เอาชื่อผู้ดูแลมาต่อท้ายแล้ว[cite: 17]
           String detailText = item['notifydetail']?.toString().trim() ?? '';
-          String finalDetail = detailText.isNotEmpty
-              ? '$detailText\nผู้ดูแล: ${widget.caretakerName}'
-              : 'ผู้ดูแล: ${widget.caretakerName}';
 
           loadedItems.add(
             _NotificationItem(
@@ -109,7 +106,7 @@ class _TrackStatusNotificationPageState
               requestId: '#${widget.requestModel!.requestId}',
               status: item['notifystatus'] ?? item['status'] ?? 'อัปเดตสถานะ',
               detailLabel: 'รายละเอียด:',
-              detail: finalDetail,
+              detail: detailText,
               isLatest: isLatest,
             ),
           );
@@ -219,7 +216,6 @@ class _TrackStatusNotificationPageState
         ),
         centerTitle: true,
       ),
-      // 🌟 ใช้เงื่อนไขสลับหน้าจอ (กำลังโหลด / ว่างเปล่า / แสดงลิสต์)
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: primaryPurple))
           : _items.isEmpty
@@ -473,7 +469,7 @@ class _TrackStatusNotificationPageState
 
   Widget _buildLatestDivider() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         children: [
           const Expanded(child: Divider(color: redAccent, thickness: 1)),
@@ -563,20 +559,23 @@ class _NotificationCard extends StatelessWidget {
               color: latest ? const Color(0xFFE53935) : Colors.black87,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            item.detailLabel,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            item.detail,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Colors.black87,
-              height: 1.4,
+          // 🌟 3. เช็คเงื่อนไข ถ้าข้อมูล detail ว่าง จะไม่สร้าง Text ขึ้นมาเลย[cite: 17]
+          if (item.detail.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              item.detailLabel,
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
             ),
-          ),
+            const SizedBox(height: 2),
+            Text(
+              item.detail,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.black87,
+                height: 1.4,
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -416,6 +416,39 @@ class CaretakerService {
     }
   }
 
+  // =========================================================
+  // 🌟 ฟังก์ชันยกเลิกสถานะการแจ้งเตือน (อัปเดตสถานะเป็น "ยกเลิก")
+  // =========================================================
+  Future<void> cancelNotificationStatus({
+    required String relativeUid,
+    required String requestId,
+    required String notifId,
+    required String cancelRemark,
+  }) async {
+    try {
+      // 1. ชี้พิกัดไปที่ Notification ตัวที่ต้องการแก้ไขใน Firebase
+      DatabaseReference notifRef = FirebaseDatabase.instance
+          .ref()
+          .child('Login')
+          .child(relativeUid)
+          .child('Relative')
+          .child('Request')
+          .child(requestId)
+          .child('Notification')
+          .child(notifId);
+
+      // 2. ใช้คำสั่ง .update() เพื่อแก้ไขเฉพาะฟิลด์ที่ต้องการ โดยไม่กระทบฟิลด์อื่น (เช่น วันที่/เวลา)
+      await notifRef.update({
+        'notifystatus': 'ยกเลิก', // เปลี่ยนสถานะเป็นคำว่า ยกเลิก
+        'notifydetail':
+            cancelRemark, // ใส่หมายเหตุที่กรอกมาลงไปแทนรายละเอียดเดิม
+      });
+    } catch (e) {
+      print("Error cancelling notification: $e");
+      throw Exception('ไม่สามารถยกเลิกสถานะได้ เกิดข้อผิดพลาด: $e');
+    }
+  }
+
   // 3. อัปเดตเฉพาะพิกัดแบบ Real-time (ยิงตลอดเวลาที่รถวิ่ง)
   Future<void> updateRealtimeLocation(
     String relativeUid,

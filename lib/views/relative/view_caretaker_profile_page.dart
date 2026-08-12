@@ -179,7 +179,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                   ),
                   child: Column(
                     children: [
-                      // 🌟 Profile Header รวมปุ่มขอใช้บริการขนาดมินิมอลอยู่ใต้เลขบัตร
                       _buildProfileHeader(),
                       const SizedBox(height: 12),
                       _buildPersonalInfo(),
@@ -344,7 +343,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     );
   }
 
-  // 🌟 Profile Header: แสดงข้อความบอกเลขบัตรประชาชน + ย้ายปุ่มไว้ใต้เลขบัตร (Minimal Style)
   Widget _buildProfileHeader() {
     String rawStatus =
         (caretakerData?['servicestatus']?.toString() ?? 'ไม่พร้อมให้บริการ')
@@ -448,7 +446,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
-          // 🌟 เขียนบอกชัดเจนว่าเป็นเลขบัตรประชาชน
           Text(
             'เลขบัตรประชาชน: ${caretakerData?['caretakerId'] ?? '1234567891011'}',
             style: const TextStyle(
@@ -459,15 +456,12 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             ),
           ),
           const SizedBox(height: 14),
-          
-          // 🌟 ปุ่มขอใช้บริการ ดีไซน์เล็กลง ดูมินิมอล อยู่ใต้เลขบัตรประชาชน
           _buildMinimalRequestButton(),
         ],
       ),
     );
   }
 
-  // 🌟 ฟังก์ชันสร้างปุ่ม "ขอใช้บริการ" สไตล์มินิมอล ขนาดกะทัดรัด
   Widget _buildMinimalRequestButton() {
     return SizedBox(
       height: 38,
@@ -592,6 +586,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     );
   }
 
+  // 🌟 สร้างฟังก์ชันนี้ใหม่เพื่อไฮไลต์จุดเด่นการดูแล[cite: 19]
   Widget _buildProfessionalInfo() {
     return _buildCard(
       child: Column(
@@ -599,10 +594,10 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
         children: [
           Row(
             children: const [
-              Icon(Icons.work_outline, size: 22, color: Color(0xFF9B59B6)),
+              Icon(Icons.star_rounded, size: 24, color: Color(0xFF9B59B6)),
               SizedBox(width: 8),
               Text(
-                'ประสบการณ์และการบริการ',
+                'จุดเด่นและการให้บริการ',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -616,22 +611,39 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             'ประสบการณ์:',
             caretakerData?['experience'] ?? 'ไม่ได้ระบุ',
           ),
-          const SizedBox(height: 12),
-          const Text(
-            'รายละเอียดการให้บริการ:',
-            style: TextStyle(
-              color: Color(0xFF9B59B6),
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+          const SizedBox(height: 16),
+          // 🌟 กล่องไฮไลต์รายละเอียดการบริการ
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF9B59B6).withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF9B59B6).withOpacity(0.3),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            caretakerData?['servicedesc'] ?? 'ไม่ได้ระบุรายละเอียด',
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF333333),
-              height: 1.5,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'รายละเอียดขั้นตอนการดูแล:',
+                  style: TextStyle(
+                    color: Color(0xFF8763E6),
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  caretakerData?['servicedesc'] ?? 'ไม่ได้ระบุรายละเอียด',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF444444),
+                    height: 1.6,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
