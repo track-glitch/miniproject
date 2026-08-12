@@ -331,10 +331,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             label: 'ขอใช้บริการ',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: 'แจ้งเตือน',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             label: 'ญาติ',
           ),

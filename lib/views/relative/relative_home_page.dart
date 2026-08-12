@@ -1132,6 +1132,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
         ? (data['rating'] as num).toDouble()
         : 0.0;
     int comments = data['comments'] ?? 0;
+    int usageCount = data['usageCount'] ?? 0; // 🌟 ดึงจำนวนครั้งที่ใช้งาน
     List<Map<String, dynamic>> reviewsList =
         (data['reviewsList'] as List<Map<String, dynamic>>?) ?? [];
 
@@ -1290,6 +1291,30 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                             decoration: comments > 0
                                 ? TextDecoration.underline
                                 : TextDecoration.none,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      // 🌟 Badge แสดงจำนวนครั้งที่เคยใช้งาน
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: primaryColor.withOpacity(0.3),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Text(
+                          'ให้บริการ $usageCount ครั้ง',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
                           ),
                         ),
                       ),

@@ -636,6 +636,7 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: primaryColor,
         elevation: 0,
         centerTitle: true,

@@ -25,10 +25,14 @@ class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
   final Color backgroundColor = const Color(0xFFF4EDFB);
 
   List<ReportModel> _sortedReports = [];
+  bool _showAllReports = false; // 🌟 สถานะเปิด-ปิด แสดงรายการรีพอร์ตทั้งหมด
+  final Map<int, bool> _expandedDetails = {}; // 🌟 สถานะขยายข้อความยาวในแต่ละการ์ด
 
-  // 🌟 1. ตั้งค่าเริ่มต้นให้แสดงทั้ง 3 ประเภทเสมอ (ถ้าไม่มีข้อมูลจะเป็น 0)
   Map<String, int> _reportSummary = {
-    'ใช้ความรุนแรง': 0,
+    'พฤติกรรมเข้าข่ายความรุนแรง': 0,
+    'ไม่มาตามนัดหมาย': 0,
+    'การดูแลผู้ป่วยไม่ปลอดภัย': 0,
+    'เรียกเก็บเงินเพิ่ม': 0,
     'กิริยามารยาทไม่เหมาะสม': 0,
     'อื่นๆ': 0,
   };
@@ -40,27 +44,29 @@ class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
   }
 
   void _prepareReportData() {
-    // 🌟 2. ใช้ข้อมูลที่ส่งเข้ามาจริงๆ (ถ้า null ให้เป็น List ว่าง) ไม่ใช้ Mock data แล้ว
     List<ReportModel> rawReports = widget.reports ?? [];
 
-    // รีเซ็ตค่าใหม่ทุกครั้งเผื่อมีการโหลดข้อมูลซ้ำ
     _reportSummary = {
-      'ใช้ความรุนแรง': 0,
-      'กิริยามารยาทไม่เหมาะสม': 0,
-      'อื่นๆ': 0,
+      'พฤติกรรมเข้าข่ายความรุนแรง': 0, // 1. แดง
+      'ไม่มาตามนัดหมาย': 0, // 2. แดง
+      'การดูแลผู้ป่วยไม่ปลอดภัย': 0, // 3. ส้ม
+      'เรียกเก็บเงินเพิ่ม': 0, // 4. ส้ม
+      'กิริยามารยาทไม่เหมาะสม': 0, // 5. เหลือง
+      'อื่นๆ': 0, // 6. เหลือง
     };
 
-    // 🌟 3. นับจำนวนแยกตามประเภท
     for (var report in rawReports) {
       String type = report.reporttype ?? 'อื่นๆ';
-      // ป้องกันกรณีมีข้อมูลเก่าที่ประเภทไม่ตรงกับ 3 หมวดนี้ ให้ปัดเข้าหมวด "อื่นๆ"
+      if (type == 'ใช้ความรุนแรง') {
+        type = 'พฤติกรรมเข้าข่ายความรุนแรง';
+      }
+
       if (!_reportSummary.containsKey(type)) {
         type = 'อื่นๆ';
       }
       _reportSummary[type] = (_reportSummary[type] ?? 0) + 1;
     }
 
-    // 🌟 4. จัดเรียง Report ตามความรุนแรง (Priority)
     rawReports.sort((a, b) {
       int priorityA = _getReportPriority(a.reporttype);
       int priorityB = _getReportPriority(b.reporttype);
@@ -77,17 +83,16 @@ class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
     });
   }
 
-  // 🌟 5. ฟังก์ชันจัดระดับความรุนแรงอิงตาม 3 ประเภทหลัก
   int _getReportPriority(String? type) {
-    if (type == 'ใช้ความรุนแรง') return 1; // รุนแรงมาก (สีแดง)
-    if (type == 'กิริยามารยาทไม่เหมาะสม') return 2; // ปานกลาง (สีส้ม)
-    return 3; // อื่นๆ (สีเหลือง)
-  }
-
-  Color _getPriorityColor(int priority) {
-    if (priority == 1) return Colors.red;
-    if (priority == 2) return Colors.orange;
-    return Colors.amber;
+    if (type == 'พฤติกรรมเข้าข่ายความรุนแรง' ||
+        type == 'ใช้ความรุนแรง' ||
+        type == 'ไม่มาตามนัดหมาย') {
+      return 1;
+    }
+    if (type == 'การดูแลผู้ป่วยไม่ปลอดภัย' || type == 'เรียกเก็บเงินเพิ่ม') {
+      return 2;
+    }
+    return 3;
   }
 
   void _showSuspendDialog() {
@@ -156,7 +161,6 @@ class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
                           }
                           setDialogState(() => isSubmitting = true);
 
-                          // TODO: เรียก API อัปเดตสถานะและ admincomment ไปที่ Firebase
                           await Future.delayed(const Duration(seconds: 1));
 
                           if (context.mounted) {
@@ -223,6 +227,11 @@ class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 🌟 กรองแสดงเฉพาะ 3 รายการแรกก่อน ถ้ายังไม่ได้กด "ดูทั้งหมด"
+    List<ReportModel> displayReports = _showAllReports
+        ? _sortedReports
+        : _sortedReports.take(3).toList();
+
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
@@ -330,10 +339,10 @@ class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
             ),
             const SizedBox(height: 16),
 
-            // --- สรุปประเภทการรายงาน ---
+            // --- สรุปประเภทการรายงาน (เรียงลำดับ แดง -> ส้ม -> เหลือง) ---
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
@@ -342,51 +351,118 @@ class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'สรุปประเภทการรายงาน',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'สรุปประเภทการรายงาน',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        'รวม ${_sortedReports.length} รายการ',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  ..._reportSummary.entries.toList().asMap().entries.map((
-                    entry,
-                  ) {
+                  const SizedBox(height: 14),
+                  ..._reportSummary.entries.toList().asMap().entries.map((entry) {
                     int index = entry.key + 1;
                     String type = entry.value.key;
                     int count = entry.value.value;
-                    int priority = _getReportPriority(type);
+                    bool hasReport = count > 0;
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
+                    Color themeColor;
+                    if (index <= 2) {
+                      themeColor = const Color(0xFFE53935); // 🔴 แดง
+                    } else if (index <= 4) {
+                      themeColor = const Color(0xFFFB8C00); // 🟠 ส้ม
+                    } else {
+                      themeColor = const Color(0xFFFBC02D); // 🟡 เหลือง
+                    }
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: hasReport
+                            ? themeColor.withOpacity(0.08)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                        border: hasReport
+                            ? Border.all(
+                                color: themeColor.withOpacity(0.4),
+                                width: 1.2,
+                              )
+                            : null,
+                      ),
                       child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(6),
+                            width: 24,
+                            height: 22,
+                            alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: _getPriorityColor(priority),
+                              color: themeColor,
                               shape: BoxShape.circle,
                             ),
                             child: Text(
                               '$index',
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 10,
+                                fontSize: 11,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               type,
-                              style: const TextStyle(fontSize: 13),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: hasReport
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: hasReport
+                                    ? Colors.black87
+                                    : Colors.black54,
+                              ),
                             ),
                           ),
-                          Text(
-                            '($count ครั้ง)',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold,
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: hasReport
+                                  ? themeColor
+                                  : Colors.grey.shade200,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '($count ครั้ง)',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: hasReport
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: hasReport
+                                    ? Colors.white
+                                    : Colors.grey.shade600,
+                              ),
                             ),
                           ),
                         ],
@@ -398,9 +474,9 @@ class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
             ),
             const SizedBox(height: 16),
 
-            // --- รายการ Report ---
+            // --- รายการ Report (จำกัดแสดงผล 3 รายการแรก + ปุ่มกดขยายดูทั้งหมด) ---
             Container(
-              width: double.infinity, // ทำให้ Container กว้างเต็มพื้นที่
+              width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -408,7 +484,6 @@ class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
                 border: Border.all(color: Colors.black87),
               ),
               child: _sortedReports.isEmpty
-                  // 🌟 6. แสดงข้อความนี้ถ้าไม่มีข้อมูล
                   ? const Padding(
                       padding: EdgeInsets.symmetric(vertical: 32),
                       child: Center(
@@ -423,87 +498,218 @@ class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
                       ),
                     )
                   : Column(
-                      children: _sortedReports.map((report) {
-                        int priority = _getReportPriority(report.reporttype);
-                        Color typeColor = _getPriorityColor(priority);
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'รายละเอียดคำร้องเรียน',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            Text(
+                              'แสดง ${displayReports.length}/${_sortedReports.length} รายการ',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
 
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade300),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      report.reporttype ?? 'ไม่ระบุประเภท',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: typeColor,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _formatThaiDateFull(report.reportdate),
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      report.reportdetail ?? '-',
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.black87,
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                  ],
+                        // แสดงเฉพาะรายการตามตัวแปร displayReports (3 รายการแรก หรือ ทั้งหมด)
+                        ...displayReports.asMap().entries.map((entry) {
+                          int itemIndex = entry.key;
+                          var report = entry.value;
+
+                          String type = report.reporttype ?? 'ไม่ระบุประเภท';
+                          if (type == 'ใช้ความรุนแรง') {
+                            type = 'พฤติกรรมเข้าข่ายความรุนแรง';
+                          }
+
+                          int priority = _getReportPriority(type);
+                          Color typeColor;
+                          if (priority == 1) {
+                            typeColor = const Color(0xFFE53935);
+                          } else if (priority == 2) {
+                            typeColor = const Color(0xFFFB8C00);
+                          } else {
+                            typeColor = const Color(0xFFFBC02D);
+                          }
+
+                          bool isExpanded = _expandedDetails[itemIndex] ?? false;
+                          String detailText = report.reportdetail ?? '-';
+                          bool isTextLong = detailText.length > 90;
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
                                 ),
-                              ),
-                              if (report.reportphoto != null &&
-                                  report.reportphoto!.isNotEmpty)
-                                GestureDetector(
-                                  onTap: () {},
-                                  child: Container(
-                                    width: 70,
-                                    height: 70,
-                                    margin: const EdgeInsets.only(left: 10.0),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: Colors.grey.shade300,
+                              ],
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        type,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: typeColor,
+                                        ),
                                       ),
-                                      image: DecorationImage(
-                                        image: _getImageProvider(
-                                          report.reportphoto!,
-                                        )!,
-                                        fit: BoxFit.cover,
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _formatThaiDateFull(report.reportdate),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+
+                                      // ย่อข้อความถ้ายาวเกินไป
+                                      Text(
+                                        detailText,
+                                        maxLines: isExpanded ? null : 3,
+                                        overflow: isExpanded
+                                            ? TextOverflow.visible
+                                            : TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.black87,
+                                          height: 1.4,
+                                        ),
+                                      ),
+
+                                      if (isTextLong)
+                                        GestureDetector(
+                                          onTap: () {
+                                            setState(() {
+                                              _expandedDetails[itemIndex] =
+                                                  !isExpanded;
+                                            });
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 4.0,
+                                            ),
+                                            child: Text(
+                                              isExpanded
+                                                  ? 'ย่อข้อความ'
+                                                  : '...อ่านเพิ่มเติม',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: primaryColor,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                if (report.reportphoto != null &&
+                                    report.reportphoto!.isNotEmpty)
+                                  GestureDetector(
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (_) => Dialog(
+                                          child: Image(
+                                            image: _getImageProvider(
+                                              report.reportphoto!,
+                                            )!,
+                                            fit: BoxFit.contain,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Container(
+                                      width: 70,
+                                      height: 70,
+                                      margin: const EdgeInsets.only(left: 10.0),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: Colors.grey.shade300,
+                                        ),
+                                        image: DecorationImage(
+                                          image: _getImageProvider(
+                                            report.reportphoto!,
+                                          )!,
+                                          fit: BoxFit.cover,
+                                        ),
                                       ),
                                     ),
                                   ),
+                              ],
+                            ),
+                          );
+                        }),
+
+                        // 🌟 ปุ่มกดดูรีพอร์ตทั้งหมด (แสดงกรณีมีรีพอร์ตมากกว่า 3 รายการ)
+                        if (_sortedReports.length > 3)
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 6.0),
+                              child: TextButton.icon(
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  backgroundColor: primaryColor.withOpacity(0.08),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
                                 ),
-                            ],
+                                onPressed: () {
+                                  setState(() {
+                                    _showAllReports = !_showAllReports;
+                                  });
+                                },
+                                icon: Icon(
+                                  _showAllReports
+                                      ? Icons.keyboard_arrow_up
+                                      : Icons.keyboard_arrow_down,
+                                  size: 20,
+                                  color: primaryColor,
+                                ),
+                                label: Text(
+                                  _showAllReports
+                                      ? 'ซ่อนรีพอร์ตที่เหลือ'
+                                      : 'ดูรีพอร์ตทั้งหมดอีก ${_sortedReports.length - 3} รายการ',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                        );
-                      }).toList(),
+                      ],
                     ),
             ),
             const SizedBox(height: 24),
