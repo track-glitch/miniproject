@@ -210,10 +210,13 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     String? imageBase64;
     bool isSubmitting = false;
 
-    // 🌟 แก้ไข: จำกัดประเภทการรายงานเหลือ 3 ประเภท
+    // 🌟 อัปเดตรายการหัวข้อประเภทการรายงานให้ครอบคลุมปัญหาจริง
     final List<String> reportTypes = [
-      'ใช้ความรุนแรง',
+      'ไม่มาตามนัดหมาย',
       'กิริยามารยาทไม่เหมาะสม',
+      'การดูแลผู้ป่วยไม่ปลอดภัย',
+      'เรียกเก็บเงินเพิ่ม',
+      'พฤติกรรมเข้าข่ายความรุนแรง',
       'อื่นๆ',
     ];
 
@@ -227,15 +230,14 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
               final ImagePicker picker = ImagePicker();
               final XFile? image = await picker.pickImage(
                 source: ImageSource.gallery,
-                imageQuality:
-                    50, // 🌟 ปรับลด Quality เพื่อไม่ให้ String Base64 ยาวเกินไป
+                imageQuality: 50,
               );
 
               if (image != null) {
                 final bytes = await image.readAsBytes();
                 setDialogState(() {
                   imageFile = File(image.path);
-                  imageBase64 = base64Encode(bytes); // 🌟 แปลงรูปเป็น Base64
+                  imageBase64 = base64Encode(bytes);
                 });
               }
             }
@@ -288,6 +290,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                         const SizedBox(height: 8),
                         DropdownButtonFormField<String>(
                           value: selectedType,
+                          isExpanded: true,
                           decoration: InputDecoration(
                             hintText: 'เลือกประเภทรายงาน',
                             hintStyle: const TextStyle(
@@ -317,7 +320,8 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                   value: type,
                                   child: Text(
                                     type,
-                                    style: const TextStyle(fontSize: 14),
+                                    style: const TextStyle(fontSize: 13.5),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               )
@@ -400,9 +404,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                   ? Column(
                                       children: [
                                         ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
+                                          borderRadius: BorderRadius.circular(8),
                                           child: Image.file(
                                             imageFile!,
                                             height: 120,
@@ -415,8 +417,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                           style: TextStyle(
                                             color: Colors.grey,
                                             fontSize: 12,
-                                            decoration:
-                                                TextDecoration.underline,
+                                            decoration: TextDecoration.underline,
                                           ),
                                         ),
                                       ],
@@ -487,7 +488,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
 
                                       setDialogState(() => isSubmitting = true);
                                       try {
-                                        // 🌟 ตรงกับ ReportModel ทุกประการ
                                         String reportId =
                                             'REP-${DateTime.now().millisecondsSinceEpoch}';
 
@@ -500,7 +500,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                               .toIso8601String(),
                                         };
 
-                                        // บันทึกลง Firebase (ใช้ Path เดิมของคุณ)
                                         await FirebaseDatabase.instance
                                             .ref(
                                               'Login/${widget.loggedUid}/Relative/Request/${widget.requestModel.requestId}/Report',
@@ -722,7 +721,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     return '${DateTime.now().year - birth.year}';
   }
 
-  // 🌟 Helper สร้างกรอบคลุมแต่ละ Section ให้สวยงามตรงตามชุดสี
   Widget _buildSectionWrapper({
     required String title,
     required IconData icon,
@@ -816,7 +814,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // --- ส่วนหัวคำขอ ---
                   Padding(
                     padding: const EdgeInsets.all(20),
                     child: Row(
@@ -878,7 +875,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                     ),
                   ),
 
-                  // ── 🌟 Section 1: ข้อมูลการนัดหมาย ──
                   _buildSectionWrapper(
                     title: 'ข้อมูลการนัดหมาย',
                     icon: Icons.calendar_month_rounded,
@@ -929,7 +925,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                     ),
                   ),
 
-                  // ── 🌟 Section 2: ผู้ดูแลที่ได้รับมอบหมาย ──
                   if (caretakerData != null &&
                       widget.caretakerName != 'รอผู้ดูแลตอบรับ')
                     _buildSectionWrapper(
@@ -1018,7 +1013,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                       ),
                     ),
 
-                  // ── 🌟 Section 3: ข้อมูลผู้ป่วย ──
                   _buildSectionWrapper(
                     title: 'ข้อมูลผู้ป่วย',
                     icon: Icons.person_rounded,

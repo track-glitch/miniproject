@@ -697,7 +697,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
               ),
             ),
 
-            // ── รายการ (พร้อมคำนวณ Review และซ่อนคนไม่ว่าง) ───────────
+            // ── รายการ (พร้อมคำนวณ Review, ซ่อนคนไม่ว่าง และนับจำนวนครั้งที่ใช้งาน) ───────────
             Expanded(
               child: StreamBuilder<DatabaseEvent>(
                 stream: FirebaseDatabase.instance.ref('Login').onValue,
@@ -723,9 +723,10 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   List<Map<String, dynamic>> caretakersList = [];
                   Map<String, List<Map<String, dynamic>>> caregiverReviewsMap = {};
                   Map<String, List<String>> busyDatesMap = {};
+                  Map<String, int> caretakerUsageCountMap = {}; // 🌟 เพิ่ม Map เพื่อนับจำนวนครั้งการใช้งาน
 
                   if (rootValue is Map) {
-                    // 🌟 1. วนลูปกวาดหา Review ทั้งหมดของระบบมารวมไว้ก่อน
+                    // 🌟 1. วนลูปกวาดหา Request ทั้งหมดเพื่อนับงานที่ตอบรับแล้วและดึง Review
                     rootValue.forEach((userKey, userValue) {
                       if (userValue is Map && userValue['Relative'] != null) {
                         var relativeNode = userValue['Relative'];
@@ -742,6 +743,15 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                     (reqData['requeststatus'] ?? '')
                                         .toString()
                                         .toLowerCase();
+
+                                // 🌟 นับจำนวนครั้งที่เคยให้บริการสำเร็จหรือตอบรับงานแล้ว
+                                if (status == 'accepted' ||
+                                    status == 'completed' ||
+                                    status == 'finished') {
+                                  caretakerUsageCountMap[cId] =
+                                      (caretakerUsageCountMap[cId] ?? 0) + 1;
+                                }
+
                                 if (status == 'pending' ||
                                     status == 'accepted' ||
                                     status == 'pending_advice') {
@@ -810,7 +820,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                       }
                     });
 
-                    // 🌟 2. ดึงข้อมูล Caretaker และประกอบร่างกับคะแนน Review
+                    // 🌟 2. ดึงข้อมูล Caretaker และประกอบร่างกับคะแนน Review และจำนวนครั้งที่ใช้งาน
                     rootValue.forEach((userUidKey, userNodeValue) {
                       if (userNodeValue is Map &&
                           userNodeValue.containsKey('Caretaker')) {
@@ -832,6 +842,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                               caregiverReviewsMap[idCard] ?? [];
 
                           data['reviewsList'] = reviewList;
+                          data['usageCount'] = caretakerUsageCountMap[idCard] ?? 0; // 🌟 ฝากจำนวนครั้งที่ใช้งาน
 
                           if (reviewList.isEmpty) {
                             data['rating'] = 0.0;
@@ -1153,6 +1164,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
         ? (data['rating'] as num).toDouble()
         : 0.0;
     int comments = data['comments'] ?? 0;
+    int usageCount = data['usageCount'] ?? 0; // 🌟 ดึงจำนวนครั้งที่ใช้งาน
     List<Map<String, dynamic>> reviewsList =
         (data['reviewsList'] as List<Map<String, dynamic>>?) ?? [];
 
@@ -1262,7 +1274,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   ),
                   const SizedBox(height: 5),
 
-                  // 🌟 แถบแสดงคะแนนดาวและปุ่ม "ดูเพิ่มเติม >" เปิดหน้าดูรีวิว
+                  // 🌟 แถบแสดงคะแนนดาว, รีวิว และ จำนวนครั้งที่เคยใช้งาน
                   Row(
                     children: [
                       Text(
@@ -1290,7 +1302,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => ViewCaretakerReview(
-                                  // 🌟 ส่ง docId/UID เพื่อให้ CaretakerService ดึงข้อมูลโปรไฟล์ได้ตรงกัน
                                   caretakerId: data['id'] ??
                                       data['caretakerId']?.toString() ??
                                       '',
@@ -1301,7 +1312,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                           }
                         },
                         child: Text(
-                          comments == 0 ? 'ยังไม่มีรีวิว' : '($comments รีวิว) ดูเพิ่มเติม >',
+                          comments == 0 ? 'ยังไม่มีรีวิว' : '($comments รีวิว)',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: comments > 0
@@ -1311,6 +1322,30 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                             decoration: comments > 0
                                 ? TextDecoration.underline
                                 : TextDecoration.none,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      // 🌟 Badge แสดงจำนวนครั้งที่เคยใช้งาน
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: primaryColor.withOpacity(0.3),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Text(
+                          'ให้บริการ $usageCount ครั้ง',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
                           ),
                         ),
                       ),
