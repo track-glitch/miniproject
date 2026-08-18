@@ -747,7 +747,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
           ),
           RadioListTile(
             title: const Text(
-              'เลือกระบุพิกัดและจุดรับใหม่',
+              'เลือกระบุพิกัดและจุดรับส่งใหม่',
               style: TextStyle(fontSize: 13),
             ),
             value: 2,
@@ -764,7 +764,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
               hasPinned: _pickupHasPinned,
               isExpanded: _pickupMapExpanded,
               showAddressField: true,
-              pinButtonText: 'กดเพื่อปักหมุดจุดรับ',
+              pinButtonText: 'กดเพื่อปักหมุดจุดรับส่ง',
               onToggleMap: () =>
                   setState(() => _pickupMapExpanded = !_pickupMapExpanded),
               onLocationChanged: (loc, addr) {
@@ -865,7 +865,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
         child: Row(
           children: [
             Icon(
-              Icons.map_outlined,
+              Icons.location_on,
               color: hasPinned ? primaryColor : Colors.grey.shade700,
               size: 22,
             ),
