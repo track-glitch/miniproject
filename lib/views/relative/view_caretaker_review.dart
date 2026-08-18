@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:miniproject/services/caretaker_service.dart';
 
 class ViewCaretakerReview extends StatefulWidget {
-  final String caretakerId; // 🌟 รับค่า ID เข้ามาเพื่อดึงข้อมูล
+  final String caretakerId;
   final List<Map<String, dynamic>> reviews;
   const ViewCaretakerReview({
     super.key,
@@ -24,15 +24,8 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
   final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
   final Color cardColor = Colors.white;
 
-  String _selectedFilter = 'ทั้งหมด';
-  final List<String> _filterOptions = [
-    'ทั้งหมด',
-    '5 คะแนน',
-    '4 คะแนน',
-    '3 คะแนน',
-    '2 คะแนน',
-    '1 คะแนน',
-  ];
+  int _selectedFilterValue = 0;
+  final List<int> _filterValues = [0, 5, 4, 3, 2, 1];
 
   String caretakerName = '';
   String caretakerCitizenId = '';
@@ -48,7 +41,6 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
   }
 
   Future<void> _fetchData() async {
-    // 1. ดึงแค่โปรไฟล์อาสามาแสดงด้านบน
     try {
       final profile = await _service.getCaretakerProfile(widget.caretakerId);
       if (profile != null) {
@@ -62,11 +54,26 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
     }
 
     setState(() {
-      // 2. 🌟 นำ widget.reviews ที่รับมาจากหน้า Profile มาใช้งานได้เลย!
       allReviews = widget.reviews;
       filteredReviews = widget.reviews;
-      _isLoading = false; // ปิดสถานะโหลด
+      _isLoading = false;
     });
+  }
+
+  // 🌟 ฟังก์ชันจัดรูปแบบตัวเลขจำนวนรีวิวให้อ่านง่าย (เผื่อมีรีวิวเยอะๆ เป็นหลักพัน)
+  String _formatCount(int count) {
+    if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}K';
+    }
+    return count.toString();
+  }
+
+  // 🌟 ฟังก์ชันนับจำนวนรีวิวตามดาว
+  int _getReviewCount(int starValue) {
+    if (starValue == 0) return allReviews.length;
+    return allReviews
+        .where((r) => (r['ratingscore'] as double).floor() == starValue)
+        .length;
   }
 
   @override
@@ -74,15 +81,15 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
     ImageProvider? caretakerImageProvider;
     if (caretakerImage.isNotEmpty) {
       try {
-        if (caretakerImage.length > 100) {
+        if (caretakerImage.startsWith('http')) {
+          caretakerImageProvider = NetworkImage(caretakerImage);
+        } else {
           String clean = caretakerImage;
           if (clean.contains(',')) clean = clean.split(',').last;
           clean = clean.replaceAll(RegExp(r'\s+'), '');
           int pad = clean.length % 4;
           if (pad > 0) clean += '=' * (4 - pad);
           caretakerImageProvider = MemoryImage(base64Decode(clean));
-        } else {
-          caretakerImageProvider = NetworkImage(caretakerImage);
         }
       } catch (_) {}
     }
@@ -90,9 +97,12 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        title: const Text(
-          'รีวิวทั้งหมด',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          'รีวิว (${_formatCount(allReviews.length)})', // 🌟 โชว์จำนวนรีวิวรวมบน AppBar ด้วย
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
         backgroundColor: primaryColor,
@@ -110,7 +120,6 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
             ? Center(child: CircularProgressIndicator(color: primaryColor))
             : Column(
                 children: [
-                  // 🌟 1. ส่วน Profile Card ด้านบน (ดึงออกมาให้ลอยทับสวยๆ)
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
@@ -193,7 +202,6 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
                     ),
                   ),
 
-                  // 🌟 2. ส่วนรายการรีวิวและตัวกรอง
                   Expanded(
                     child: Container(
                       width: double.infinity,
@@ -211,78 +219,132 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
                         ],
                       ),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'รีวิวทั้งหมด',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: darkPurple,
-                                ),
-                              ),
-                              // 🌟 Dropdown กรองดาว
-                              Container(
-                                height: 32,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFAF8FF),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: const Color(0xFFB9A4F2),
-                                    width: 1.2,
-                                  ),
-                                ),
-                                child: DropdownButtonHideUnderline(
-                                  child: DropdownButton<String>(
-                                    value: _selectedFilter,
-                                    icon: const Icon(
-                                      Icons.arrow_drop_down,
-                                      color: Color(0xFF6E5ABF),
-                                    ),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF6E5ABF),
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    items: _filterOptions.map((String value) {
-                                      return DropdownMenuItem<String>(
-                                        value: value,
-                                        child: Text(value),
-                                      );
-                                    }).toList(),
-                                    onChanged: (newValue) {
-                                      setState(() {
-                                        _selectedFilter = newValue!;
-                                        if (newValue == 'ทั้งหมด') {
-                                          filteredReviews = allReviews;
-                                        } else {
-                                          double targetStar = double.parse(
-                                            newValue.split(' ')[0],
-                                          );
-                                          filteredReviews = allReviews.where((
-                                            review,
-                                          ) {
-                                            return (review['ratingscore']
-                                                        as double)
-                                                    .floor() ==
-                                                targetStar.floor();
-                                          }).toList();
-                                        }
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
+                          // 🌟 เปลี่ยนจาก Dropdown เป็น Wrap Chip
+                          Wrap(
+                            spacing: 8.0, // ระยะห่างแนวนอน
+                            runSpacing: 10.0, // ระยะห่างแนวตั้ง
+                            children: _filterValues.map((star) {
+                              int count = _getReviewCount(star);
+                              bool isSelected = _selectedFilterValue == star;
 
-                          // 🌟 List แสดงการ์ดรีวิว
+                              return InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedFilterValue = star;
+                                    if (star == 0) {
+                                      filteredReviews = allReviews;
+                                    } else {
+                                      filteredReviews = allReviews
+                                          .where(
+                                            (r) =>
+                                                (r['ratingscore'] as double)
+                                                    .floor() ==
+                                                star,
+                                          )
+                                          .toList();
+                                    }
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    // 🌟 สีพื้นหลังดำแบบในรูปตอนเลือก และสีเทาอ่อนตอนไม่ได้เลือก
+                                    color: isSelected
+                                        ? const Color(0xFF1C1B1F)
+                                        : const Color(0xFFF2F2F2),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? const Color(0xFF1C1B1F)
+                                          : Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (star == 0) ...[
+                                        Text(
+                                          'ทั้งหมด',
+                                          style: TextStyle(
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.black87,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '(${_formatCount(count)})',
+                                          style: TextStyle(
+                                            color: isSelected
+                                                ? Colors.white70
+                                                : Colors.black54,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ] else if (star == 1) ...[
+                                        // 🌟 1 ดาวโชว์แค่ไอคอนกับตัวเลขในวงเล็บ
+                                        const Icon(
+                                          Icons.star_rounded,
+                                          color: Color(0xFFFFC107),
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '(${_formatCount(count)})',
+                                          style: TextStyle(
+                                            color: isSelected
+                                                ? Colors.white70
+                                                : Colors.black54,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ] else ...[
+                                        // 🌟 2-5 ดาว โชว์ไอคอน เลขดาว และตัวเลขในวงเล็บ
+                                        const Icon(
+                                          Icons.star_rounded,
+                                          color: Color(0xFFFFC107),
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '$star',
+                                          style: TextStyle(
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.black87,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '(${_formatCount(count)})',
+                                          style: TextStyle(
+                                            color: isSelected
+                                                ? Colors.white70
+                                                : Colors.black54,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 16),
+                          const Divider(height: 1, thickness: 1),
+                          const SizedBox(height: 8),
+
                           Expanded(
                             child: filteredReviews.isEmpty
                                 ? Center(
@@ -322,7 +384,6 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
                                     itemBuilder: (context, index) {
                                       final review = filteredReviews[index];
 
-                                      // 🌟 แปลงวันที่ให้เป็น พ.ศ. สวยๆ (ถ้ามีข้อมูล)
                                       String formattedDate = '';
                                       if (review['reviewdate'] != null) {
                                         try {
@@ -337,17 +398,13 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
                                       return _buildReviewItem(
                                         name:
                                             review['reviewerName'] ??
-                                            'ผู้ใช้บริการ', // ดักค่า Null
-                                        ratingscore: (review['ratingscore'] ?? 0)
-                                            .toDouble(), // แปลงเป็น double ให้ชัวร์
-                                        comment:
-                                            review['comment'] ??
-                                            '', // ดักค่า Null
-                                        reviewdate:
-                                            formattedDate, // ใช้วันที่ที่จัดฟอร์แมตแล้ว
-                                        imageUrl:
-                                            review['reviewerImage'] ??
-                                            '', // 🌟 จุดสำคัญ! ดักค่า Null ป้องกันแอปเด้ง
+                                            'ผู้ใช้บริการ',
+                                        ratingscore:
+                                            (review['ratingscore'] ?? 0)
+                                                .toDouble(),
+                                        comment: review['comment'] ?? '',
+                                        reviewdate: formattedDate,
+                                        imageUrl: review['reviewerImage'] ?? '',
                                       );
                                     },
                                   ),
@@ -362,7 +419,6 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
     );
   }
 
-  // 🌟 ฟังก์ชันวาด UI แต่ละรีวิว (ใช้โค้ดเดียวกับหน้าโปรไฟล์เป๊ะๆ)
   Widget _buildReviewItem({
     required String name,
     required double ratingscore,
@@ -370,47 +426,35 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
     required String reviewdate,
     required String imageUrl,
   }) {
-    ImageProvider? imageProvider;
+    ImageProvider? reviewerImageProvider;
     if (imageUrl.isNotEmpty) {
       try {
-        if (imageUrl.length > 100) {
+        if (imageUrl.startsWith('http')) {
+          reviewerImageProvider = NetworkImage(imageUrl);
+        } else {
           String clean = imageUrl;
           if (clean.contains(',')) clean = clean.split(',').last;
           clean = clean.replaceAll(RegExp(r'\s+'), '');
           int pad = clean.length % 4;
           if (pad > 0) clean += '=' * (4 - pad);
-          imageProvider = MemoryImage(base64Decode(clean));
-        } else {
-          imageProvider = NetworkImage(imageUrl);
+
+          reviewerImageProvider = MemoryImage(base64Decode(clean));
         }
       } catch (e) {
-        print('Error decoding Review Image: $e');
+        print('Error decoding Reviewer Profile Image: $e');
       }
     }
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            shape: BoxShape.circle,
-          ),
-          child: ClipOval(
-            child: imageProvider != null
-                ? Image(
-                    image: imageProvider!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Icon(
-                      Icons.person,
-                      color: Colors.grey.shade400,
-                      size: 26,
-                    ),
-                  )
-                : Icon(Icons.person, color: Colors.grey.shade400, size: 26),
-          ),
+        CircleAvatar(
+          radius: 22,
+          backgroundColor: Colors.grey.shade200,
+          backgroundImage: reviewerImageProvider,
+          child: reviewerImageProvider == null
+              ? Icon(Icons.person, color: Colors.grey.shade400, size: 26)
+              : null,
         ),
         const SizedBox(width: 12),
         Expanded(

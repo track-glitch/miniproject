@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:miniproject/models/request_model.dart';
 import 'package:miniproject/services/caretaker_service.dart';
 import '../../widgets/custom_bottom_nav.dart';
-import '../../widgets/custom_header_nav.dart';
 import '../caretaker/view_relative_request_page.dart';
 import '../caretaker/add_status_notification_page.dart';
 import '../caretaker/edit_profile_page.dart';
-import '../caretaker/add_doctor_advice_page.dart'; // 🌟 เพิ่มบรรทัดนี้
+import '../caretaker/add_doctor_advice_page.dart';
+import '../login_page.dart';
 
 class ListRelativeRequestPage extends StatefulWidget {
   final String uid;
@@ -26,7 +28,8 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
   List<RequestCard> requestsInProgress = [];
   List<RequestCard> requestsCompleted = [];
   List<RequestCard> requestsCancelled = [];
-  int _unreadCount = 0; // 🌟 ตัวแปรเก็บจำนวนคำขอที่มาใหม่
+  int _unreadCount = 0;
+  String _userName = ''; // 🌟 เพิ่มตัวแปรเก็บชื่อผู้ใช้
 
   void _onBottomNavTapped(int index) {
     setState(() {
@@ -45,7 +48,75 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
   @override
   void initState() {
     super.initState();
+    _fetchUserData(); // 🌟 โหลดชื่อผู้ใช้ก่อน
     _fetchRequests();
+  }
+
+  // 🌟 ฟังก์ชันดึงชื่อผู้ใช้มาแสดงบน AppBar
+  Future<void> _fetchUserData() async {
+    try {
+      final snapshot = await FirebaseDatabase.instance
+          .ref('Login/${widget.uid}/Caretaker')
+          .get();
+
+      if (snapshot.exists && snapshot.value is Map) {
+        final data = Map<String, dynamic>.from(snapshot.value as Map);
+        setState(() {
+          _userName = "${data['firstname'] ?? ''} ${data['lastname'] ?? ''}"
+              .trim();
+        });
+      }
+    } catch (e) {
+      print("Error fetching user data: $e");
+    }
+  }
+
+  // 🌟 ฟังก์ชันแสดง Pop-up ยืนยันออกจากระบบ
+  void _showLogoutConfirmDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: const Text(
+            'ออกจากระบบ',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: const Text('คุณต้องการออกจากระบบใช่หรือไม่?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'ยกเลิก',
+                style: TextStyle(color: Colors.grey, fontSize: 16),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                if (context.mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginPage()),
+                    (route) => false,
+                  );
+                }
+              },
+              child: const Text(
+                'ตกลง',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   String _formatThaiDate(DateTime? date, DateTime? time) {
@@ -82,13 +153,13 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
     List<RequestCard> inProgress = [];
     List<RequestCard> completed = [];
     List<RequestCard> cancelled = [];
-    int unread = 0; // 🌟 ตัวนับยังไม่ได้อ่าน
+    int unread = 0;
 
     for (var item in data) {
       RequestModel req = item['requestModel'];
       Map<String, dynamic> pat = item['patientData'];
       Map<String, dynamic> rel = item['relativeData'];
-      bool isRead = req.isReadCaretaker ?? false; // 🌟 ดึงสถานะการอ่านมา
+      bool isRead = req.isReadCaretaker ?? false;
 
       String statusType = (req.requeststatus ?? 'pending').toLowerCase();
       bool hasAlert =
@@ -114,10 +185,9 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
         patientData: pat,
         relativeData: rel,
         relativeUid: item['relativeUid'] ?? '',
-        isRead: isRead, // 🌟 ยัดใส่การ์ด
+        isRead: isRead,
       );
 
-      // นับเฉพาะที่อยู่แท็บกำลังดำเนินการและยังไม่ได้อ่าน
       if ((statusType == 'pending' ||
               statusType == 'accepted' ||
               statusType == 'pending_advice') &&
@@ -140,7 +210,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
       requestsInProgress = inProgress;
       requestsCompleted = completed;
       requestsCancelled = cancelled;
-      _unreadCount = unread; // 🌟 อัปเดตตัวเลขแจ้งเตือน
+      _unreadCount = unread;
       _isLoading = false;
     });
   }
@@ -163,9 +233,14 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: Colors.grey.shade50,
-        appBar: const CustomHeader(
-          title: 'รายการคำขอของฉัน',
-          showBackButton: false,
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF8763E6),
+          title: const Text(
+            'รายการคำขอของฉัน',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          centerTitle: true,
+          automaticallyImplyLeading: false,
         ),
         body: const Center(
           child: Column(
@@ -190,9 +265,52 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4EDFB),
-      appBar: const CustomHeader(title: 'รายการคำขอ', showBackButton: false),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF8763E6),
+        elevation: 0,
+        // 🌟 1. ตั้งค่าให้อยู่ตรงกลาง และเขียนข้อความยาวติดกันเลย
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        title: Text(
+          'ยินดีต้อนรับ คุณ${_userName.isNotEmpty ? _userName : 'ผู้ให้บริการ'}',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18, // ปรับขนาดให้พอดีกับแถบ AppBar
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: Colors.white),
+            tooltip: 'ออกจากระบบ',
+            onPressed: _showLogoutConfirmDialog,
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 🌟 2. ลดขนาดตัวอักษรและลดระยะห่างของแถบรายการคำขอ
+          Container(
+            width: double.infinity,
+            color: const Color(0xFF8763E6),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 12,
+            ), // ลด padding บน-ล่าง
+            child: Center(
+              child: const Text(
+                'รายการคำขอ',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 22, // ลดจาก 28 เหลือ 22
+                ),
+              ),
+            ),
+          ),
+
           Container(
             color: Colors.white,
             child: DefaultTabController(
@@ -205,7 +323,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                 indicatorColor: const Color(0xFF7D3C98),
                 indicatorWeight: 3,
                 tabs: [
-                  // 🌟 เพิ่มการแจ้งเตือนจุดแดงๆ ตรงแท็บ "กำลังดำเนินการ" ได้ด้วย!
                   Tab(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -295,7 +412,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
     Color statusBgColor;
     String statusText;
 
-    // 🌟 ชุดสีเหมือนเดิม
     switch (request.statusType) {
       case 'pending':
         mainColor = const Color(0xFF757BFF);
@@ -331,27 +447,22 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
     bool isInProgressTab = _currentTabIndex == 0;
 
     return Container(
-      // 🔽 1. ลดระยะห่างระหว่างการ์ด (Margin)
       margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: const Color.fromARGB(255, 221, 221, 221),
-        borderRadius: BorderRadius.circular(10), // ปรับขอบให้มนน้อยลงนิดนึง
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.black.withOpacity(0.15), width: 1.2),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(10),
         child: Container(
           decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(color: mainColor, width: 6),
-            ), // 🔽 ลดความหนาแถบสี
+            border: Border(left: BorderSide(color: mainColor, width: 6)),
           ),
-          // 🔽 2. ลดระยะห่างภายในกรอบ (Padding)
           padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- แถวที่ 1: รหัสคำขอ + สถานะ ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -363,7 +474,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                           color: Colors.grey.shade500,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                        ), // 🔽 ลดฟอนต์
+                        ),
                       ),
                       const SizedBox(width: 6),
                       if (!request.isRead && isInProgressTab)
@@ -388,7 +499,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                     ],
                   ),
                   Container(
-                    // 🔽 ย่อปุ่มสถานะ
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
                       vertical: 4,
@@ -412,8 +522,8 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                 'ส่งคำขอเมื่อ: ${request.submitDate}',
                 style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
               ),
-              const SizedBox(height: 8), // 🔽 ลด SizedBox
-              // --- แถวที่ 2: ชื่อโรงพยาบาล ---
+              const SizedBox(height: 8),
+
               Text(
                 request.serviceName,
                 maxLines: 1,
@@ -422,15 +532,15 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: mainColor,
-                ), // 🔽 ลดจาก 20 เหลือ 16
+                ),
               ),
-              const SizedBox(height: 10), // 🔽 ลด SizedBox
-              // --- แถวที่ 3: วันและเวลา ---
+              const SizedBox(height: 10),
+
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(6), // 🔽 ย่อไอคอน
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
                       color: mainColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(6),
@@ -439,7 +549,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                       Icons.calendar_today,
                       size: 20,
                       color: mainColor,
-                    ), // 🔽 ไอคอนเล็กลง
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Column(
@@ -465,8 +575,8 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12), // 🔽 ลดช่องว่างก่อนถึงปุ่ม
-              // --- แถวที่ 4: ปุ่มกด ---
+              const SizedBox(height: 12),
+
               Row(
                 mainAxisAlignment: isInProgressTab
                     ? MainAxisAlignment.spaceBetween
@@ -508,7 +618,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                             }
                           : null,
                       child: Container(
-                        // 🔽 บีบปุ่มให้บางลง
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 6,
@@ -528,7 +637,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                               color: (request.hasAlert && isInProgressTab)
                                   ? const Color(0xFFF44336)
                                   : Colors.grey.shade500,
-                              size: 16, // 🔽 ลดขนาด
+                              size: 16,
                             ),
                             const SizedBox(width: 6),
                             Text(
@@ -539,7 +648,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                                 color: (request.hasAlert && isInProgressTab)
                                     ? const Color(0xFFF44336)
                                     : Colors.grey.shade500,
-                                fontSize: 12, // 🔽 ลดขนาด
+                                fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 decoration:
                                     (request.hasAlert && isInProgressTab)
@@ -596,7 +705,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                       'ดูรายละเอียด',
                       style: TextStyle(
                         color: Color(0xFF9B59B6),
-                        fontSize: 13, // 🔽 ลดขนาดตัวอักษร
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                         decoration: TextDecoration.underline,
                         decorationColor: Color(0xFF9B59B6),
@@ -609,56 +718,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildDetailRow({
-    required IconData icon,
-    required Color iconColor,
-    required Color bgColor,
-    required String label,
-    required String value,
-    required Color valueColor,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, size: 22, color: iconColor),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade500,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: valueColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
@@ -676,7 +735,7 @@ class RequestCard {
   final Map<String, dynamic> patientData;
   final Map<String, dynamic> relativeData;
   final String relativeUid;
-  final bool isRead; // 🌟 เพิ่มตัวแปรเช็คสถานะการอ่านในโมเดลการ์ด
+  final bool isRead;
 
   RequestCard({
     required this.id,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
+import 'package:firebase_database/firebase_database.dart'; // 🌟 เพิ่ม import Firebase
 
 import '../../widgets/custom_header_nav.dart';
 import '../../widgets/custom_bottom_nav.dart';
@@ -149,7 +150,116 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     }
   }
 
-  void _showConfirmationDialog(bool isAccept) {
+  // 🌟 ฟังก์ชันเช็คคิวงานซ้ำในวันเดียวกัน[cite: 24]
+  Future<bool> _checkIsBusyOnDate(DateTime requestedDate) async {
+    try {
+      final snapshot = await FirebaseDatabase.instance.ref('Login').get();
+      if (snapshot.exists && snapshot.value is Map) {
+        final allUsers = snapshot.value as Map;
+
+        for (var userValue in allUsers.values) {
+          if (userValue is Map &&
+              userValue['Relative'] != null &&
+              userValue['Relative']['Request'] != null) {
+            final requests = userValue['Relative']['Request'] as Map;
+
+            for (var reqData in requests.values) {
+              if (reqData['caretakerId'] == widget.uid) {
+                // เช็คเฉพาะงานของผู้ดูแลคนนี้
+                String status = (reqData['requeststatus'] ?? '')
+                    .toString()
+                    .toLowerCase();
+
+                // ตรวจสอบเฉพาะงานที่ตอบรับแล้ว หรือรอประเมิน
+                if (status == 'accepted' || status == 'pending_advice') {
+                  String dateStr = reqData['appointmentdate'] ?? '';
+                  if (dateStr.isNotEmpty) {
+                    DateTime apptDate = DateTime.parse(dateStr);
+                    // ถ้าปี เดือน วัน ตรงกัน แสดงว่าติดคิวแล้ว
+                    if (apptDate.year == requestedDate.year &&
+                        apptDate.month == requestedDate.month &&
+                        apptDate.day == requestedDate.day) {
+                      return true; // ติดคิว
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print("Error checking busy dates: $e");
+    }
+    return false; // ว่าง
+  }
+
+  void _showConfirmationDialog(bool isAccept) async {
+    // 🌟 เปลี่ยนเป็น async เพื่อรอผลการเช็คคิว
+
+    // 🌟 ถ้ายืนยันรับงาน ให้เช็คคิวก่อน[cite: 24]
+    if (isAccept) {
+      DateTime? requestedDate = widget.requestData.requestModel.appointmentdate;
+      if (requestedDate != null) {
+        // เปิดหน้าต่างโหลดรอ
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) =>
+              const Center(child: CircularProgressIndicator()),
+        );
+
+        bool isBusy = await _checkIsBusyOnDate(requestedDate);
+
+        // ปิดหน้าต่างโหลด
+        if (context.mounted) Navigator.pop(context);
+
+        if (isBusy) {
+          // ถ้าติดคิว ให้แสดง Pop-up แจ้งเตือนและหยุดการทำงาน[cite: 24]
+          if (context.mounted) {
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  title: const Text(
+                    'ไม่สามารถตอบรับคำขอได้',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
+                  content: const Text(
+                    'คุณมีคิวงานที่ต้องให้บริการในวันที่ระบุไว้แล้ว\nกรุณาตรวจสอบตารางงานของคุณอีกครั้ง',
+                  ),
+                  actions: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text(
+                        'ตกลง',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          }
+          return; // ออกจากฟังก์ชัน ไม่ต้องโชว์ Pop-up ยืนยัน
+        }
+      }
+    }
+
+    // ถ้าผ่านการเช็ค (หรือกดปฏิเสธ) ให้แสดง Pop-up ยืนยันตามปกติ[cite: 24]
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -739,8 +849,9 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                                                 pointA,
                                                 pointB,
                                               ]),
-                                              padding:
-                                                  const EdgeInsets.all(30.0),
+                                              padding: const EdgeInsets.all(
+                                                30.0,
+                                              ),
                                             ),
                                             interactionOptions:
                                                 const InteractionOptions(
@@ -796,8 +907,9 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: Colors.black87,
-                                            borderRadius:
-                                                BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
                                           ),
                                           child: const Text(
                                             'กดเพื่อดูแผนที่เต็ม',
@@ -1013,9 +1125,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
       width: double.infinity,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: isReady
-              ? primaryPurple
-              : Colors.grey.shade400,
+          backgroundColor: isReady ? primaryPurple : Colors.grey.shade400,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

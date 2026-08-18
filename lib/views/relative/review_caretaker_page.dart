@@ -162,7 +162,10 @@ class _ReviewCaretakerPageState extends State<ReviewCaretakerPage> {
                     children: [
                       Text(
                         '# ${widget.requestId}',
-                        style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -170,14 +173,14 @@ class _ReviewCaretakerPageState extends State<ReviewCaretakerPage> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE8F5E9),
+                          color: const Color(0xFFE1F5FE),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.green),
+                          border: Border.all(color: Color(0xFF00B0FF)),
                         ),
                         child: const Text(
                           'สิ้นสุดบริการ',
                           style: TextStyle(
-                            color: Colors.green,
+                            color: Color(0xFF00B0FF),
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
@@ -264,10 +267,7 @@ class _ReviewCaretakerPageState extends State<ReviewCaretakerPage> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  _buildSectionHeaderInside(
-                    Icons.star_rounded,
-                    'คะแนนโดยรวม',
-                  ),
+                  _buildSectionHeaderInside(Icons.star_rounded, 'คะแนนโดยรวม'),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: List.generate(5, (index) {
@@ -303,7 +303,10 @@ class _ReviewCaretakerPageState extends State<ReviewCaretakerPage> {
                     maxLength: 500,
                     decoration: InputDecoration(
                       hintText: 'เขียนความคิดเห็นของคุณที่นี่...',
-                      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade400,
+                        fontSize: 13,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(color: borderColor),
@@ -314,7 +317,10 @@ class _ReviewCaretakerPageState extends State<ReviewCaretakerPage> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: primaryPurple, width: 1.5),
+                        borderSide: BorderSide(
+                          color: primaryPurple,
+                          width: 1.5,
+                        ),
                       ),
                       filled: true,
                       fillColor: sectionBgColor,

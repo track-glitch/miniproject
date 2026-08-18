@@ -770,7 +770,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                   String reviewerImage =
                                       relativeNode['profilephoto']
                                           ?.toString() ??
-                                      relativeNode['patient']?['patientphoto']
+                                      relativeNode['Patient']?['patientphoto']
                                           ?.toString() ??
                                       '';
 
@@ -1132,7 +1132,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
         ? (data['rating'] as num).toDouble()
         : 0.0;
     int comments = data['comments'] ?? 0;
-    int usageCount = data['usageCount'] ?? 0; // 🌟 ดึงจำนวนครั้งที่ใช้งาน
     List<Map<String, dynamic>> reviewsList =
         (data['reviewsList'] as List<Map<String, dynamic>>?) ?? [];
 
@@ -1243,7 +1242,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   Row(
                     children: [
                       Text(
-                        '${rating.toStringAsFixed(1)} ',
+                        '${rating.toStringAsFixed(1)}/5',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -1294,30 +1293,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                           ),
                         ),
                       ),
-                      const Spacer(),
-                      // 🌟 Badge แสดงจำนวนครั้งที่เคยใช้งาน
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: primaryColor.withOpacity(0.3),
-                            width: 0.8,
-                          ),
-                        ),
-                        child: Text(
-                          'ให้บริการ $usageCount ครั้ง',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            color: primaryColor,
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -1345,7 +1320,39 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'ให้บริการสำเร็จ $serviceCount ครั้ง',
+                            'ให้บริการไปแล้ว $serviceCount ครั้ง',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.green.shade200),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.verified,
+                            size: 12,
+                            color: Colors.green,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'ให้บริการไปแล้ว 0 ครั้ง',
                             style: const TextStyle(
                               fontSize: 10,
                               color: Colors.green,
@@ -1374,7 +1381,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                     ],
                   ),
                   const SizedBox(height: 3),
-
                   Row(
                     children: [
                       Icon(Icons.directions_car, size: 13, color: primaryColor),

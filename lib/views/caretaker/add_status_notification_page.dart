@@ -34,9 +34,12 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     'ถึงจุดรับผู้ป่วย',
     'กำลังเดินทางไปโรงพยาบาล',
     'ถึงโรงพยาบาล',
-    'รอคิวพบแพทย์',
-    'กำลังรักษา',
-    'ตรวจรักษาเสร็จสิ้น',
+    'กำลังลงทะเบียน',
+    'รอพบแพทย์',
+    'กำลังตรวจรักษา',
+    'รอดำเนินการหลังตรวจ',
+    'รอชำระเงิน',
+    'รอรับยา',
     'กำลังเดินทางกลับ',
     'ถึงจุดหมายปลายทาง',
     'เสร็จสิ้นการให้บริการ',
@@ -44,15 +47,19 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
 
   bool _isLoading = true;
   List<Map<dynamic, dynamic>> _notificationHistory = [];
-  List<String> _availableStatusList = []; // 🌟 เก็บสถานะที่ยังไม่ได้ส่ง
+  List<String> _availableStatusList = [];
 
   StreamSubscription<Position>? _positionStreamSubscription;
   Timer? _trackingTimer;
 
   String? _selectedStatus;
   final TextEditingController _detailController = TextEditingController();
-  final TextEditingController _cancelRemarkController =
-      TextEditingController(); // 🌟 สำหรับกรอกหมายเหตุยกเลิก
+  final TextEditingController _cancelRemarkController = TextEditingController();
+
+  // 🌟 เพิ่ม Controller สำหรับหมายเหตุยกเลิกบริการฉุกเฉิน
+  final TextEditingController _emergencyRemarkController =
+      TextEditingController();
+
   Timer? _clockTimer;
   DateTime _currentTime = DateTime.now();
 
@@ -63,7 +70,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
   final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
   final Color borderColor = const Color(0xFFD3C2F0);
   final Color sectionBgColor = const Color(0xFFF8F5FF);
-  final Color historyColor = Colors.green; // 🌟 เปลี่ยนประวัติเป็นสีเขียว
+  final Color historyColor = Colors.green;
 
   @override
   void initState() {
@@ -89,11 +96,9 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     });
   }
 
-  // 🌟 ฟังก์ชันคำนวณว่าสถานะไหนบ้างที่ยังไม่เคยส่ง
   void _updateAvailableStatuses() {
     _availableStatusList.clear();
     for (String s in _statusList) {
-      // เช็กว่ามีสถานะนี้ในประวัติไหม (และต้องไม่ใช่สถานะที่ถูกยกเลิกไปแล้ว)
       bool exists = _notificationHistory.any((n) {
         String title = n['notifystatus'] ?? n['status'] ?? '';
         return title == s && !title.contains('ยกเลิก');
@@ -105,7 +110,6 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     }
 
     if (_availableStatusList.isNotEmpty) {
-      // ป้องกัน Error กรณี _selectedStatus ค้างค่าที่ไม่มีใน List
       if (_selectedStatus == null ||
           !_availableStatusList.contains(_selectedStatus)) {
         _selectedStatus = _availableStatusList.first;
@@ -122,10 +126,10 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     _clockTimer?.cancel();
     _detailController.dispose();
     _cancelRemarkController.dispose();
+    _emergencyRemarkController.dispose(); // 🌟 ทิ้ง controller คืนเมมโมรี่
     super.dispose();
   }
 
-  // 🌟 ฟังก์ชันแสดงป๊อปอัพยืนยันการส่ง
   void _showConfirmationDialog() {
     if (_selectedStatus == null) return;
 
@@ -197,7 +201,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
         widget.requestData.relativeUid,
         widget.requestData.id,
       );
-      _updateAvailableStatuses(); // 🌟 อัปเดต Dropdown หลังส่งสำเร็จ
+      _updateAvailableStatuses();
       _detailController.clear();
 
       if (statusToSubmit == 'เสร็จสิ้นการให้บริการ') {
@@ -251,7 +255,124 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     }
   }
 
-  // 🌟 ฟังก์ชันแสดงป๊อปอัพยกเลิกสถานะ
+  // 🌟 ฟังก์ชันแสดง Pop-up ยกเลิกบริการฉุกเฉิน
+  void _showEmergencyCancelDialog() {
+    _emergencyRemarkController.clear();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'ยกเลิกบริการ (เหตุฉุกเฉิน)',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'โปรดระบุสาเหตุการยกเลิกบริการในครั้งนี้\n(หมายเหตุ: ระบบจะปรับสถานะการให้บริการเป็น "ยกเลิก" ทันที)',
+                style: TextStyle(fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 15),
+              TextField(
+                controller: _emergencyRemarkController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: 'สาเหตุที่ยกเลิก',
+                  hintText: 'เช่น รถเสีย, เกิดอุบัติเหตุ, ผู้ป่วยขอยกเลิก...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.red),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('ปิด', style: TextStyle(color: Colors.grey.shade600)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: () {
+                if (_emergencyRemarkController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('กรุณาระบุสาเหตุที่ยกเลิก')),
+                  );
+                  return;
+                }
+                Navigator.of(context).pop();
+                _submitEmergencyCancel(_emergencyRemarkController.text.trim());
+              },
+              child: const Text(
+                'ยืนยันยกเลิกบริการ',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 🌟 ฟังก์ชันทำงานเมื่อกดยืนยันยกเลิกบริการ (ฉุกเฉิน)
+  Future<void> _submitEmergencyCancel(String remark) async {
+    setState(() => _isLoading = true);
+    try {
+      // 1. ส่งแจ้งเตือนสถานะเป็นเหตุฉุกเฉิน
+      await _service.addStatusNotification(
+        relativeUid: widget.requestData.relativeUid,
+        requestId: widget.requestData.id,
+        status: 'ยกเลิกบริการ (เหตุฉุกเฉิน)',
+        detail: remark,
+      );
+
+      // 2. ปรับสถานะคำขอรับบริการ (Request Status) เป็น cancelled
+      await _service.updateRequestStatus(
+        widget.requestData.relativeUid,
+        widget.requestData.id,
+        'cancelled',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ระบบทำการยกเลิกบริการเรียบร้อยแล้ว'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        // เด้งกลับไปหน้ารายการคำขอ
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      print("Error emergency cancel: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('เกิดข้อผิดพลาดในการยกเลิก'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   void _showCancelDialog(String notifId, String oldStatus) {
     _cancelRemarkController.clear();
     showDialog(
@@ -263,7 +384,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
           ),
           title: const Text(
             'ยกเลิกสถานะล่าสุด',
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -284,7 +405,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   focusedBorder: const OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.red),
+                    borderSide: BorderSide(color: Colors.orange),
                   ),
                 ),
               ),
@@ -297,7 +418,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: Colors.orange,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -330,7 +451,6 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     );
   }
 
-  // 🌟 ฟังก์ชันทำงานเมื่อกดยกเลิก
   Future<void> _cancelLatestNotification(
     String notifId,
     String oldStatus,
@@ -349,7 +469,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
         widget.requestData.relativeUid,
         widget.requestData.id,
       );
-      _updateAvailableStatuses(); // 🌟 อัปเดต Dropdown เพื่อเอาสถานะกลับมาให้เลือกใหม่
+      _updateAvailableStatuses();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -403,7 +523,6 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // กล่องข้อมูลบริการ
                         Container(
                           padding: const EdgeInsets.all(18),
                           decoration: _cardDecoration(),
@@ -470,7 +589,6 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
 
                         const SizedBox(height: 16),
 
-                        // กล่องส่งสถานะ
                         Container(
                           padding: const EdgeInsets.all(18),
                           decoration: _cardDecoration(),
@@ -665,7 +783,6 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
 
                         const SizedBox(height: 16),
 
-                        // กล่องแสดงประวัติ Timeline
                         Container(
                           padding: const EdgeInsets.all(18),
                           width: double.infinity,
@@ -701,7 +818,8 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                     ),
                   ),
                 ),
-                if (_availableStatusList.isNotEmpty) _buildBottomAction(),
+                // 🌟 ปรับปรุงส่วนแถบปุ่มด้านล่าง เพิ่มปุ่มยกเลิกฉุกเฉิน
+                _buildBottomAction(),
               ],
             ),
     );
@@ -758,12 +876,17 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
   }) {
     String title = item['notifystatus'] ?? item['status'] ?? 'ไม่ทราบสถานะ';
     String detailText = item['notifydetail']?.toString() ?? '';
-    // 🌟 ดึง ID ของ Notification เพื่อใช้ตอนยกเลิก (เปลี่ยนชื่อ Key ตามโครงสร้างใน Firebase ของคุณ)
     String notifId = item['id'] ?? item['notifyId'] ?? item['key'] ?? '';
 
     bool isCancelled = title.contains('ยกเลิก');
+    bool isEmergencyCancel = title == 'ยกเลิกบริการ (เหตุฉุกเฉิน)';
+
+    // ตั้งค่าสีไอคอนตามสถานะ
     Color currentStatusColor = isCancelled ? Colors.red : historyColor;
+    if (isEmergencyCancel) currentStatusColor = Colors.red.shade700;
+
     IconData statusIcon = isCancelled ? Icons.close : Icons.check;
+    if (isEmergencyCancel) statusIcon = Icons.warning_rounded;
 
     String dateText = '';
     String timeText = '';
@@ -772,7 +895,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     if (rawDate != null) {
       try {
         DateTime dt = DateTime.parse(rawDate).toLocal();
-        dateText = DateFormat('dd/MM/yyyy').format(dt); // 🌟 เพิ่มวันที่
+        dateText = DateFormat('dd/MM/yyyy').format(dt);
         timeText = DateFormat('HH:mm น.').format(dt);
       } catch (e) {}
     }
@@ -815,13 +938,13 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                           fontSize: 14.5,
                           fontWeight: FontWeight.bold,
                           color: isCancelled
-                              ? Colors.red
+                              ? Colors.red.shade700
                               : const Color(0xFF241C2B),
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        "${dateText.isNotEmpty ? '$dateText ' : ''}${timeText.isNotEmpty ? '$timeText' : ''}", // 🌟 แสดงวันและเวลา
+                        "${dateText.isNotEmpty ? '$dateText ' : ''}${timeText.isNotEmpty ? '$timeText' : ''}",
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade600,
@@ -842,8 +965,11 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                     ],
                   ),
                 ),
-                // 🌟 แสดงปุ่มยกเลิกเฉพาะรายการล่าสุด และต้องยังไม่ถูกยกเลิก
-                if (isLast && !isCancelled && notifId.isNotEmpty)
+                // แสดงปุ่มยกเลิกเฉพาะรายการล่าสุดที่ยังไม่ถูกยกเลิก และไม่ใช่เหตุฉุกเฉิน
+                if (isLast &&
+                    !isCancelled &&
+                    notifId.isNotEmpty &&
+                    !isEmergencyCancel)
                   IconButton(
                     icon: const Icon(
                       Icons.delete_outline,
@@ -889,6 +1015,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     );
   }
 
+  // 🌟 ปรับปรุง Bottom Action ให้มี 2 ปุ่ม (ยกเลิกฉุกเฉิน และ ส่งสถานะ)
   Widget _buildBottomAction() {
     return Container(
       padding: const EdgeInsets.all(16.0),
@@ -902,37 +1029,65 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
           ),
         ],
       ),
-      child: SizedBox(
-        width: double.infinity,
-        height: 52,
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primaryPurple,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(26),
-            ),
-            elevation: 4,
-            shadowColor: primaryPurple.withOpacity(0.4),
-          ),
-          onPressed: _isLoading ? null : _showConfirmationDialog,
-          child: _isLoading
-              ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                )
-              : const Text(
-                  'ส่งแจ้งเตือน',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 1,
+            child: OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.red, width: 1.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(26),
                 ),
-        ),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: _isLoading ? null : _showEmergencyCancelDialog,
+              child: const Text(
+                'ยกเลิกบริการ',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryPurple,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(26),
+                ),
+                elevation: 4,
+                shadowColor: primaryPurple.withOpacity(0.4),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: (_isLoading || _selectedStatus == null)
+                  ? null
+                  : _showConfirmationDialog,
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'ส่งแจ้งเตือน',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }

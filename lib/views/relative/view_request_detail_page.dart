@@ -404,7 +404,9 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                   ? Column(
                                       children: [
                                         ClipRRect(
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                           child: Image.file(
                                             imageFile!,
                                             height: 120,
@@ -417,7 +419,8 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                                           style: TextStyle(
                                             color: Colors.grey,
                                             fontSize: 12,
-                                            decoration: TextDecoration.underline,
+                                            decoration:
+                                                TextDecoration.underline,
                                           ),
                                         ),
                                       ],
@@ -772,18 +775,19 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
 
     var req = widget.requestModel;
     String statusText = 'รอตอบรับ';
-    Color statusColor = const Color(0xFF757BFF);
-    Color statusBgColor = const Color(0xFFE8EAFF);
+    Color statusColor = const Color(0xFF00C853);
+    Color statusBgColor = const Color(0xFFE8F5E9);
 
     if (currentStatus == RequestStatus.acceptedEarly ||
         currentStatus == RequestStatus.acceptedReady) {
       statusText = 'ตอบรับแล้ว';
-      statusColor = primaryColor;
-      statusBgColor = lightPurple;
+      statusColor = const Color(0xFF00C853);
+      statusBgColor = const Color(0xFFE8F5E9);
+      ;
     } else if (currentStatus == RequestStatus.completed) {
       statusText = 'สิ้นสุดบริการ';
-      statusColor = const Color(0xFF00B14F);
-      statusBgColor = const Color(0xFFE8F5E9);
+      statusColor = const Color(0xFF00B0FF);
+      statusBgColor = const Color(0xFFE1F5FE);
     } else if (currentStatus == RequestStatus.cancelled) {
       statusText = 'ยกเลิกบริการ';
       statusColor = const Color(0xFFF44336);
