@@ -123,15 +123,19 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
           if (caretakerData!['Vehicle'] != null) {
             vehicleData = Map<String, dynamic>.from(caretakerData!['Vehicle']);
 
-            // ดึงข้อมูลรูปรถทั้งหมดเก็บไว้ใน List สำหรับทำ Carousel
-            if (vehicleData!['vehiclephotos'] != null) {
-              final photos = vehicleData!['vehiclephotos'];
+            // 🌟 ปรับตรงนี้: ให้เช็คทั้ง 'vehiclephotos' และ 'VehiclePhoto'
+            final photos =
+                vehicleData!['vehiclephotos'] ?? vehicleData!['VehiclePhoto'];
+
+            if (photos != null) {
               if (photos is List) {
                 vehiclePhotos = photos
+                    .where((p) => p != null && p['photo'] != null)
                     .map((p) => p['photo'].toString())
                     .toList();
               } else if (photos is Map) {
                 vehiclePhotos = photos.values
+                    .where((p) => p != null && p['photo'] != null)
                     .map((p) => p['photo'].toString())
                     .toList();
               }
@@ -193,11 +197,8 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                   ),
                   child: Column(
                     children: [
+                      // ส่วนรวมรูปโปรไฟล์และข้อมูลติดต่อ
                       _buildProfileHeader(),
-                      const SizedBox(height: 12),
-
-                      // 🌟 ส่วนข้อมูลติดต่อแบบกระชับ (1 แถวแนวนอน)
-                      _buildContactInfo(),
                       const SizedBox(height: 12),
 
                       // 🌟 ส่วนประสบการณ์และบริการ (รวบ 2 การ์ดไว้ด้วยกัน)
@@ -364,6 +365,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     );
   }
 
+  // 🌟 ส่วนรวมรูปโปรไฟล์ ชื่อ สถานะ และข้อมูลติดต่อจัดเป็นแถวให้สวยงาม
   Widget _buildProfileHeader() {
     String rawStatus =
         (caretakerData?['servicestatus']?.toString() ?? 'ไม่พร้อมให้บริการ')
@@ -388,7 +390,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -403,69 +405,119 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
       ),
       child: Column(
         children: [
-          Stack(
-            alignment: Alignment.bottomRight,
+          // แถวบน: รูปโปรไฟล์ + ชื่อและสถานะ
+          Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFF8763E6),
-                    width: 2.5,
+              Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(2.5),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFF8763E6),
+                        width: 2,
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      radius: 34,
+                      backgroundColor: const Color(0xFFE8D5FF),
+                      backgroundImage: caretakerImageProvider,
+                      child: caretakerImageProvider == null
+                          ? const Icon(
+                              Icons.person,
+                              size: 40,
+                              color: Colors.black87,
+                            )
+                          : null,
+                    ),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF8763E6).withOpacity(0.2),
-                      blurRadius: 8,
-                      spreadRadius: 1,
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.check_circle,
+                      color: isAvailable ? Colors.green : Colors.grey,
+                      size: 18,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isAvailable
+                            ? Colors.green.withOpacity(0.12)
+                            : Colors.orange.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isAvailable ? 'พร้อมให้บริการ' : 'ไม่พร้อมให้บริการ',
+                        style: TextStyle(
+                          color: isAvailable
+                              ? Colors.green.shade700
+                              : Colors.orange.shade800,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      '${caretakerData?['firstname'] ?? 'อัศวิน'} ${caretakerData?['lastname'] ?? 'จินดา'}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 17,
+                        color: Color(0xFF8763E6),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                ),
-                child: CircleAvatar(
-                  radius: 35,
-                  backgroundColor: const Color(0xFFE8D5FF),
-                  backgroundImage: caretakerImageProvider,
-                  child: caretakerImageProvider == null
-                      ? const Icon(
-                          Icons.person,
-                          size: 45,
-                          color: Colors.black87,
-                        )
-                      : null,
-                ),
-              ),
-              Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.check_circle,
-                  color: isAvailable ? Colors.green : Colors.grey,
-                  size: 20,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            isAvailable ? 'พร้อมให้บริการ' : 'ไม่พร้อมให้บริการ',
-            style: TextStyle(
-              color: isAvailable ? Colors.green : Colors.orange,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${caretakerData?['firstname'] ?? 'อัศวิน'} ${caretakerData?['lastname'] ?? 'จินดา'}',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              color: Color(0xFF8763E6),
-            ),
-            textAlign: TextAlign.center,
+
+          const SizedBox(height: 12),
+          const Divider(thickness: 1, height: 1),
+          const SizedBox(height: 12),
+
+          // แถวล่าง: ข้อมูลติดต่อ (เพศ / อายุ / เบอร์โทร)
+          Row(
+            children: [
+              Expanded(
+                child: _buildMiniInfoItem(
+                  'เพศ',
+                  caretakerData?['gender'] ?? '-',
+                ),
+              ),
+              Container(height: 24, width: 1, color: Colors.grey.shade200),
+              Expanded(
+                child: _buildMiniInfoItem(
+                  'อายุ',
+                  calculateAge(caretakerData?['birthdate']),
+                ),
+              ),
+              Container(height: 24, width: 1, color: Colors.grey.shade200),
+              Expanded(
+                child: _buildMiniInfoItem(
+                  'เบอร์โทร',
+                  caretakerData?['phonenumber'] ?? '-',
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -535,7 +587,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     return '$age ปี';
   }
 
-  // 🌟 ส่วนข้อมูลติดต่อ (ปรับให้เรียงแนวนอน 1 บรรทัด ประหยัดพื้นที่)
+  // 🌟 ส่วนข้อมูลติดต่อ (แยกไว้เป็นฟังก์ชันสำรองตามโครงสร้างเดิม)
   Widget _buildContactInfo() {
     return _buildCard(
       child: Column(
@@ -582,7 +634,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   // 🌟 Helper widget สำหรับข้อมูลชิ้นเล็กๆ
   Widget _buildMiniInfoItem(String label, String value) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           label,
@@ -592,10 +644,11 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
         Text(
           value,
           style: const TextStyle(
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
           ),
+          textAlign: TextAlign.center,
         ),
       ],
     );
@@ -738,8 +791,9 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                   itemBuilder: (context, index) {
                     try {
                       String cleanBase64 = vehiclePhotos[index];
-                      if (cleanBase64.contains(','))
+                      if (cleanBase64.contains(',')) {
                         cleanBase64 = cleanBase64.split(',').last;
+                      }
                       cleanBase64 = cleanBase64.replaceAll(RegExp(r'\s+'), '');
                       int pad = cleanBase64.length % 4;
                       if (pad > 0) cleanBase64 += '=' * (4 - pad);
