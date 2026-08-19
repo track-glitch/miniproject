@@ -154,10 +154,25 @@ class _EditProfilePageState extends State<EditProfilePage> {
           vehicleModel = data['Vehicle']['model'] ?? '';
           vehiclePlate = data['Vehicle']['licenseplate'] ?? '';
 
-          // 🌟 แก้ไข: เปลี่ยนจาก 'vehiclephotos' เป็น 'VehiclePhoto' ให้ตรงกับ Database
-          if (data['Vehicle']['vehiclephotos'] != null) {
-            for (var photo in data['Vehicle']['vehiclephotos']) {
-              vehicleImages.add(photo['photo']);
+          // 🌟 เคลียร์ List เก่าก่อนโหลดใหม่
+          vehicleImages.clear();
+
+          // 🌟 ดึงข้อมูลรูปรถ รองรับทั้ง 'vehiclephotos' และ 'VehiclePhoto'
+          final photos = data['Vehicle']['vehiclephotos'] ?? data['Vehicle']['VehiclePhoto'];
+
+          if (photos != null) {
+            if (photos is List) {
+              for (var photo in photos) {
+                if (photo != null && photo['photo'] != null) {
+                  vehicleImages.add(photo['photo'].toString());
+                }
+              }
+            } else if (photos is Map) {
+              for (var photo in photos.values) {
+                if (photo != null && photo['photo'] != null) {
+                  vehicleImages.add(photo['photo'].toString());
+                }
+              }
             }
           }
         }

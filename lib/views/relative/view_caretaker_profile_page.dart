@@ -123,15 +123,19 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
           if (caretakerData!['Vehicle'] != null) {
             vehicleData = Map<String, dynamic>.from(caretakerData!['Vehicle']);
 
-            // ดึงข้อมูลรูปรถทั้งหมดเก็บไว้ใน List สำหรับทำ Carousel
-            if (vehicleData!['vehiclephotos'] != null) {
-              final photos = vehicleData!['vehiclephotos'];
+            // 🌟 ปรับตรงนี้: ให้เช็คทั้ง 'vehiclephotos' และ 'VehiclePhoto'
+            final photos =
+                vehicleData!['vehiclephotos'] ?? vehicleData!['VehiclePhoto'];
+
+            if (photos != null) {
               if (photos is List) {
                 vehiclePhotos = photos
+                    .where((p) => p != null && p['photo'] != null)
                     .map((p) => p['photo'].toString())
                     .toList();
               } else if (photos is Map) {
                 vehiclePhotos = photos.values
+                    .where((p) => p != null && p['photo'] != null)
                     .map((p) => p['photo'].toString())
                     .toList();
               }

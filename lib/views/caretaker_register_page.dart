@@ -724,20 +724,23 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                 },
               ),
               // 🌟 ปรับปรุง: อีเมล ไม่บังคับกรอก (isRequired: false)
-              _buildLabelField('อีเมล (ถ้ามี)', isRequired: false),
+              _buildLabelField('อีเมล', isRequired: true),
               _buildTextField(
                 controller: _emailController,
                 hint: 'เช่น example@gmail.com',
                 keyboardType: TextInputType.emailAddress,
                 validator: (val) {
-                  if (val != null && val.trim().isNotEmpty) {
-                    if (!RegExp(
-                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                    ).hasMatch(val.trim())) {
-                      return 'รูปแบบอีเมลไม่ถูกต้อง';
-                    }
+                  // 1. ตรวจสอบค่าว่าง (บังคับกรอก)
+                  if (val == null || val.trim().isEmpty) {
+                    return 'กรุณากรอกอีเมล';
                   }
-                  return null; // ยินยอมให้ส่งเป็นค่าว่างได้
+                  // 2. ตรวจสอบรูปแบบอีเมล
+                  if (!RegExp(
+                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                  ).hasMatch(val.trim())) {
+                    return 'รูปแบบอีเมลไม่ถูกต้อง';
+                  }
+                  return null;
                 },
               ),
             ],
