@@ -168,7 +168,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
       {
         'step': '3',
         'title': 'ดูแลตลอดการพบแพทย์',
-        'desc': 'ช่วยลงทะเบียน อยู่เป็นเพื่อนหน้าห้องตรวจ เดินเรื่องชำระเงิน และรับยา',
+        'desc':
+            'ช่วยลงทะเบียน อยู่เป็นเพื่อนหน้าห้องตรวจ เดินเรื่องชำระเงิน และรับยา',
         'icon': Icons.local_hospital,
       },
       {
@@ -207,7 +208,11 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Icon(Icons.volunteer_activism_rounded, color: primaryColor, size: 26),
+                  Icon(
+                    Icons.volunteer_activism_rounded,
+                    color: primaryColor,
+                    size: 26,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'ขั้นตอนการให้บริการ',
@@ -238,7 +243,11 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                           color: lightPurple,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(item['icon'] as IconData, color: primaryColor, size: 20),
+                        child: Icon(
+                          item['icon'] as IconData,
+                          color: primaryColor,
+                          size: 20,
+                        ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -857,7 +866,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                           borderRadius: BorderRadius.circular(22),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(22),
-                            onTap: () {},
+                            onTap: _findNearMe,
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 9),
                               decoration: BoxDecoration(
@@ -898,53 +907,110 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Material(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(22),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(22),
-                            onTap: _showPricingDetailsDialog,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
+                      const SizedBox(height: 8),
+                      // แถวปุ่มที่ 2: ขั้นตอนการทำงาน และ รายละเอียดค่าใช้จ่าย
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Material(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(22),
+                              child: InkWell(
                                 borderRadius: BorderRadius.circular(22),
-                                border: Border.all(
-                                  color: primaryColor,
-                                  width: 1.2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: primaryColor.withOpacity(0.12),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
+                                onTap: _showServiceStepsModal,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
                                   ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.info_outline_rounded,
-                                    color: primaryColor,
-                                    size: 15,
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    'รายละเอียดค่าใช้จ่าย',
-                                    style: TextStyle(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(22),
+                                    border: Border.all(
                                       color: primaryColor,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
+                                      width: 1.2,
                                     ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: primaryColor.withOpacity(0.12),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.format_list_bulleted_rounded,
+                                        color: primaryColor,
+                                        size: 15,
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'ขั้นตอนการทำงาน',
+                                        style: TextStyle(
+                                          color: primaryColor,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Material(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(22),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(22),
+                                onTap: _showPricingDetailsDialog,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(22),
+                                    border: Border.all(
+                                      color: primaryColor,
+                                      width: 1.2,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: primaryColor.withOpacity(0.12),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.info_outline_rounded,
+                                        color: primaryColor,
+                                        size: 15,
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'รายละเอียดค่าใช้จ่าย',
+                                        style: TextStyle(
+                                          color: primaryColor,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -975,6 +1041,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   Map<String, List<Map<String, dynamic>>> caregiverReviewsMap =
                       {};
                   Map<String, List<String>> busyDatesMap = {};
+
+                  // 🌟 เพิ่ม Map เก็บจำนวนการให้บริการสำเร็จ[cite: 18]
                   Map<String, int> completedServicesMap = {};
 
                   if (rootValue is Map) {
@@ -1011,7 +1079,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                   }
                                 }
 
-                                // 🌟 เช็กจำนวนครั้งที่บริการสำเร็จ (สถานะสำเร็จ หรือ มีรีวิว)
+                                // 🌟 เช็กจำนวนครั้งที่บริการสำเร็จ (สถานะสำเร็จ หรือ มีรีวิว)[cite: 18]
                                 if (status == 'completed' ||
                                     status == 'success' ||
                                     status == 'pending_advice' ||
@@ -1088,7 +1156,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                           List<Map<String, dynamic>> reviewList =
                               caregiverReviewsMap[idCard] ?? [];
 
-                          // 🌟 เพิ่ม Service Count ยัดใส่ก้อนข้อมูล
+                          // 🌟 เพิ่ม Service Count ยัดใส่ก้อนข้อมูล[cite: 18]
                           data['serviceCount'] =
                               completedServicesMap[idCard] ?? 0;
 
@@ -1441,6 +1509,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
     List<Map<String, dynamic>> reviewsList =
         (data['reviewsList'] as List<Map<String, dynamic>>?) ?? [];
 
+    // 🌟 ดึงค่า serviceCount ที่เราเขียนโค้ดนับไว้[cite: 18]
     int serviceCount = data['serviceCount'] ?? 0;
 
     String rawProfilePhoto = data['profilephoto']?.toString() ?? '';
@@ -1602,6 +1671,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   ),
                   const SizedBox(height: 6),
 
+                  // 🌟 เพิ่ม Badge โชว์จำนวนครั้งที่ให้บริการสำเร็จที่นี่[cite: 18]
                   if (serviceCount > 0)
                     Container(
                       margin: const EdgeInsets.only(bottom: 6),
