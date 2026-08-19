@@ -47,6 +47,7 @@ dependencies:
   geolocator: ^14.0.3      # สำหรับแสดง OpenStreetMap             # สำหรับยิง API Longdo
   carousel_slider: ^5.0.0
   google_nav_bar: ^5.0.7
+  geocoding: ^5.0.0
 
 
 
@@ -78,7 +79,10 @@ flutter:
     - assets/images/Profile/
     - assets/images/Vehicle/
     - assets/images/Document/
-
+    - assets/data/districts.json
+    - assets/data/provinces.json
+    - assets/data/subdistricts.json
+    
   fonts:
     - family: Kanit
       fonts:

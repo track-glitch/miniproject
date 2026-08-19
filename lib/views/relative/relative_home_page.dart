@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'package:miniproject/models/patient_model.dart';
 import 'package:miniproject/models/relative_model.dart';
 import 'package:miniproject/services/function_service.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:miniproject/views/relative/edit_relative_info_page.dart';
 import 'package:miniproject/views/relative/list_request_page.dart';
 import 'package:miniproject/views/relative/track_status_notification_page.dart';
@@ -40,6 +43,12 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   String _userName = '';
   DateTime? _selectedFilterDate;
 
+  List<dynamic> provinceData = [];
+  List<dynamic> districtData = [];
+  List<dynamic> subdistrictsData = [];
+
+  final Geocoding geocoding = Geocoding();
+
   @override
   void initState() {
     super.initState();
@@ -47,6 +56,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
       setState(() {});
     });
     _loadUserName();
+    loadThailandData();
   }
 
   Future<void> _loadUserName() async {
@@ -93,6 +103,20 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
     } catch (e) {
       print("Error fetching username: $e");
     }
+  }
+
+  Future<void> loadThailandData() async {
+    // 🌟 แก้จาก jsonEncode เป็น jsonDecode เพื่อให้มันแปลงเป็น List ได้ถูกต้อง
+    String jsonString = await rootBundle.loadString(
+      'assets/data/provinces.json',
+    );
+    provinceData = jsonDecode(jsonString) as List<dynamic>;
+
+    jsonString = await rootBundle.loadString('assets/data/districts.json');
+    districtData = jsonDecode(jsonString) as List<dynamic>;
+
+    jsonString = await rootBundle.loadString('assets/data/subdistricts.json');
+    subdistrictsData = jsonDecode(jsonString) as List<dynamic>;
   }
 
   @override
@@ -340,6 +364,111 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
     );
   }
 
+  Future<void> _findNearMe() async {
+    // 1. แสดง Dialog โหลดระหว่างค้นหา
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) =>
+          Center(child: CircularProgressIndicator(color: primaryColor)),
+    );
+
+    try {
+      // 2. ตรวจสอบ GPS
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) throw Exception('กรุณาเปิด GPS บนอุปกรณ์ของคุณ');
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception('แอปไม่ได้รับอนุญาตให้เข้าถึงตำแหน่ง');
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception('สิทธิ์ GPS ถูกปิดกั้นถาวร กรุณาเปิดในตั้งค่า');
+      }
+
+      // 3. ดึงพิกัดปัจจุบัน
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // 4. แปลงพิกัด (บังคับเป็นภาษาอังกฤษ เพื่อให้ Map กับ JSON ง่ายและชัวร์ที่สุด)
+      List<Placemark> placemarks = await geocoding.placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks.first;
+
+        String rawProvince = place.administrativeArea ?? '';
+        String rawDistrict =
+            place.subAdministrativeArea ?? place.locality ?? '';
+
+        String cleanProvEn = rawProvince
+            .toLowerCase()
+            .replaceAll('chang wat', '')
+            .replaceAll('province', '')
+            .trim();
+
+        String cleanDistEn = rawDistrict
+            .toLowerCase()
+            .replaceAll('amphoe', '')
+            .replaceAll('district', '')
+            .replaceAll('khet', '')
+            .trim();
+
+        String finalProvinceTh = cleanProvEn;
+        String finalDistrictTh = cleanDistEn;
+        int? provCode;
+
+        // Map หาจังหวัด
+        for (var p in provinceData) {
+          String pEn = (p['provinceNameEn'] ?? '').toString().toLowerCase();
+          if (pEn == cleanProvEn || cleanProvEn.contains(pEn)) {
+            finalProvinceTh = p['provinceNameTh'];
+            provCode = p['provinceCode'];
+            break;
+          }
+        }
+
+        // Map หาอำเภอ
+        for (var d in districtData) {
+          String dEn = (d['districtNameEn'] ?? '').toString().toLowerCase();
+          int pCode = d['provinceCode'];
+          if (provCode != null && provCode != pCode) continue;
+          if (dEn == cleanDistEn ||
+              cleanDistEn.contains(dEn) ||
+              dEn.contains(cleanDistEn)) {
+            finalDistrictTh = d['districtNameTh'];
+            break;
+          }
+        }
+
+        // 🌟 นำคำไปสร้างเป็นประโยคสวยๆ "อำเภอ ... จังหวัด ..." แล้วใส่ในช่องค้นหา
+        setState(() {
+          String displayText = '';
+          if (finalDistrictTh.isNotEmpty && finalDistrictTh != cleanDistEn) {
+            displayText += 'อำเภอ $finalDistrictTh ';
+          }
+          if (finalProvinceTh.isNotEmpty && finalProvinceTh != cleanProvEn) {
+            displayText += 'จังหวัด $finalProvinceTh';
+          }
+
+          _searchController.text = displayText.trim();
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -581,7 +710,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                           borderRadius: BorderRadius.circular(22),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(22),
-                            onTap: () {},
+                            onTap: _findNearMe,
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 9),
                               decoration: BoxDecoration(
@@ -844,7 +973,27 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                       child: Text('ไม่พบข้อมูลผู้ดูแลระบบในคลังข้อมูล'),
                     );
 
-                  final searchQuery = _searchController.text.toLowerCase();
+                  final searchQuery = _searchController.text
+                      .toLowerCase()
+                      .trim();
+
+                  // 🌟 แอบลบคำว่า "อำเภอ", "จังหวัด", "อ.", "จ." ออกก่อนเอาไปค้นหาจริง
+                  // เพื่อให้เหลือแค่ คีย์เวิร์ดเน้นๆ เช่น "เมืองเชียงใหม่", "เชียงใหม่"
+                  String cleanQuery = searchQuery
+                      .replaceAll('อำเภอ', '')
+                      .replaceAll('จังหวัด', '')
+                      .replaceAll('ตำบล', '')
+                      .replaceAll('ต.', '')
+                      .replaceAll('อ.', '')
+                      .replaceAll('จ.', '')
+                      .replaceAll(
+                        'เมือง',
+                        '',
+                      ) // 🌟 จุดสำคัญ: ตัดคำว่าเมืองทิ้ง จะได้เหลือแค่ "เชียงใหม่"
+                      .trim();
+
+                  // แยกคำด้วยช่องว่าง เพื่อหาทีละคำ
+                  final searchTerms = cleanQuery.split(RegExp(r'\s+'));
 
                   final filteredList = caretakersList.where((data) {
                     String rawStatus =
@@ -869,18 +1018,30 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                     final name =
                         "${data['firstname'] ?? ''} ${data['lastname'] ?? ''}"
                             .toLowerCase();
+
                     var address = '';
                     if (data['address'] != null) {
-                      address = (data['address'] ?? '').toLowerCase();
+                      address = data['address'].toString().toLowerCase();
                     } else if (data['Location'] != null &&
                         data['Location']['address'] != null) {
-                      address = (data['Location']['address'] ?? '')
+                      address = data['Location']['address']
+                          .toString()
                           .toLowerCase();
                     }
-                    return name.contains(searchQuery) ||
-                        address.contains(searchQuery);
-                  }).toList();
 
+                    if (cleanQuery.isEmpty) return true;
+
+                    // เช็คว่า "ทุกคำ" ที่ค้นหา มีอยู่ในชื่อ หรือ ที่อยู่ หรือไม่
+                    bool isMatch = true;
+                    for (String term in searchTerms) {
+                      if (term.isEmpty) continue;
+                      if (!name.contains(term) && !address.contains(term)) {
+                        isMatch = false;
+                        break;
+                      }
+                    }
+                    return isMatch;
+                  }).toList();
                   filteredList.sort(
                     (a, b) => (b['rating'] as double).compareTo(
                       a['rating'] as double,

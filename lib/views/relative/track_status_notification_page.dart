@@ -33,11 +33,12 @@ class _TrackStatusNotificationPageState
   List<_NotificationItem> _items = [];
   bool _isLoading = true;
 
-  static const Color primaryPurple = Color(0xFF8E5DB8);
-  static const Color lightPurpleBg = Color(0xFFE9DCF3);
-  static const Color redAccent = Color(0xFFE53935);
-  final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
-  final Color searchPrimaryColor = const Color(0xFF8763E6);
+  // 🌟 ปรับโทนสีใหม่ให้เข้ากันและโดดเด่นขึ้น
+  static const Color primaryPurple = Color(0xFF8763E6);
+  static const Color darkPurple = Color(0xFF7D3C98);
+  static const Color lightPurpleBg = Color(0xFFF4EDFB);
+  // 🌟 ใช้สีส้มทองสำหรับไฮไลต์สถานะล่าสุด (ตัดกับสีม่วงได้ดีมากและดูพรีเมียม)
+  static const Color highlightColor = Color(0xFFFF8F00);
 
   @override
   void initState() {
@@ -45,7 +46,6 @@ class _TrackStatusNotificationPageState
     _fetchNotifications();
   }
 
-  // 🌟 ฟังก์ชันดึงข้อมูลจาก Firebase
   Future<void> _fetchNotifications() async {
     if (widget.loggedUid == null || widget.requestModel!.requestId == null) {
       setState(() => _isLoading = false);
@@ -74,7 +74,7 @@ class _TrackStatusNotificationPageState
               .toList();
         }
 
-        // 🌟 1. Sort เวลา ใหม่ -> เก่า (ล่าสุดอยู่บนสุด)[cite: 17]
+        // Sort เวลา ใหม่ -> เก่า (ล่าสุดอยู่บนสุด)
         rawList.sort((a, b) {
           String timeA = a['notifydate'] ?? a['timestamp'] ?? "";
           String timeB = b['notifydate'] ?? b['timestamp'] ?? "";
@@ -83,8 +83,7 @@ class _TrackStatusNotificationPageState
 
         for (int i = 0; i < rawList.length; i++) {
           var item = rawList[i];
-          // 🌟 เมื่อใหม่สุดอยู่บนสุด ดังนั้น index 0 คืออันล่าสุดเสมอ
-          bool isLatest = (i == 0);
+          bool isLatest = (i == 0); // ใหม่สุดอยู่บนสุดเสมอ
 
           // จัดรูปแบบเวลา
           String rawDate = item['notifydate'] ?? item['timestamp'] ?? "";
@@ -97,7 +96,6 @@ class _TrackStatusNotificationPageState
             } catch (_) {}
           }
 
-          // 🌟 2. ดึงเฉพาะรายละเอียด ไม่เอาชื่อผู้ดูแลมาต่อท้ายแล้ว[cite: 17]
           String detailText = item['notifydetail']?.toString().trim() ?? '';
 
           loadedItems.add(
@@ -136,19 +134,23 @@ class _TrackStatusNotificationPageState
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: searchPrimaryColor, width: 1.5),
+              border: Border.all(color: primaryPurple, width: 1.5),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.lock_person_outlined, size: 75, color: darkPurple),
+                const Icon(
+                  Icons.lock_person_outlined,
+                  size: 75,
+                  color: primaryPurple,
+                ),
                 const SizedBox(height: 20),
-                Text(
+                const Text(
                   'กรุณาเข้าสู่ระบบก่อนใช้งาน',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: darkPurple,
+                    color: primaryPurple,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -163,7 +165,7 @@ class _TrackStatusNotificationPageState
                   height: 46,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: searchPrimaryColor,
+                      backgroundColor: primaryPurple,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(23),
                       ),
@@ -236,23 +238,30 @@ class _TrackStatusNotificationPageState
                 ],
               ),
             )
-          : ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              children: [
-                for (int i = 0; i < _items.length; i++) ...[
-                  if (_items[i].isLatest) _buildLatestDivider(),
-                  _NotificationCard(item: _items[i]),
-                  const SizedBox(height: 14),
-                ],
-              ],
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              itemCount: _items.length,
+              itemBuilder: (context, index) {
+                final item = _items[index];
+                return Column(
+                  children: [
+                    if (item.isLatest) _buildLatestDivider(),
+                    _NotificationCard(item: item),
+                    const SizedBox(height: 16),
+                  ],
+                );
+              },
             ),
       bottomNavigationBar: Container(
         height: 65,
         decoration: BoxDecoration(
-          color: darkPurple,
+          color:
+              primaryPurple, // 🌟 เปลี่ยนจาก darkPurple เป็น primaryPurple ตรงนี้
           boxShadow: [
             BoxShadow(
-              color: darkPurple.withOpacity(0.27),
+              color: primaryPurple.withOpacity(
+                0.27,
+              ), // 🌟 เปลี่ยนสีเงาให้เข้ากัน
               blurRadius: 12,
               offset: const Offset(0, -3),
             ),
@@ -469,22 +478,32 @@ class _TrackStatusNotificationPageState
 
   Widget _buildLatestDivider() {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         children: [
-          const Expanded(child: Divider(color: redAccent, thickness: 1)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Text(
-              'สถานะล่าสุด',
-              style: TextStyle(
-                color: redAccent,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
+          const Expanded(child: Divider(color: highlightColor, thickness: 1.5)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: highlightColor.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: const [
+                Icon(Icons.stars_rounded, color: highlightColor, size: 16),
+                SizedBox(width: 6),
+                Text(
+                  'อัปเดตล่าสุด',
+                  style: TextStyle(
+                    color: highlightColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
           ),
-          const Expanded(child: Divider(color: redAccent, thickness: 1)),
+          const Expanded(child: Divider(color: highlightColor, thickness: 1.5)),
         ],
       ),
     );
@@ -521,59 +540,130 @@ class _NotificationCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
+        // 🌟 เพิ่มความหนาของขอบและปรับเงาให้การ์ดล่าสุดดูเด้งออกมา
         border: latest
-            ? const Border(left: BorderSide(color: Color(0xFFE53935), width: 4))
-            : null,
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-        ],
+            ? const Border(
+                left: BorderSide(
+                  color: _TrackStatusNotificationPageState.highlightColor,
+                  width: 5,
+                ),
+              )
+            : Border.all(color: Colors.grey.shade200),
+        boxShadow: latest
+            ? [
+                BoxShadow(
+                  color: _TrackStatusNotificationPageState.highlightColor
+                      .withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                item.dateTime,
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
+              Row(
+                children: [
+                  Icon(
+                    Icons.access_time_filled_rounded,
+                    size: 16,
+                    color: Colors.grey.shade400,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    item.dateTime,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                item.requestId,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: latest ? FontWeight.bold : FontWeight.w500,
-                  color: latest ? const Color(0xFFE53935) : Colors.black54,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: latest
+                      ? _TrackStatusNotificationPageState.highlightColor
+                            .withOpacity(0.1)
+                      : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  item.requestId,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: latest
+                        ? _TrackStatusNotificationPageState.highlightColor
+                        : Colors.grey.shade600,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
           Text(
             item.status,
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: latest ? const Color(0xFFE53935) : Colors.black87,
+              color: latest
+                  ? _TrackStatusNotificationPageState.highlightColor
+                  : _TrackStatusNotificationPageState.darkPurple,
             ),
           ),
-          // 🌟 3. เช็คเงื่อนไข ถ้าข้อมูล detail ว่าง จะไม่สร้าง Text ขึ้นมาเลย[cite: 17]
           if (item.detail.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              item.detailLabel,
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Divider(thickness: 1, height: 1),
             ),
-            const SizedBox(height: 2),
-            Text(
-              item.detail,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Colors.black87,
-                height: 1.4,
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 18,
+                  color: Colors.grey.shade500,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.detailLabel,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        item.detail,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black87,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ],

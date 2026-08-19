@@ -1,695 +1,464 @@
 [
   {
     "id": 1,
-    "name_th": "กรุงเทพมหานคร",
-    "name_en": "Bangkok",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 10,
+    "provinceNameEn": "Bangkok",
+    "provinceNameTh": "กรุงเทพมหานคร"
   },
   {
     "id": 2,
-    "name_th": "สมุทรปราการ",
-    "name_en": "Samut Prakan",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 11,
+    "provinceNameEn": "Samut Prakan",
+    "provinceNameTh": "สมุทรปราการ"
   },
   {
     "id": 3,
-    "name_th": "นนทบุรี",
-    "name_en": "Nonthaburi",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 12,
+    "provinceNameEn": "Nonthaburi",
+    "provinceNameTh": "นนทบุรี"
   },
   {
     "id": 4,
-    "name_th": "ปทุมธานี",
-    "name_en": "Pathum Thani",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 13,
+    "provinceNameEn": "Pathum Thani",
+    "provinceNameTh": "ปทุมธานี"
   },
   {
     "id": 5,
-    "name_th": "พระนครศรีอยุธยา",
-    "name_en": "Phra Nakhon Si Ayutthaya",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 14,
+    "provinceNameEn": "Phra Nakhon Si Ayutthaya",
+    "provinceNameTh": "พระนครศรีอยุธยา"
   },
   {
     "id": 6,
-    "name_th": "อ่างทอง",
-    "name_en": "Ang Thong",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 15,
+    "provinceNameEn": "Ang Thong",
+    "provinceNameTh": "อ่างทอง"
   },
   {
     "id": 7,
-    "name_th": "ลพบุรี",
-    "name_en": "Lopburi",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 16,
+    "provinceNameEn": "Loburi",
+    "provinceNameTh": "ลพบุรี"
   },
   {
     "id": 8,
-    "name_th": "สิงห์บุรี",
-    "name_en": "Sing Buri",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 17,
+    "provinceNameEn": "Sing Buri",
+    "provinceNameTh": "สิงห์บุรี"
   },
   {
     "id": 9,
-    "name_th": "ชัยนาท",
-    "name_en": "Chai Nat",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 18,
+    "provinceNameEn": "Chai Nat",
+    "provinceNameTh": "ชัยนาท"
   },
   {
     "id": 10,
-    "name_th": "สระบุรี",
-    "name_en": "Saraburi",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 19,
+    "provinceNameEn": "Saraburi",
+    "provinceNameTh": "สระบุรี"
   },
   {
     "id": 11,
-    "name_th": "ชลบุรี",
-    "name_en": "Chon Buri",
-    "geography_id": 5,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 20,
+    "provinceNameEn": "Chon Buri",
+    "provinceNameTh": "ชลบุรี"
   },
   {
     "id": 12,
-    "name_th": "ระยอง",
-    "name_en": "Rayong",
-    "geography_id": 5,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 21,
+    "provinceNameEn": "Rayong",
+    "provinceNameTh": "ระยอง"
   },
   {
     "id": 13,
-    "name_th": "จันทบุรี",
-    "name_en": "Chanthaburi",
-    "geography_id": 5,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 22,
+    "provinceNameEn": "Chanthaburi",
+    "provinceNameTh": "จันทบุรี"
   },
   {
     "id": 14,
-    "name_th": "ตราด",
-    "name_en": "Trat",
-    "geography_id": 5,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 23,
+    "provinceNameEn": "Trat",
+    "provinceNameTh": "ตราด"
   },
   {
     "id": 15,
-    "name_th": "ฉะเชิงเทรา",
-    "name_en": "Chachoengsao",
-    "geography_id": 5,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 24,
+    "provinceNameEn": "Chachoengsao",
+    "provinceNameTh": "ฉะเชิงเทรา"
   },
   {
     "id": 16,
-    "name_th": "ปราจีนบุรี",
-    "name_en": "Prachin Buri",
-    "geography_id": 5,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 25,
+    "provinceNameEn": "Prachin Buri",
+    "provinceNameTh": "ปราจีนบุรี"
   },
   {
     "id": 17,
-    "name_th": "นครนายก",
-    "name_en": "Nakhon Nayok",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 26,
+    "provinceNameEn": "Nakhon Nayok",
+    "provinceNameTh": "นครนายก"
   },
   {
     "id": 18,
-    "name_th": "สระแก้ว",
-    "name_en": "Sa Kaeo",
-    "geography_id": 5,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 27,
+    "provinceNameEn": "Sa Kaeo",
+    "provinceNameTh": "สระแก้ว"
   },
   {
     "id": 19,
-    "name_th": "นครราชสีมา",
-    "name_en": "Nakhon Ratchasima",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 30,
+    "provinceNameEn": "Nakhon Ratchasima",
+    "provinceNameTh": "นครราชสีมา"
   },
   {
     "id": 20,
-    "name_th": "บุรีรัมย์",
-    "name_en": "Buri Ram",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 31,
+    "provinceNameEn": "Buri Ram",
+    "provinceNameTh": "บุรีรัมย์"
   },
   {
     "id": 21,
-    "name_th": "สุรินทร์",
-    "name_en": "Surin",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 32,
+    "provinceNameEn": "Surin",
+    "provinceNameTh": "สุรินทร์"
   },
   {
     "id": 22,
-    "name_th": "ศรีสะเกษ",
-    "name_en": "Si Sa Ket",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 33,
+    "provinceNameEn": "Si Sa Ket",
+    "provinceNameTh": "ศรีสะเกษ"
   },
   {
     "id": 23,
-    "name_th": "อุบลราชธานี",
-    "name_en": "Ubon Ratchathani",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 34,
+    "provinceNameEn": "Ubon Ratchathani",
+    "provinceNameTh": "อุบลราชธานี"
   },
   {
     "id": 24,
-    "name_th": "ยโสธร",
-    "name_en": "Yasothon",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 35,
+    "provinceNameEn": "Yasothon",
+    "provinceNameTh": "ยโสธร"
   },
   {
     "id": 25,
-    "name_th": "ชัยภูมิ",
-    "name_en": "Chaiyaphum",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 36,
+    "provinceNameEn": "Chaiyaphum",
+    "provinceNameTh": "ชัยภูมิ"
   },
   {
     "id": 26,
-    "name_th": "อำนาจเจริญ",
-    "name_en": "Amnat Charoen",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 37,
+    "provinceNameEn": "Amnat Charoen",
+    "provinceNameTh": "อำนาจเจริญ"
   },
   {
     "id": 27,
-    "name_th": "หนองบัวลำภู",
-    "name_en": "Nong Bua Lam Phu",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 38,
+    "provinceNameEn": "Bueng Kan",
+    "provinceNameTh": "บึงกาฬ"
   },
   {
     "id": 28,
-    "name_th": "ขอนแก่น",
-    "name_en": "Khon Kaen",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 39,
+    "provinceNameEn": "Nong Bua Lam Phu",
+    "provinceNameTh": "หนองบัวลำภู"
   },
   {
     "id": 29,
-    "name_th": "อุดรธานี",
-    "name_en": "Udon Thani",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 40,
+    "provinceNameEn": "Khon Kaen",
+    "provinceNameTh": "ขอนแก่น"
   },
   {
     "id": 30,
-    "name_th": "เลย",
-    "name_en": "Loei",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 41,
+    "provinceNameEn": "Udon Thani",
+    "provinceNameTh": "อุดรธานี"
   },
   {
     "id": 31,
-    "name_th": "หนองคาย",
-    "name_en": "Nong Khai",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 42,
+    "provinceNameEn": "Loei",
+    "provinceNameTh": "เลย"
   },
   {
     "id": 32,
-    "name_th": "มหาสารคาม",
-    "name_en": "Maha Sarakham",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 43,
+    "provinceNameEn": "Nong Khai",
+    "provinceNameTh": "หนองคาย"
   },
   {
     "id": 33,
-    "name_th": "ร้อยเอ็ด",
-    "name_en": "Roi Et",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 44,
+    "provinceNameEn": "Maha Sarakham",
+    "provinceNameTh": "มหาสารคาม"
   },
   {
     "id": 34,
-    "name_th": "กาฬสินธุ์",
-    "name_en": "Kalasin",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 45,
+    "provinceNameEn": "Roi Et",
+    "provinceNameTh": "ร้อยเอ็ด"
   },
   {
     "id": 35,
-    "name_th": "สกลนคร",
-    "name_en": "Sakon Nakhon",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 46,
+    "provinceNameEn": "Kalasin",
+    "provinceNameTh": "กาฬสินธุ์"
   },
   {
     "id": 36,
-    "name_th": "นครพนม",
-    "name_en": "Nakhon Phanom",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 47,
+    "provinceNameEn": "Sakon Nakhon",
+    "provinceNameTh": "สกลนคร"
   },
   {
     "id": 37,
-    "name_th": "มุกดาหาร",
-    "name_en": "Mukdahan",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 48,
+    "provinceNameEn": "Nakhon Phanom",
+    "provinceNameTh": "นครพนม"
   },
   {
     "id": 38,
-    "name_th": "เชียงใหม่",
-    "name_en": "Chiang Mai",
-    "geography_id": 1,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 49,
+    "provinceNameEn": "Mukdahan",
+    "provinceNameTh": "มุกดาหาร"
   },
   {
     "id": 39,
-    "name_th": "ลำพูน",
-    "name_en": "Lamphun",
-    "geography_id": 1,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 50,
+    "provinceNameEn": "Chiang Mai",
+    "provinceNameTh": "เชียงใหม่"
   },
   {
     "id": 40,
-    "name_th": "ลำปาง",
-    "name_en": "Lampang",
-    "geography_id": 1,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 51,
+    "provinceNameEn": "Lamphun",
+    "provinceNameTh": "ลำพูน"
   },
   {
     "id": 41,
-    "name_th": "อุตรดิตถ์",
-    "name_en": "Uttaradit",
-    "geography_id": 1,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 52,
+    "provinceNameEn": "Lampang",
+    "provinceNameTh": "ลำปาง"
   },
   {
     "id": 42,
-    "name_th": "แพร่",
-    "name_en": "Phrae",
-    "geography_id": 1,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 53,
+    "provinceNameEn": "Uttaradit",
+    "provinceNameTh": "อุตรดิตถ์"
   },
   {
     "id": 43,
-    "name_th": "น่าน",
-    "name_en": "Nan",
-    "geography_id": 1,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 54,
+    "provinceNameEn": "Phrae",
+    "provinceNameTh": "แพร่"
   },
   {
     "id": 44,
-    "name_th": "พะเยา",
-    "name_en": "Phayao",
-    "geography_id": 1,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 55,
+    "provinceNameEn": "Nan",
+    "provinceNameTh": "น่าน"
   },
   {
     "id": 45,
-    "name_th": "เชียงราย",
-    "name_en": "Chiang Rai",
-    "geography_id": 1,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 56,
+    "provinceNameEn": "Phayao",
+    "provinceNameTh": "พะเยา"
   },
   {
     "id": 46,
-    "name_th": "แม่ฮ่องสอน",
-    "name_en": "Mae Hong Son",
-    "geography_id": 1,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 57,
+    "provinceNameEn": "Chiang Rai",
+    "provinceNameTh": "เชียงราย"
   },
   {
     "id": 47,
-    "name_th": "นครสวรรค์",
-    "name_en": "Nakhon Sawan",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 58,
+    "provinceNameEn": "Mae Hong Son",
+    "provinceNameTh": "แม่ฮ่องสอน"
   },
   {
     "id": 48,
-    "name_th": "อุทัยธานี",
-    "name_en": "Uthai Thani",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 60,
+    "provinceNameEn": "Nakhon Sawan",
+    "provinceNameTh": "นครสวรรค์"
   },
   {
     "id": 49,
-    "name_th": "กำแพงเพชร",
-    "name_en": "Kamphaeng Phet",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 61,
+    "provinceNameEn": "Uthai Thani",
+    "provinceNameTh": "อุทัยธานี"
   },
   {
     "id": 50,
-    "name_th": "ตาก",
-    "name_en": "Tak",
-    "geography_id": 4,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 62,
+    "provinceNameEn": "Kamphaeng Phet",
+    "provinceNameTh": "กำแพงเพชร"
   },
   {
     "id": 51,
-    "name_th": "สุโขทัย",
-    "name_en": "Sukhothai",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 63,
+    "provinceNameEn": "Tak",
+    "provinceNameTh": "ตาก"
   },
   {
     "id": 52,
-    "name_th": "พิษณุโลก",
-    "name_en": "Phitsanulok",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 64,
+    "provinceNameEn": "Sukhothai",
+    "provinceNameTh": "สุโขทัย"
   },
   {
     "id": 53,
-    "name_th": "พิจิตร",
-    "name_en": "Phichit",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 65,
+    "provinceNameEn": "Phitsanulok",
+    "provinceNameTh": "พิษณุโลก"
   },
   {
     "id": 54,
-    "name_th": "เพชรบูรณ์",
-    "name_en": "Phetchabun",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 66,
+    "provinceNameEn": "Phichit",
+    "provinceNameTh": "พิจิตร"
   },
   {
     "id": 55,
-    "name_th": "ราชบุรี",
-    "name_en": "Ratchaburi",
-    "geography_id": 4,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 67,
+    "provinceNameEn": "Phetchabun",
+    "provinceNameTh": "เพชรบูรณ์"
   },
   {
     "id": 56,
-    "name_th": "กาญจนบุรี",
-    "name_en": "Kanchanaburi",
-    "geography_id": 4,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 70,
+    "provinceNameEn": "Ratchaburi",
+    "provinceNameTh": "ราชบุรี"
   },
   {
     "id": 57,
-    "name_th": "สุพรรณบุรี",
-    "name_en": "Suphan Buri",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 71,
+    "provinceNameEn": "Kanchanaburi",
+    "provinceNameTh": "กาญจนบุรี"
   },
   {
     "id": 58,
-    "name_th": "นครปฐม",
-    "name_en": "Nakhon Pathom",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 72,
+    "provinceNameEn": "Suphan Buri",
+    "provinceNameTh": "สุพรรณบุรี"
   },
   {
     "id": 59,
-    "name_th": "สมุทรสาคร",
-    "name_en": "Samut Sakhon",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 73,
+    "provinceNameEn": "Nakhon Pathom",
+    "provinceNameTh": "นครปฐม"
   },
   {
     "id": 60,
-    "name_th": "สมุทรสงคราม",
-    "name_en": "Samut Songkhram",
-    "geography_id": 2,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 74,
+    "provinceNameEn": "Samut Sakhon",
+    "provinceNameTh": "สมุทรสาคร"
   },
   {
     "id": 61,
-    "name_th": "เพชรบุรี",
-    "name_en": "Phetchaburi",
-    "geography_id": 4,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 75,
+    "provinceNameEn": "Samut Songkhram",
+    "provinceNameTh": "สมุทรสงคราม"
   },
   {
     "id": 62,
-    "name_th": "ประจวบคีรีขันธ์",
-    "name_en": "Prachuap Khiri Khan",
-    "geography_id": 4,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 76,
+    "provinceNameEn": "Phetchaburi",
+    "provinceNameTh": "เพชรบุรี"
   },
   {
     "id": 63,
-    "name_th": "นครศรีธรรมราช",
-    "name_en": "Nakhon Si Thammarat",
-    "geography_id": 6,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 77,
+    "provinceNameEn": "Prachuap Khiri Khan",
+    "provinceNameTh": "ประจวบคีรีขันธ์"
   },
   {
     "id": 64,
-    "name_th": "กระบี่",
-    "name_en": "Krabi",
-    "geography_id": 6,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 80,
+    "provinceNameEn": "Nakhon Si Thammarat",
+    "provinceNameTh": "นครศรีธรรมราช"
   },
   {
     "id": 65,
-    "name_th": "พังงา",
-    "name_en": "Phangnga",
-    "geography_id": 6,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 81,
+    "provinceNameEn": "Krabi",
+    "provinceNameTh": "กระบี่"
   },
   {
     "id": 66,
-    "name_th": "ภูเก็ต",
-    "name_en": "Phuket",
-    "geography_id": 6,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 82,
+    "provinceNameEn": "Phangnga",
+    "provinceNameTh": "พังงา"
   },
   {
     "id": 67,
-    "name_th": "สุราษฎร์ธานี",
-    "name_en": "Surat Thani",
-    "geography_id": 6,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 83,
+    "provinceNameEn": "Phuket",
+    "provinceNameTh": "ภูเก็ต"
   },
   {
     "id": 68,
-    "name_th": "ระนอง",
-    "name_en": "Ranong",
-    "geography_id": 6,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 84,
+    "provinceNameEn": "Surat Thani",
+    "provinceNameTh": "สุราษฎร์ธานี"
   },
   {
     "id": 69,
-    "name_th": "ชุมพร",
-    "name_en": "Chumphon",
-    "geography_id": 6,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 85,
+    "provinceNameEn": "Ranong",
+    "provinceNameTh": "ระนอง"
   },
   {
     "id": 70,
-    "name_th": "สงขลา",
-    "name_en": "Songkhla",
-    "geography_id": 6,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 86,
+    "provinceNameEn": "Chumphon",
+    "provinceNameTh": "ชุมพร"
   },
   {
     "id": 71,
-    "name_th": "สตูล",
-    "name_en": "Satun",
-    "geography_id": 6,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 90,
+    "provinceNameEn": "Songkhla",
+    "provinceNameTh": "สงขลา"
   },
   {
     "id": 72,
-    "name_th": "ตรัง",
-    "name_en": "Trang",
-    "geography_id": 6,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 91,
+    "provinceNameEn": "Satun",
+    "provinceNameTh": "สตูล"
   },
   {
     "id": 73,
-    "name_th": "พัทลุง",
-    "name_en": "Phatthalung",
-    "geography_id": 6,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 92,
+    "provinceNameEn": "Trang",
+    "provinceNameTh": "ตรัง"
   },
   {
     "id": 74,
-    "name_th": "ปัตตานี",
-    "name_en": "Pattani",
-    "geography_id": 6,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 93,
+    "provinceNameEn": "Phatthalung",
+    "provinceNameTh": "พัทลุง"
   },
   {
     "id": 75,
-    "name_th": "ยะลา",
-    "name_en": "Yala",
-    "geography_id": 6,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 94,
+    "provinceNameEn": "Pattani",
+    "provinceNameTh": "ปัตตานี"
   },
   {
     "id": 76,
-    "name_th": "นราธิวาส",
-    "name_en": "Narathiwat",
-    "geography_id": 6,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 95,
+    "provinceNameEn": "Yala",
+    "provinceNameTh": "ยะลา"
   },
   {
     "id": 77,
-    "name_th": "บึงกาฬ",
-    "name_en": "Bueng Kan",
-    "geography_id": 3,
-    "created_at": "2019-08-09T03:33:09.000+07:00",
-    "updated_at": "2025-09-20T06:31:26.000+07:00",
-    "deleted_at": null
+    "provinceCode": 96,
+    "provinceNameEn": "Narathiwat",
+    "provinceNameTh": "นราธิวาส"
   }
 ]

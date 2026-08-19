@@ -13,7 +13,7 @@ class ViewReviewPage extends StatefulWidget {
 
 class _ViewReviewPageState extends State<ViewReviewPage> {
   final CaretakerService _service = CaretakerService();
-  bool _isLoading = true; // ตัวแปรสำหรับสถานะโหลดข้อมูล
+  bool _isLoading = true;
 
   final Color primaryColor = const Color(0xFF7C5CFC);
   final Color darkPurple = const Color(0xFF6E5ABF);
@@ -23,36 +23,26 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
   final Color bgGradientBottom = const Color.fromARGB(255, 225, 202, 255);
   final Color cardColor = Colors.white;
 
-  String _selectedFilter = 'ทั้งหมด';
-  final List<String> _filterOptions = [
-    'ทั้งหมด',
-    '5 คะแนน',
-    '4 คะแนน',
-    '3 คะแนน',
-    '2 คะแนน',
-    '1 คะแนน',
-  ];
+  String _selectedFilter = 'ทั้งหมด'; // 🌟 เก็บสถานะว่าเลือกดาวไหนอยู่
 
-  // 🌟 ตัวแปรเก็บข้อมูลจริงจาก Database
   String caretakerName = '';
   String caretakerCitizenId = '';
   String caretakerImage = '';
 
   List<Map<String, dynamic>> allReviews = [];
-  List<Map<String, dynamic>> filteredReviews =
-      []; // เอาไว้เก็บข้อมูลที่ถูกกรองดาว
+  List<Map<String, dynamic>> filteredReviews = [];
+  int reviewCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _fetchData(); // สั่งดึงข้อมูลตอนเปิดหน้า
+    _fetchData();
   }
 
   Future<void> _fetchData() async {
-    // ดึงโปรไฟล์ของอาสาคนนี้
     final profile = await _service.getCaretakerProfile(widget.caretakerId);
-    // ดึงรีวิวทั้งหมด
     final reviews = await _service.getAllReviews(widget.caretakerId);
+    reviewCount = reviews.length;
 
     setState(() {
       if (profile != null) {
@@ -63,14 +53,13 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
       }
 
       allReviews = reviews;
-      filteredReviews = reviews; // ตอนแรกให้แสดงข้อมูลทั้งหมดก่อน
-      _isLoading = false; // โหลดเสร็จแล้ว
+      filteredReviews = reviews;
+      _isLoading = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // 🌟 ระบบถอดรหัส Base64 สำหรับ "รูปโปรไฟล์อาสา"
     ImageProvider? caretakerImageProvider;
     if (caretakerImage.isNotEmpty) {
       try {
@@ -91,9 +80,12 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
     return Scaffold(
       backgroundColor: bgGradientBottom,
       appBar: AppBar(
-        title: const Text(
-          'รีวิวทั้งหมด',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          'รีวิว ($reviewCount)',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
@@ -123,12 +115,9 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
         ),
         child: SafeArea(
           child: _isLoading
-              ? Center(
-                  child: CircularProgressIndicator(color: primaryColor),
-                ) // แสดงหลอดโหลด
+              ? Center(child: CircularProgressIndicator(color: primaryColor))
               : Column(
                   children: [
-                    // --- 🌟 2. ส่วนรายการรีวิว ---
                     Expanded(
                       child: Container(
                         width: double.infinity,
@@ -146,80 +135,37 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
                           ],
                         ),
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'รีวิวล่าสุด',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                    color: darkPurple,
-                                  ),
-                                ),
-                                Container(
-                                  height: 36,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFAF8FF),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: const Color(0xFFB9A4F2),
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value: _selectedFilter,
-                                      icon: const Icon(
-                                        Icons.arrow_drop_down,
-                                        color: Color(0xFF6E5ABF),
-                                      ),
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: Color(0xFF6E5ABF),
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      items: _filterOptions.map((String value) {
-                                        return DropdownMenuItem<String>(
-                                          value: value,
-                                          child: Text(value),
-                                        );
-                                      }).toList(),
-                                      onChanged: (newValue) {
-                                        // 🌟 3. ระบบกรองคะแนนดาว (Filter)
-                                        setState(() {
-                                          _selectedFilter = newValue!;
-                                          if (newValue == 'ทั้งหมด') {
-                                            filteredReviews =
-                                                allReviews; // โชว์ทั้งหมด
-                                          } else {
-                                            // ดึงเฉพาะตัวเลขมาเช็ค (เช่น "5 คะแนน" -> 5)
-                                            double targetStar = double.parse(
-                                              newValue.split(' ')[0],
-                                            );
-                                            filteredReviews = allReviews.where((
-                                              review,
-                                            ) {
-                                              return (review['rating']
-                                                          as double)
-                                                      .floor() ==
-                                                  targetStar.floor();
-                                            }).toList();
-                                          }
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            // 🌟 ส่วนหัวข้อ
+                            Text(
+                              'รีวิวล่าสุด',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: darkPurple,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+
+                            // 🌟 แถบปุ่มกรองดาว (เลื่อนซ้ายขวาได้)
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              child: Row(
+                                children: [
+                                  _buildStarFilterChip('ทั้งหมด'),
+                                  _buildStarFilterChip('5'),
+                                  _buildStarFilterChip('4'),
+                                  _buildStarFilterChip('3'),
+                                  _buildStarFilterChip('2'),
+                                  _buildStarFilterChip('1'),
+                                ],
+                              ),
                             ),
                             const SizedBox(height: 16),
 
-                            // List ของรีวิวที่ถูกกรองแล้ว
+                            // 🌟 ส่วนรายการรีวิว
                             Expanded(
                               child: filteredReviews.isEmpty
                                   ? Center(
@@ -245,8 +191,7 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
                                     )
                                   : ListView.separated(
                                       physics: const BouncingScrollPhysics(),
-                                      itemCount: filteredReviews
-                                          .length, // 🌟 ใช้ List ที่ถูกกรอง
+                                      itemCount: filteredReviews.length,
                                       separatorBuilder: (context, index) =>
                                           Padding(
                                             padding: const EdgeInsets.symmetric(
@@ -281,7 +226,79 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
   }
 
   // ==========================================
-  // 🌟 ฟังก์ชันสร้าง Row รีวิว (พ่วงระบบกันแครชรูป Base64)
+  // 🌟 ฟังก์ชันสร้างปุ่มกรองดาว (ทรงแคปซูล)
+  // ==========================================
+  Widget _buildStarFilterChip(String label) {
+    bool isSelected = _selectedFilter == label;
+    int count = 0;
+
+    // คำนวณจำนวนรีวิวของแต่ละประเภทดาวเพื่อนำไปแสดงในวงเล็บ
+    if (label == 'ทั้งหมด') {
+      count = allReviews.length;
+    } else {
+      double targetStar = double.parse(label);
+      count = allReviews
+          .where((r) => (r['rating'] as double).floor() == targetStar.floor())
+          .length;
+    }
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedFilter = label;
+          if (label == 'ทั้งหมด') {
+            filteredReviews = allReviews; // โชว์ทั้งหมด
+          } else {
+            double targetStar = double.parse(label);
+            filteredReviews = allReviews.where((review) {
+              return (review['rating'] as double).floor() == targetStar.floor();
+            }).toList();
+          }
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(right: 8), // ระยะห่างระหว่างปุ่ม
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? primaryColor
+              : Colors.grey.shade100, // สีม่วงเมื่อเลือก
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? primaryColor : Colors.grey.shade300,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // แสดงไอคอนดาวถ้าไม่ใช่ปุ่ม "ทั้งหมด"
+            if (label != 'ทั้งหมด') ...[
+              const Icon(
+                Icons.star_rounded,
+                color: Color(0xFFFFC107),
+                size: 16,
+              ),
+              const SizedBox(width: 4),
+            ],
+            // ข้อความบอกดาวและจำนวนรีวิว
+            Text(
+              label == 'ทั้งหมด' ? 'ทั้งหมด ($count)' : '$label ($count)',
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey.shade800,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==========================================
+  // 🌟 ฟังก์ชันสร้าง Row รีวิว
   // ==========================================
   Widget _buildReviewItem({
     required String name,

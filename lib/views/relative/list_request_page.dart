@@ -25,9 +25,10 @@ class ListRequestPage extends StatefulWidget {
 class _ListRequestPageState extends State<ListRequestPage> {
   int _currentTabIndex = 0; // 0 = กำลังดำเนินการ, 1 = สิ้นสุด, 2 = ยกเลิก
   bool _isLoading = true;
+  int _inProgressFilterIndex = 0;
 
   // 🌟 คงสีพื้นหลังเดิมของคุณไว้ ไม่ปรับแก้
-  final Color bgColor = const Color(0xFFF9F9F9);
+  final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
   final Color primaryPurple = const Color(0xFF8763E6);
   final Color darkPurple = const Color(0xFF7D3C98);
 
@@ -302,7 +303,7 @@ class _ListRequestPageState extends State<ListRequestPage> {
     }
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: const Color.fromARGB(255, 225, 202, 255),
       appBar: AppBar(
         backgroundColor: primaryPurple,
         elevation: 0,
@@ -398,8 +399,9 @@ class _ListRequestPageState extends State<ListRequestPage> {
                   )
                 : ListView.separated(
                     itemCount: _getCurrentTabRequests().length,
+                    // 🌟 จุดที่ 2: เปลี่ยน Container สีทึบ เป็น SizedBox โปร่งใส
                     separatorBuilder: (context, index) =>
-                        Container(height: 8, color: bgColor),
+                        const SizedBox(height: 8),
                     itemBuilder: (context, index) =>
                         _buildRequestCard(_getCurrentTabRequests()[index]),
                   ),

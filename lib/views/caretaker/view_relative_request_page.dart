@@ -535,19 +535,19 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
 
     switch (currentStatus) {
       case RequestStatus.pending:
-        statusColor = const Color(0xFF757BFF);
-        statusBgColor = const Color(0xFFE8EAFF);
+        statusColor = const Color(0xFF00C853);
+        statusBgColor = const Color(0xFFE8F5E9);
         statusText = 'รอตอบรับ';
         break;
       case RequestStatus.acceptedEarly:
       case RequestStatus.acceptedReady:
-        statusColor = primaryPurple;
-        statusBgColor = lightPurple;
+        statusColor = const Color(0xFF00C853);
+        statusBgColor = const Color(0xFFE8F5E9);
         statusText = 'ตอบรับแล้ว';
         break;
       case RequestStatus.completed:
-        statusColor = const Color(0xFF00B14F);
-        statusBgColor = const Color(0xFFE8F5E9);
+        statusColor = const Color(0xFF00B0FF);
+        statusBgColor = const Color(0xFFE1F5FE);
         statusText = 'สิ้นสุดบริการ';
         break;
       case RequestStatus.cancelled:
