@@ -224,6 +224,7 @@ class _ViewCaretakerRegistrationPageState
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
@@ -268,7 +269,9 @@ class _ViewCaretakerRegistrationPageState
               if (mounted) {
                 Navigator.pop(context);
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(
                   const SnackBar(
                     content: Text(
                       'ส่งข้อมูลกลับให้ผู้ใช้งานแก้ไขเรียบร้อยแล้ว',
@@ -438,7 +441,6 @@ class _ViewCaretakerRegistrationPageState
     );
   }
 
-  // 🌟 เพิ่ม Widget สำหรับแสดงข้อมูลเทียบใบรับรอง
   Widget _buildCertificateInfo() {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -451,7 +453,7 @@ class _ViewCaretakerRegistrationPageState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'ตรวจสอบชื่อในใบรับรอง: ${widget.caretaker.firstname} ${widget.caretaker.lastname}',
+            'ตรวจสอบชื่อในใบรับรอง/ใบประกาศ: ${widget.caretaker.firstname} ${widget.caretaker.lastname}',
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               color: Colors.teal,
@@ -508,37 +510,44 @@ class _ViewCaretakerRegistrationPageState
                       Widget? infoWidget;
 
                       // จับคู่ Data (Text) กับ Document (Image)
-                      if (docId == 'doc_idcard' || docType == 'id_card') {
+                      if (docId == 'doc_idcard' ||
+                          docType == 'สำเนาบัตรประชาชน' ||
+                          docType == 'id_card') {
                         title = 'สำเนาบัตรประชาชน';
                         infoWidget = _buildIdCardInfo();
                       } else if (docId == 'doc_vehicle_reg' ||
+                          docType == 'สำเนาทะเบียนรถ' ||
                           docType == 'vehicle_registration') {
                         title = 'สำเนาทะเบียนรถ';
                         infoWidget = _buildVehicleInfo();
                       } else if (docId == 'doc_driver_license' ||
+                          docType == 'สำเนาใบขับขี่' ||
                           docType == 'driver_license') {
                         title = 'สำเนาใบขับขี่';
                         infoWidget = _buildDriverLicenseInfo();
                       } else if (docId == 'doc_insurance' ||
+                          docType == 'สำเนาประกันภัยรถยนต์' ||
                           docType == 'car_insurance') {
                         title = 'สำเนาประกันภัยรถยนต์';
                         infoWidget = _buildVehicleInfo();
-                      } else if (docId == 'doc_resume' || docType == 'resume') {
+                      } else if (docId == 'doc_resume' ||
+                          docType == 'ประวัติการทำงาน (Resume)' ||
+                          docType == 'resume') {
                         title = 'ประวัติการทำงาน (Resume)';
                         infoWidget = Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: Text(
-                            'ประสบการณ์: ${widget.caretaker.experience ?? "-"}',
+                            'ประสบการณ์: ${widget.caretaker.experience?.isNotEmpty == true ? widget.caretaker.experience : "-"}',
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         );
-                      } else if (docId == 'doc_certificate' ||
+                      } else if (docId.startsWith('doc_certificate') ||
+                          docType.contains('ใบประกาศนียบัตร') ||
                           docType == 'first_aid_certificate') {
-                        // 🌟 นำ Certificate กลับมาแสดงผล
-                        title = 'ใบรับรอง (Certificate / First Aid)';
+                        // รองรับทั้งใบประกาศนียบัตร 1, 2, ... และ doc_certificate
+                        title = docType.isNotEmpty ? docType : 'ใบประกาศนียบัตร (Certificate)';
                         infoWidget = _buildCertificateInfo();
                       } else {
-                        // 🌟 Fallback กันเหนียว เผื่อมีเอกสารประเภทอื่น
                         title = docType.isNotEmpty ? docType : docId;
                       }
 

@@ -738,11 +738,19 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
               ),
               _buildLabelField('เบอร์โทรศัพท์', isRequired: true),
               _buildInputField(
-                hint: 'เบอร์โทรศัพท์',
+                hint: 'เช่น 081234****',
                 controller: _patPhoneController,
                 keyboardType: TextInputType.phone,
-                validator: (val) =>
-                    val!.isEmpty ? 'กรุณากรอกเบอร์โทรศัพท์' : null,
+                maxLength: 10, // ล็อก 10 หลักและแสดงตัวนับ 0/10
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'กรุณากรอกเบอร์โทรศัพท์';
+                  }
+                  if (val.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(val)) {
+                    return 'ต้องเป็นตัวเลข 10 หลัก';
+                  }
+                  return null;
+                },
               ),
               _buildLabelField('ไอดีไลน์'),
               _buildInputField(
@@ -867,11 +875,20 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                           isRequired: true,
                         ),
                         _buildInputField(
-                          hint: 'เบอร์โทรศัพท์ 10 หลัก',
+                          hint: 'เช่น 089876****',
                           controller: _relPhoneController,
                           keyboardType: TextInputType.phone,
-                          validator: (val) =>
-                              val!.isEmpty ? 'กรุณากรอกเบอร์โทรศัพท์' : null,
+                          maxLength: 10, // ล็อก 10 หลักและแสดงตัวนับ 0/10
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return 'กรุณากรอกเบอร์โทรศัพท์';
+                            }
+                            if (val.length != 10 ||
+                                !RegExp(r'^[0-9]+$').hasMatch(val)) {
+                              return 'ต้องเป็นตัวเลข 10 หลัก';
+                            }
+                            return null;
+                          },
                         ),
                       ],
                     ),
