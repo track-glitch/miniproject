@@ -20,16 +20,22 @@ class ListRelativeRequestPage extends StatefulWidget {
 }
 
 class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
-  int _currentTabIndex = 0;
+  int _currentTabIndex = 0; // 0=รอตอบรับ, 1=ตอบรับแล้ว, 2=สิ้นสุด, 3=ยกเลิก
   int _bottomNavIndex = 0;
   bool _isLoading = true;
-  int _inProgressFilterIndex = 0;
   final CaretakerService _service = CaretakerService();
 
-  List<RequestCard> requestsInProgress = [];
+  // 🌟 ปรับสีให้เหมือนหน้าของญาติ
+  final Color bgColor = const Color(0xFFF5F5F5);
+  final Color primaryPurple = const Color(0xFF8763E6);
+  final Color darkPurple = const Color(0xFF7D3C98);
+
+  // 🌟 แยก List เป็น 4 หมวดหมู่
+  List<RequestCard> requestsPending = [];
+  List<RequestCard> requestsAccepted = [];
   List<RequestCard> requestsCompleted = [];
   List<RequestCard> requestsCancelled = [];
-  int _unreadCount = 0;
+
   String _userName = '';
 
   void _onBottomNavTapped(int index) {
@@ -96,6 +102,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
               onPressed: () async {
                 await FirebaseAuth.instance.signOut();
                 if (context.mounted) {
+                  Navigator.pop(context);
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -118,36 +125,9 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
     );
   }
 
-  String _formatThaiDateShort(DateTime? date) {
-    if (date == null) return '-';
-    List<String> months = [
-      'ม.ค.',
-      'ก.พ.',
-      'มี.ค.',
-      'เม.ย.',
-      'พ.ค.',
-      'มิ.ย.',
-      'ก.ค.',
-      'ส.ค.',
-      'ก.ย.',
-      'ต.ค.',
-      'พ.ย.',
-      'ธ.ค.',
-    ];
-    return '${date.day} ${months[date.month - 1]} ${date.year + 543}';
-  }
-
-  String _formatThaiDate(DateTime? date, DateTime? time) {
+  // 🌟 ฟอร์แมตวันที่แบบกระชับ (เปลี่ยน | เป็นคำว่า "เวลา")
+  String _formatThaiDateExact(DateTime? date, DateTime? time) {
     if (date == null || time == null) return 'ไม่ระบุวัน-เวลา';
-    List<String> days = [
-      'อาทิตย์',
-      'จันทร์',
-      'อังคาร',
-      'พุธ',
-      'พฤหัสบดี',
-      'ศุกร์',
-      'เสาร์',
-    ];
     List<String> months = [
       'ม.ค.',
       'ก.พ.',
@@ -162,16 +142,16 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
       'พ.ย.',
       'ธ.ค.',
     ];
-    return 'วัน${days[date.weekday % 7]} ${date.day} ${months[date.month - 1]} ${date.year + 543}  ·  ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} น.';
+    return '${date.day} ${months[date.month - 1]} ${date.year + 543} เวลา ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} น.';
   }
 
   Future<void> _fetchRequests() async {
     final data = await _service.getRequestsForCaretaker(widget.uid);
 
-    List<RequestCard> inProgress = [];
-    List<RequestCard> completed = [];
-    List<RequestCard> cancelled = [];
-    int unread = 0;
+    List<RequestCard> pendingList = [];
+    List<RequestCard> acceptedList = [];
+    List<RequestCard> completedList = [];
+    List<RequestCard> cancelledList = [];
 
     for (var item in data) {
       RequestModel req = item['requestModel'];
@@ -194,10 +174,8 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
         id: req.requestId ?? 'Unknow',
         serviceName: req.hospitalname ?? 'ไม่ระบุสถานที่',
         statusType: statusType,
-        date: _formatThaiDate(req.appointmentdate, req.appointmenttime),
-        submitDate: _formatThaiDateShort(
-          req.requestdate,
-        ), // 🌟 ย่อวันที่ส่งให้สั้นลง
+        date: _formatThaiDateExact(req.appointmentdate, req.appointmenttime),
+        submitDate: _formatThaiDateExact(req.requestdate, req.requestdate),
         category: req.departmentname ?? 'ทั่วไป',
         patient: patientName.isEmpty ? 'ไม่ระบุชื่อผู้ป่วย' : patientName,
         hasAlert: hasAlert,
@@ -208,251 +186,209 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
         isRead: isRead,
       );
 
-      if ((statusType == 'pending' ||
-              statusType == 'accepted' ||
-              statusType == 'pending_advice') &&
-          !isRead) {
-        unread++;
-      }
-
-      if (statusType == 'pending' ||
-          statusType == 'accepted' ||
-          statusType == 'pending_advice') {
-        inProgress.add(card);
+      // 🌟 แยกเข้า 4 กล่องให้ตรงกับ Tab
+      if (statusType == 'pending') {
+        pendingList.add(card);
+      } else if (statusType == 'accepted' || statusType == 'pending_advice') {
+        acceptedList.add(card);
       } else if (statusType == 'completed') {
-        completed.add(card);
+        completedList.add(card);
       } else {
-        cancelled.add(card);
+        cancelledList.add(card);
       }
     }
 
+    // Sort ใหม่สุดอยู่บน
+    int sortDate(RequestCard a, RequestCard b) {
+      DateTime dateA = a.requestModel.requestdate ?? DateTime.now();
+      DateTime dateB = b.requestModel.requestdate ?? DateTime.now();
+      return dateB.compareTo(dateA);
+    }
+
+    pendingList.sort(sortDate);
+    acceptedList.sort(sortDate);
+    completedList.sort(sortDate);
+    cancelledList.sort(sortDate);
+
     setState(() {
-      requestsInProgress = inProgress;
-      requestsCompleted = completed;
-      requestsCancelled = cancelled;
-      _unreadCount = unread;
+      requestsPending = pendingList;
+      requestsAccepted = acceptedList;
+      requestsCompleted = completedList;
+      requestsCancelled = cancelledList;
       _isLoading = false;
     });
   }
 
   List<RequestCard> _getCurrentTabRequests() {
-    switch (_currentTabIndex) {
-      case 0:
-        if (_inProgressFilterIndex == 0) {
-          // กรองเฉพาะงานที่รอดำเนินการตอบรับ (pending)
-          return requestsInProgress
-              .where((req) => req.statusType == 'pending')
-              .toList();
-        } else {
-          // กรองเฉพาะงานที่ตอบรับแล้ว (accepted หรือ pending_advice)
-          return requestsInProgress
-              .where(
-                (req) =>
-                    req.statusType == 'accepted' ||
-                    req.statusType == 'pending_advice',
-              )
-              .toList();
-        }
-      case 1:
-        return requestsCompleted;
-      case 2:
-        return requestsCancelled;
-      default:
-        return [];
-    }
+    if (_currentTabIndex == 0) return requestsPending;
+    if (_currentTabIndex == 1) return requestsAccepted;
+    if (_currentTabIndex == 2) return requestsCompleted;
+    return requestsCancelled;
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: Colors.grey.shade50,
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF8763E6),
-          title: const Text(
-            'รายการคำขอของฉัน',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          centerTitle: true,
-          automaticallyImplyLeading: false,
-        ),
+        backgroundColor: bgColor,
         body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(color: Color(0xFF9B59B6)),
-              SizedBox(height: 16),
-              Text(
-                'กำลังโหลดข้อมูล...',
-                style: TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-            ],
-          ),
-        ),
-        bottomNavigationBar: CustomBottomNavBar(
-          currentIndex: _bottomNavIndex,
-          onTap: _onBottomNavTapped,
-          uid: widget.uid,
+          child: CircularProgressIndicator(color: Color(0xFF8763E6)),
         ),
       );
     }
 
+    // 🌟 คำนวณหาจำนวนที่ยังไม่ได้อ่าน เพื่อแปะจุดแดงบน Tab
+    int unreadPending = requestsPending.where((r) => !r.isRead).length;
+    int unreadAccepted = requestsAccepted.where((r) => !r.isRead).length;
+
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 225, 202, 255),
+      backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF8763E6),
+        backgroundColor: primaryPurple,
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false,
-        title: Text(
-          'ยินดีต้อนรับ คุณ${_userName.isNotEmpty ? _userName : 'ผู้ให้บริการ'}',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+        toolbarHeight: 95,
+        title: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.4),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.person, color: Colors.white, size: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        _userName.isNotEmpty ? _userName : 'ผู้ดูแล',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 4),
+                IconButton(
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  icon: const Icon(
+                    Icons.logout_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  tooltip: 'ออกจากระบบ',
+                  onPressed: _showLogoutConfirmDialog,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'รายการคำขอรับบริการ',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 6),
+          ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Colors.white),
-            tooltip: 'ออกจากระบบ',
-            onPressed: _showLogoutConfirmDialog,
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: double.infinity,
-            color: const Color(0xFF8763E6),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: const Center(
-              child: Text(
-                'รายการคำขอ',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22,
-                ),
-              ),
-            ),
-          ),
-
+          // 🌟 4 Tabs แนวนอนแบบในภาพเรฟเฟอเรนซ์
           Container(
             color: Colors.white,
             child: DefaultTabController(
-              length: 3,
+              length: 4,
               initialIndex: _currentTabIndex,
               child: TabBar(
+                isScrollable: false,
                 onTap: (index) => setState(() => _currentTabIndex = index),
-                labelColor: const Color(0xFF7D3C98),
-                unselectedLabelColor: Colors.grey.shade600,
-                indicatorColor: const Color(0xFF7D3C98),
+                labelColor: darkPurple,
+                unselectedLabelColor: Colors.grey.shade500,
+                indicatorColor: darkPurple,
                 indicatorWeight: 3,
+                labelPadding: const EdgeInsets.symmetric(horizontal: 0),
                 tabs: [
-                  Tab(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text('กำลังดำเนินการ'),
-                        if (_unreadCount > 0) ...[
-                          const SizedBox(width: 4),
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                  _buildTabItem(
+                    Icons.access_time_rounded,
+                    'รอตอบรับ',
+                    requestsPending.length,
+                    showBadge: unreadPending > 0,
                   ),
-                  const Tab(text: 'สิ้นสุด'),
-                  const Tab(text: 'ยกเลิก'),
+                  _buildTabItem(
+                    Icons.check_circle_outline_rounded,
+                    'ตอบรับแล้ว',
+                    requestsAccepted.length,
+                    showBadge: unreadAccepted > 0,
+                  ),
+                  _buildTabItem(
+                    Icons.star_border_rounded,
+                    'สิ้นสุด',
+                    requestsCompleted.length,
+                  ),
+                  _buildTabItem(
+                    Icons.cancel_outlined,
+                    'ยกเลิก',
+                    requestsCancelled.length,
+                  ),
                 ],
               ),
             ),
           ),
 
-          // 🌟 ใช้ ListView เลื่อนปุ่มไปด้วยกันกับการ์ดเลย!
+          Container(height: 6, color: bgColor),
+
+          // 🌟 ตัวลิสต์รายการที่ถูกจัดหน้าตาใหม่
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.only(top: 0, bottom: 16),
-              itemCount: _getCurrentTabRequests().isEmpty
-                  ? 2
-                  : _getCurrentTabRequests().length + 1,
-              itemBuilder: (context, index) {
-                // --- ส่วนที่ 1: แถบปุ่ม (Index 0 เลื่อนหายไปกับ List) ---
-                if (index == 0) {
-                  if (_currentTabIndex == 0) {
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-
-                      child: Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.start, // เรียงปุ่มชิดซ้าย
-                        children: [
-                          _buildFilterButton('รอตอบรับ', 0),
-                          const SizedBox(width: 10),
-                          _buildFilterButton('ตอบรับแล้ว', 1),
-                        ],
-                      ),
-                    );
-                  } else {
-                    return Container();
-                  }
-                }
-
-                // --- ส่วนที่ 2: กรณีไม่มีข้อมูล ---
-                if (_getCurrentTabRequests().isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 80),
+            child: _getCurrentTabRequests().isEmpty
+                ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
                           Icons.inbox_rounded,
                           size: 80,
-                          color: Colors.grey.shade300,
+                          color: Colors.grey.shade400,
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'ไม่พบข้อมูลรายการ',
+                          'ไม่มีคำขอในสถานะนี้',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade500,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'ยังไม่มีคำขอรับบริการในหมวดหมู่นี้',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade400,
+                            color: Colors.grey.shade600,
                           ),
                         ),
                       ],
                     ),
-                  );
-                }
-
-                // --- ส่วนที่ 3: แสดงการ์ดรายการ ---
-                final request = _getCurrentTabRequests()[index - 1];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _buildRequestCard(request),
-                );
-              },
-            ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: _getCurrentTabRequests().length,
+                    itemBuilder: (context, index) =>
+                        _buildRequestCard(_getCurrentTabRequests()[index]),
+                  ),
           ),
         ],
       ),
@@ -464,389 +400,355 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
     );
   }
 
-  Widget _buildFilterButton(String text, int index) {
-    bool isActive = _inProgressFilterIndex == index;
-
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _inProgressFilterIndex = index;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        // 🌟 ปรับขนาด Padding ให้ปุ่มเล็กๆ กะทัดรัด
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF8763E6) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isActive ? const Color(0xFF8763E6) : Colors.grey.shade300,
-            width: 1.2,
+  // 🌟 สร้างหน้าตา Tab ให้มี Icon และตัวเลข (Count) พร้อมจุดแดงแจ้งเตือน
+  Widget _buildTabItem(
+    IconData icon,
+    String label,
+    int count, {
+    bool showBadge = false,
+  }) {
+    return Tab(
+      height: 65,
+      child: Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 22),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text('($count)', style: const TextStyle(fontSize: 10)),
+            ],
           ),
-          // ไม่ใส่ boxShadow ปุ่มจะได้ราบไปกับพื้นหลัง ไม่ลอย
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: isActive ? Colors.white : Colors.grey.shade600,
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-          ),
-        ),
+          if (showBadge)
+            Positioned(
+              top: 8,
+              right: 4,
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 
+  // 🌟 การ์ดแบบใหม่เป๊ะตามแบบภาพเรฟเฟอเรนซ์
   Widget _buildRequestCard(RequestCard request) {
-    Color mainColor;
+    Color statusColor;
     Color statusBgColor;
-    Color statusTextColor;
     String statusText;
+    IconData statusIcon;
 
     switch (request.statusType) {
       case 'pending':
-        mainColor = const Color(0xFF00C853);
-        statusBgColor = const Color(0xFFE8F5E9);
-        statusTextColor = const Color(0xFF00C853);
+        statusColor = const Color(0xFFE65100); // สีส้มเข้ม
+        statusBgColor = const Color(0xFFFFF3E0);
         statusText = 'รอตอบรับ';
+        statusIcon = Icons.access_time_rounded;
         break;
       case 'accepted':
-        mainColor = const Color(0xFF00C853);
-        statusBgColor = const Color(0xFFE8F5E9);
-        statusTextColor = const Color(0xFF00C853);
-        statusText = 'ตอบรับแล้ว';
-        break;
       case 'pending_advice':
-        mainColor = const Color(0xFFF2994A);
-        statusBgColor = const Color(0xFFFDEBD0);
-        statusTextColor = const Color(0xFFF2994A);
-        statusText = 'รอคำแนะนำ';
+        statusColor = const Color(0xFF2ECC71); // สีเขียว
+        statusBgColor = const Color(0xFFE9F7EF);
+        statusText = 'ตอบรับแล้ว';
+        statusIcon = Icons.check_circle_outline_rounded;
         break;
       case 'completed':
-        mainColor = const Color(0xFF00B0FF);
-        statusBgColor = const Color(0xFFE1F5FE);
-        statusTextColor = const Color(0xFF00B0FF);
-        statusText = 'สิ้นสุดบริการ';
+        statusColor = const Color(0xFF3498DB); // สีฟ้า
+        statusBgColor = const Color(0xFFEBF5FB);
+        statusText = 'สิ้นสุด';
+        statusIcon = Icons.star_border_rounded;
         break;
       case 'cancelled':
-        mainColor = const Color(0xFFF44336);
-        statusBgColor = const Color(0xFFFFEBEE);
-        statusTextColor = const Color(0xFFF44336);
-        statusText = 'ยกเลิกบริการ';
+        statusColor = const Color(0xFFE74C3C); // สีแดง
+        statusBgColor = const Color(0xFFFDEDEC);
+        statusText = 'ยกเลิก';
+        statusIcon = Icons.cancel_outlined;
         break;
       default:
-        mainColor = Colors.grey;
+        statusColor = Colors.grey;
         statusBgColor = Colors.grey.shade100;
-        statusTextColor = Colors.grey;
-        statusText = 'ไม่ทราบสถานะ';
+        statusText = 'ไม่ทราบ';
+        statusIcon = Icons.help_outline_rounded;
     }
 
-    bool isInProgressTab = _currentTabIndex == 0;
-
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 4, // ลดระยะห่างระหว่างการ์ดเล็กน้อย
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border(left: BorderSide(color: mainColor, width: 6)),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // --- ด้านซ้าย: กล่องไอค่อน + Badge สถานะ ---
+          Column(
             children: [
-              // --- แถวที่ 1: รหัสคำขอ + สถานะ ---
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        '# ${request.id}',
-                        style: TextStyle(
-                          color: Colors.grey.shade500,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      if (!request.isRead && isInProgressTab)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.redAccent,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            'NEW',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusBgColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      statusText,
-                      style: TextStyle(
-                        color: statusTextColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'ส่งคำขอเมื่อ: ${request.submitDate}',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-              ),
-              const SizedBox(height: 12),
-
-              // --- แถวที่ 2: ชื่อโรงพยาบาล ---
-              Text(
-                'จุดหมายปลายทาง',
-                style: TextStyle(
-                  color: Colors.grey.shade500,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: primaryPurple.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Icon(statusIcon, color: primaryPurple, size: 26),
               ),
-              Text(
-                request.serviceName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: mainColor,
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusBgColor,
+                  borderRadius: BorderRadius.circular(6),
                 ),
-              ),
-              const SizedBox(height: 12),
-
-              // --- แถวที่ 3: วันและเวลา ---
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: mainColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.calendar_today,
-                      size: 20,
-                      color: mainColor,
-                    ),
+                child: Text(
+                  statusText,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'วัน-เวลานัดหมาย',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade500,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        request.date,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: mainColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // --- แถวที่ 4: ปุ่มกด ---
-              Row(
-                mainAxisAlignment: isInProgressTab
-                    ? MainAxisAlignment.spaceBetween
-                    : MainAxisAlignment.end,
-                children: [
-                  if (isInProgressTab)
-                    GestureDetector(
-                      onTap: (request.hasAlert && isInProgressTab)
-                          ? () {
-                              if (request.statusType == 'pending_advice') {
-                                Map<String, dynamic> reqInfo = {
-                                  'patientName': request.patient,
-                                  'dateTime': request.date,
-                                  'hospital': request.serviceName,
-                                  'department': request.category,
-                                };
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => AddDoctorAdvicePage(
-                                      relativeUid: request.relativeUid,
-                                      requestId: request.id,
-                                      requestInfo: reqInfo,
-                                    ),
-                                  ),
-                                ).then((_) => _fetchRequests());
-                              } else {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        AddStatusNotificationPage(
-                                          requestData: request,
-                                          uid: widget.uid,
-                                        ),
-                                  ),
-                                ).then((_) => _fetchRequests());
-                              }
-                            }
-                          : null,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: (request.hasAlert && isInProgressTab)
-                              ? const Color(0xFFFFEBEE)
-                              : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              request.statusType == 'pending_advice'
-                                  ? Icons.note_add_rounded
-                                  : Icons.notifications_active,
-                              color: (request.hasAlert && isInProgressTab)
-                                  ? const Color(0xFFF44336)
-                                  : Colors.grey.shade500,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              request.statusType == 'pending_advice'
-                                  ? 'เพิ่มคำแนะนำแพทย์'
-                                  : 'แก้ไขสถานะ',
-                              style: TextStyle(
-                                color: (request.hasAlert && isInProgressTab)
-                                    ? const Color(0xFFF44336)
-                                    : Colors.grey.shade500,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                decoration:
-                                    (request.hasAlert && isInProgressTab)
-                                    ? TextDecoration.underline
-                                    : TextDecoration.none,
-                                decorationColor: const Color(0xFFF44336),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                  GestureDetector(
-                    onTap: () async {
-                      if (!request.isRead) {
-                        await _service.markRequestAsRead(
-                          request.relativeUid,
-                          request.id,
-                        );
-                      }
-
-                      if (request.statusType == 'pending_advice') {
-                        Map<String, dynamic> reqInfo = {
-                          'patientName': request.patient,
-                          'dateTime': request.date,
-                          'hospital': request.serviceName,
-                          'department': request.category,
-                        };
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AddDoctorAdvicePage(
-                              relativeUid: request.relativeUid,
-                              requestId: request.id,
-                              requestInfo: reqInfo,
-                            ),
-                          ),
-                        );
-                      } else {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ViewRelativeRequestPage(
-                              requestData: request,
-                              uid: widget.uid,
-                            ),
-                          ),
-                        );
-                      }
-                      _fetchRequests();
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: const Color(0xFF8763E6)),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'ดูรายละเอียด',
-                        style: TextStyle(
-                          color: Color(0xFF8763E6),
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ],
           ),
-        ),
+          const SizedBox(width: 14),
+
+          // --- ด้านขวา: รายละเอียด ---
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 🌟 รหัสคำขออยู่ด้านบนสุด และโชว์ป้าย NEW ถ้ายังไม่ได้อ่าน
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'REQ-${request.id.length > 6 ? request.id.substring(request.id.length - 6) : request.id}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (!request.isRead &&
+                        (_currentTabIndex == 0 || _currentTabIndex == 1))
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'NEW',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+
+                // 🌟 จุดหมายปลายทาง: ชื่อโรงพยาบาล
+                RichText(
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  text: TextSpan(
+                    style: const TextStyle(fontFamily: 'Kanit'),
+                    children: [
+                      const TextSpan(
+                        text: 'จุดหมายปลายทาง: ',
+                        style: TextStyle(fontSize: 14, color: Colors.black87),
+                      ),
+                      TextSpan(
+                        text: request.serviceName,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                // 🌟 ชื่อผู้ป่วย
+                Text(
+                  'ผู้ป่วย: ${request.patient}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                ),
+                const SizedBox(height: 4),
+
+                // 🌟 วันที่ส่งคำขอ
+                Text(
+                  'วันที่ส่งคำขอ: ${request.submitDate}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 4),
+
+                // 🌟 วันนัดบริการ
+                Text(
+                  'วันนัดบริการ: ${request.date}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: darkPurple,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                // 🌟 แถวปุ่มกดด้านล่าง
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // ปุ่มอัปเดตสถานะ/คำแนะนำแพทย์ (เฉพาะตอนตอบรับแล้ว)
+                    if (_currentTabIndex == 1) // อยู่ในแท็บตอบรับแล้ว
+                      InkWell(
+                        onTap: () {
+                          if (request.statusType == 'pending_advice') {
+                            Map<String, dynamic> reqInfo = {
+                              'patientName': request.patient,
+                              'dateTime': request.date,
+                              'hospital': request.serviceName,
+                              'department': request.category,
+                            };
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AddDoctorAdvicePage(
+                                  relativeUid: request.relativeUid,
+                                  requestId: request.id,
+                                  requestInfo: reqInfo,
+                                ),
+                              ),
+                            ).then((_) => _fetchRequests());
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AddStatusNotificationPage(
+                                  requestData: request,
+                                  uid: widget.uid,
+                                ),
+                              ),
+                            ).then((_) => _fetchRequests());
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(color: darkPurple),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                request.statusType == 'pending_advice'
+                                    ? Icons.note_add_rounded
+                                    : Icons.edit_note_rounded,
+                                size: 16,
+                                color: darkPurple,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                request.statusType == 'pending_advice'
+                                    ? 'คำแนะนำแพทย์'
+                                    : 'แก้ไขสถานะ',
+                                style: TextStyle(
+                                  color: darkPurple,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                    // ปุ่มรายละเอียด (สีม่วงทึบ)
+                    SizedBox(
+                      height: 30,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryPurple,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          elevation: 0,
+                        ),
+                        onPressed: () async {
+                          if (!request.isRead) {
+                            await _service.markRequestAsRead(
+                              request.relativeUid,
+                              request.id,
+                            );
+                          }
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ViewRelativeRequestPage(
+                                requestData: request,
+                                uid: widget.uid,
+                              ),
+                            ),
+                          );
+                          _fetchRequests();
+                        },
+                        child: const Text(
+                          'รายละเอียด',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

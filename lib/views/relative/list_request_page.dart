@@ -7,11 +7,10 @@ import 'package:miniproject/models/relative_model.dart';
 import 'package:miniproject/models/request_model.dart';
 import 'package:miniproject/services/function_service.dart';
 import 'package:miniproject/views/relative/edit_relative_info_page.dart';
-import 'package:miniproject/views/login_page.dart';
 import 'package:miniproject/views/relative/relative_home_page.dart';
 import 'package:miniproject/views/relative/track_status_notification_page.dart';
 import 'package:miniproject/views/relative/view_request_detail_page.dart';
-import '../../widgets/custom_header_nav.dart';
+import 'package:miniproject/views/login_page.dart';
 
 class ListRequestPage extends StatefulWidget {
   final String? loggedUid;
@@ -23,16 +22,15 @@ class ListRequestPage extends StatefulWidget {
 }
 
 class _ListRequestPageState extends State<ListRequestPage> {
-  int _currentTabIndex = 0; // 0 = กำลังดำเนินการ, 1 = สิ้นสุด, 2 = ยกเลิก
+  int _currentTabIndex = 0; // 0=รอตอบรับ, 1=ตอบรับแล้ว, 2=สิ้นสุด, 3=ยกเลิก
   bool _isLoading = true;
-  int _inProgressFilterIndex = 0;
 
-  // 🌟 คงสีพื้นหลังเดิมของคุณไว้ ไม่ปรับแก้
   final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
   final Color primaryPurple = const Color(0xFF8763E6);
   final Color darkPurple = const Color(0xFF7D3C98);
 
-  List<RequestCardData> requestsInProgress = [];
+  List<RequestCardData> requestsPending = [];
+  List<RequestCardData> requestsAccepted = [];
   List<RequestCardData> requestsCompleted = [];
   List<RequestCardData> requestsCancelled = [];
 
@@ -116,6 +114,7 @@ class _ListRequestPageState extends State<ListRequestPage> {
               onPressed: () async {
                 await FirebaseAuth.instance.signOut();
                 if (context.mounted) {
+                  Navigator.pop(context);
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -138,11 +137,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
     );
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
   Future<void> _fetchMyRequests() async {
     String uid =
         widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -155,9 +149,11 @@ class _ListRequestPageState extends State<ListRequestPage> {
       final snapshot = await FirebaseDatabase.instance
           .ref('Login/$uid/Relative/Request')
           .get();
-      List<RequestCardData> inProgress = [];
-      List<RequestCardData> completed = [];
-      List<RequestCardData> cancelled = [];
+
+      List<RequestCardData> pendingList = [];
+      List<RequestCardData> acceptedList = [];
+      List<RequestCardData> completedList = [];
+      List<RequestCardData> cancelledList = [];
 
       if (snapshot.exists && snapshot.value is Map) {
         final Map<dynamic, dynamic> requestsMap =
@@ -166,16 +162,19 @@ class _ListRequestPageState extends State<ListRequestPage> {
         final allUsersSnapshot = await FirebaseDatabase.instance
             .ref('Login')
             .get();
-        Map<String, String> caretakerNameMap = {};
+
+        // 🌟 เก็บข้อมูลแบบเต็มเพื่อเอามาเช็ค อายุ/เพศ
+        Map<String, Map<String, dynamic>> caretakerDataMap = {};
         if (allUsersSnapshot.exists && allUsersSnapshot.value is Map) {
           final allUsers = allUsersSnapshot.value as Map<dynamic, dynamic>;
           allUsers.forEach((key, value) {
             if (value['Caretaker'] != null) {
               String cId = value['Caretaker']['caretakerId']?.toString() ?? '';
-              String cName =
-                  "${value['Caretaker']['firstname'] ?? ''} ${value['Caretaker']['lastname'] ?? ''}"
-                      .trim();
-              if (cId.isNotEmpty) caretakerNameMap[cId] = cName;
+              if (cId.isNotEmpty) {
+                caretakerDataMap[cId] = Map<String, dynamic>.from(
+                  value['Caretaker'],
+                );
+              }
             }
           });
         }
@@ -186,33 +185,76 @@ class _ListRequestPageState extends State<ListRequestPage> {
               Map<String, dynamic>.from(reqData),
             );
             String statusType = (req.requeststatus ?? 'pending').toLowerCase();
-            String caretakerName = 'รอผู้ดูแลตอบรับ';
+
+            // 🌟 ลอจิกการคำนวณ อายุและเพศ สำหรับคำนำหน้าชื่อผู้ให้บริการ
+            String caretakerFullName = 'รอผู้ดูแลตอบรับ';
             if (req.caretakerId != null &&
-                caretakerNameMap.containsKey(req.caretakerId)) {
-              caretakerName = caretakerNameMap[req.caretakerId]!;
+                caretakerDataMap.containsKey(req.caretakerId)) {
+              final cData = caretakerDataMap[req.caretakerId]!;
+              String fName = cData['firstname']?.toString() ?? '';
+              String lName = cData['lastname']?.toString() ?? '';
+              String gender = cData['gender']?.toString() ?? '';
+              String bdStr = cData['birthdate']?.toString() ?? '';
+
+              String prefix = 'คุณ '; // ค่าเริ่มต้น
+
+              if (bdStr.isNotEmpty) {
+                try {
+                  DateTime bd = DateTime.parse(bdStr);
+                  int age = DateTime.now().year - bd.year;
+                  if (DateTime.now().month < bd.month ||
+                      (DateTime.now().month == bd.month &&
+                          DateTime.now().day < bd.day)) {
+                    age--;
+                  }
+
+                  if (gender == 'ชาย') {
+                    prefix = age < 15 ? 'ด.ช. ' : 'นาย ';
+                  } else if (gender == 'หญิง') {
+                    prefix = age < 15 ? 'ด.ญ. ' : 'นางสาว ';
+                  }
+                } catch (e) {
+                  if (gender == 'ชาย') prefix = 'นาย ';
+                  if (gender == 'หญิง') prefix = 'นางสาว ';
+                }
+              } else {
+                if (gender == 'ชาย') prefix = 'นาย ';
+                if (gender == 'หญิง') prefix = 'นางสาว ';
+              }
+
+              caretakerFullName = "$prefix$fName $lName".trim();
             }
 
             RequestCardData card = RequestCardData(
               id: req.requestId ?? 'Unknow',
               serviceName: req.hospitalname ?? 'ไม่ระบุสถานที่',
               statusType: statusType,
-              date: _formatThaiDate(req.appointmentdate, req.appointmenttime),
+              date: _formatThaiDateExact(
+                req.appointmentdate,
+                req.appointmenttime,
+              ),
+              submitDate: _formatThaiDateExact(
+                req.requestdate,
+                req.requestdate,
+              ),
               category: req.departmentname ?? 'ทั่วไป',
-              caregiverName: caretakerName,
+              caregiverName:
+                  caretakerFullName, // 🌟 ส่งชื่อเต็มที่คำนวณคำนำหน้าแล้ว
               requestModel: req,
             );
 
-            if (statusType == 'pending' || statusType == 'accepted') {
-              inProgress.add(card);
+            if (statusType == 'pending') {
+              pendingList.add(card);
+            } else if (statusType == 'accepted' ||
+                statusType == 'pending_advice') {
+              acceptedList.add(card);
             } else if (statusType == 'completed') {
-              completed.add(card);
+              completedList.add(card);
             } else {
-              cancelled.add(card);
+              cancelledList.add(card);
             }
           } catch (innerError) {
-            print(
-              "❌ แปลงข้อมูล Request พังที่ ID: $reqId | สาเหตุ: $innerError",
-            );
+            print("❌ Error parsing Request ID: $reqId | $innerError");
           }
         });
 
@@ -222,16 +264,18 @@ class _ListRequestPageState extends State<ListRequestPage> {
           return dateB.compareTo(dateA);
         }
 
-        inProgress.sort(sortDate);
-        completed.sort(sortDate);
-        cancelled.sort(sortDate);
+        pendingList.sort(sortDate);
+        acceptedList.sort(sortDate);
+        completedList.sort(sortDate);
+        cancelledList.sort(sortDate);
       }
 
       if (!mounted) return;
       setState(() {
-        requestsInProgress = inProgress;
-        requestsCompleted = completed;
-        requestsCancelled = cancelled;
+        requestsPending = pendingList;
+        requestsAccepted = acceptedList;
+        requestsCompleted = completedList;
+        requestsCancelled = cancelledList;
         _isLoading = false;
       });
     } catch (e) {
@@ -240,26 +284,7 @@ class _ListRequestPageState extends State<ListRequestPage> {
     }
   }
 
-  String _formatThaiDateShort(DateTime? date) {
-    if (date == null) return '-';
-    List<String> months = [
-      'ม.ค.',
-      'ก.พ.',
-      'มี.ค.',
-      'เม.ย.',
-      'พ.ค.',
-      'มิ.ย.',
-      'ก.ค.',
-      'ส.ค.',
-      'ก.ย.',
-      'ต.ค.',
-      'พ.ย.',
-      'ธ.ค.',
-    ];
-    return '${date.day} ${months[date.month - 1]} ${date.year + 543}';
-  }
-
-  String _formatThaiDate(DateTime? date, DateTime? time) {
+  String _formatThaiDateExact(DateTime? date, DateTime? time) {
     if (date == null || time == null) return 'ไม่ระบุวัน-เวลา';
     List<String> months = [
       'ม.ค.',
@@ -275,21 +300,13 @@ class _ListRequestPageState extends State<ListRequestPage> {
       'พ.ย.',
       'ธ.ค.',
     ];
-    List<String> days = [
-      'อาทิตย์',
-      'จันทร์',
-      'อังคาร',
-      'พุธ',
-      'พฤหัสบดี',
-      'ศุกร์',
-      'เสาร์',
-    ];
-    return 'วัน${days[date.weekday % 7]} ${date.day} ${months[date.month - 1]} ${date.year + 543} · ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} น.';
+    return '${date.day} ${months[date.month - 1]} ${date.year + 543} เวลา ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} น.';
   }
 
   List<RequestCardData> _getCurrentTabRequests() {
-    if (_currentTabIndex == 0) return requestsInProgress;
-    if (_currentTabIndex == 1) return requestsCompleted;
+    if (_currentTabIndex == 0) return requestsPending;
+    if (_currentTabIndex == 1) return requestsAccepted;
+    if (_currentTabIndex == 2) return requestsCompleted;
     return requestsCancelled;
   }
 
@@ -303,77 +320,121 @@ class _ListRequestPageState extends State<ListRequestPage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 225, 202, 255),
+      backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: primaryPurple,
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false,
-        title: Text(
-          'ยินดีต้อนรับ คุณ${_userName.isNotEmpty ? _userName : 'ผู้ใช้บริการ'}',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+        toolbarHeight: 95,
+        title: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.4),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.person, color: Colors.white, size: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        _userName.isNotEmpty ? _userName : 'ผู้ใช้บริการ',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 4),
+                IconButton(
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  icon: const Icon(
+                    Icons.logout_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  tooltip: 'ออกจากระบบ',
+                  onPressed: _showLogoutConfirmDialog,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'ประวัติคำขอใช้บริการ',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 6),
+          ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Colors.white),
-            tooltip: 'ออกจากระบบ',
-            onPressed: _showLogoutConfirmDialog,
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
 
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: double.infinity,
-            color: primaryPurple,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: Center(
-              child: const Text(
-                'ประวัติคำขอใช้บริการ',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22,
-                ),
-              ),
-            ),
-          ),
-
-          Container(
             color: Colors.white,
             child: DefaultTabController(
-              length: 3,
+              length: 4,
               initialIndex: _currentTabIndex,
               child: TabBar(
+                isScrollable: false,
                 onTap: (index) => setState(() => _currentTabIndex = index),
-                labelColor: primaryPurple,
-                unselectedLabelColor: Colors.grey.shade600,
-                indicatorColor: primaryPurple,
+                labelColor: darkPurple,
+                unselectedLabelColor: Colors.grey.shade500,
+                indicatorColor: darkPurple,
                 indicatorWeight: 3,
-                labelStyle: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-                unselectedLabelStyle: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.normal,
-                ),
-                tabs: const [
-                  Tab(text: 'ดำเนินการ', height: 55),
-                  Tab(text: 'สิ้นสุด', height: 55),
-                  Tab(text: 'ยกเลิก', height: 55),
+                labelPadding: const EdgeInsets.symmetric(horizontal: 0),
+                tabs: [
+                  _buildTabItem(
+                    Icons.access_time_rounded,
+                    'รอตอบรับ',
+                    requestsPending.length,
+                  ),
+                  _buildTabItem(
+                    Icons.check_circle_outline_rounded,
+                    'ตอบรับแล้ว',
+                    requestsAccepted.length,
+                  ),
+                  _buildTabItem(
+                    Icons.star_border_rounded,
+                    'สิ้นสุด',
+                    requestsCompleted.length,
+                  ),
+                  _buildTabItem(
+                    Icons.cancel_outlined,
+                    'ยกเลิก',
+                    requestsCancelled.length,
+                  ),
                 ],
               ),
             ),
           ),
+
           Container(height: 6, color: bgColor),
+
           Expanded(
             child: _getCurrentTabRequests().isEmpty
                 ? Center(
@@ -383,31 +444,30 @@ class _ListRequestPageState extends State<ListRequestPage> {
                         Icon(
                           Icons.inbox_rounded,
                           size: 80,
-                          color: Colors.grey.shade300,
+                          color: Colors.grey.shade400,
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'ไม่พบข้อมูลรายการ',
+                          'ไม่มีคำขอในสถานะนี้',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade500,
+                            color: Colors.grey.shade600,
                           ),
                         ),
                       ],
                     ),
                   )
-                : ListView.separated(
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: _getCurrentTabRequests().length,
-                    // 🌟 จุดที่ 2: เปลี่ยน Container สีทึบ เป็น SizedBox โปร่งใส
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 8),
                     itemBuilder: (context, index) =>
                         _buildRequestCard(_getCurrentTabRequests()[index]),
                   ),
           ),
         ],
       ),
+
       bottomNavigationBar: Container(
         height: 65,
         decoration: BoxDecoration(
@@ -447,7 +507,145 @@ class _ListRequestPageState extends State<ListRequestPage> {
               Icons.person_outline,
               'ญาติ',
               false,
-              onTap: () {},
+              onTap: () async {
+                String currentUid =
+                    widget.loggedUid ??
+                    FirebaseAuth.instance.currentUser?.uid ??
+                    '';
+                if (currentUid.isEmpty) return;
+
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) =>
+                      const Center(child: CircularProgressIndicator()),
+                );
+
+                try {
+                  final snapshot = await FirebaseDatabase.instance
+                      .ref('Login')
+                      .get();
+                  if (context.mounted) Navigator.pop(context);
+
+                  String targetRelativeId = '';
+                  Map<String, dynamic> targetUserData = {};
+                  bool isFound = false;
+
+                  if (snapshot.exists && snapshot.value is Map) {
+                    final allUsers = Map<String, dynamic>.from(
+                      snapshot.value as Map,
+                    );
+                    for (var key in allUsers.keys) {
+                      if (key == currentUid) {
+                        targetRelativeId = key;
+                        targetUserData = Map<String, dynamic>.from(
+                          allUsers[key] as Map,
+                        );
+                        isFound = true;
+                        break;
+                      }
+                      var childData = allUsers[key];
+                      if (childData is Map) {
+                        var relNode = childData['Relative'];
+                        if (childData['uid'] == currentUid ||
+                            (relNode is Map &&
+                                relNode['relativeId'] == currentUid)) {
+                          targetRelativeId = key;
+                          targetUserData = Map<String, dynamic>.from(childData);
+                          isFound = true;
+                          break;
+                        }
+                      }
+                    }
+                  }
+
+                  if (isFound && targetRelativeId.isNotEmpty) {
+                    RelativeModel relative;
+                    Map<String, dynamic> relativeMap = {};
+                    if (targetUserData.containsKey('Relative')) {
+                      relativeMap = Map<String, dynamic>.from(
+                        targetUserData['Relative'] as Map,
+                      );
+                      relative = RelativeModel(
+                        relativeId:
+                            relativeMap['relativeId'] ?? targetRelativeId,
+                        firstname: relativeMap['firstname'] ?? '',
+                        lastname: relativeMap['lastname'] ?? '',
+                        phonenumber: relativeMap['phonenumber'] ?? '',
+                        relationship: relativeMap['relationship'] ?? '',
+                        email: relativeMap['email'] ?? '',
+                      );
+                    } else {
+                      relative = RelativeModel(
+                        relativeId: targetRelativeId,
+                        firstname: '',
+                        lastname: '',
+                        phonenumber: '',
+                        relationship: '',
+                        email: '',
+                      );
+                    }
+
+                    PatientModel patient;
+                    if (relativeMap.containsKey('Patient')) {
+                      final pData = Map<String, dynamic>.from(
+                        relativeMap['Patient'] as Map,
+                      );
+                      patient = PatientModel(
+                        patientId: pData['patientId'] ?? '',
+                        patientphoto: pData['patientphoto'] ?? '',
+                        firstname: pData['firstname'] ?? '',
+                        lastname: pData['lastname'] ?? '',
+                        phonenumber: pData['phonenumber'] ?? '',
+                        gender: pData['gender'] ?? '',
+                        birthdate: pData['birthdate'] != null
+                            ? DateTime.tryParse(pData['birthdate'].toString())
+                            : null,
+                        disease: pData['disease'] ?? '',
+                        mobility: pData['mobility'] ?? '',
+                      );
+                    } else {
+                      patient = PatientModel(
+                        patientId: '',
+                        patientphoto: '',
+                        firstname: '',
+                        lastname: '',
+                        phonenumber: '',
+                        gender: '',
+                      );
+                    }
+
+                    if (context.mounted) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => EditRelativeInfoPage(
+                            currentPatient: patient,
+                            currentRelative: relative,
+                            loggedUid: targetRelativeId,
+                          ),
+                        ),
+                      );
+                    }
+                  } else {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('ไม่พบข้อมูลประวัติ')),
+                      );
+                    }
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('เกิดข้อผิดพลาด: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
             ),
           ],
         ),
@@ -455,301 +653,293 @@ class _ListRequestPageState extends State<ListRequestPage> {
     );
   }
 
+  Widget _buildTabItem(IconData icon, String label, int count) {
+    return Tab(
+      height: 65,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 22),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+          ),
+          Text('($count)', style: const TextStyle(fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRequestCard(RequestCardData request) {
-    Color mainColor;
+    Color statusColor;
     Color statusBgColor;
-    Color statusTextColor;
     String statusText;
+    IconData statusIcon;
 
     switch (request.statusType) {
       case 'pending':
-        mainColor = const Color(0xFF00C853);
-        statusBgColor = const Color(
-          0xFFE8F5E9,
-        ); // ปรับสีพื้นหลัง Status ให้ดูนุ่มขึ้น
-        statusTextColor = const Color(0xFF00C853);
+        statusColor = const Color(0xFFE65100);
+        statusBgColor = const Color(0xFFFFF3E0);
         statusText = 'รอตอบรับ';
+        statusIcon = Icons.access_time_rounded;
         break;
       case 'accepted':
-        mainColor = const Color(0xFF00C853);
-        statusBgColor = const Color(0xFFE8F5E9);
-        statusTextColor = const Color(0xFF00C853);
+      case 'pending_advice':
+        statusColor = const Color(0xFF2ECC71);
+        statusBgColor = const Color(0xFFE9F7EF);
         statusText = 'ตอบรับแล้ว';
+        statusIcon = Icons.check_circle_outline_rounded;
         break;
       case 'completed':
-        mainColor = const Color(0xFF00B0FF);
-        statusBgColor = const Color(
-          0xFFE1F5FE,
-        ); // ปรับสีพื้นหลัง Status ให้ดูนุ่มขึ้น
-        statusTextColor = const Color(0xFF00B0FF);
-        statusText = 'สิ้นสุดบริการ';
+        statusColor = const Color(0xFF3498DB);
+        statusBgColor = const Color(0xFFEBF5FB);
+        statusText = 'สิ้นสุด';
+        statusIcon = Icons.star_border_rounded;
         break;
       case 'cancelled':
-        mainColor = const Color(0xFFF44336);
-        statusBgColor = const Color(0xFFFFEBEE);
-        statusTextColor = const Color(0xFFF44336);
-        statusText = 'ยกเลิกบริการ';
+        statusColor = const Color(0xFFE74C3C);
+        statusBgColor = const Color(0xFFFDEDEC);
+        statusText = 'ยกเลิก';
+        statusIcon = Icons.cancel_outlined;
         break;
       default:
-        mainColor = Colors.grey;
+        statusColor = Colors.grey;
         statusBgColor = Colors.grey.shade100;
-        statusTextColor = Colors.grey;
-        statusText = 'ไม่ทราบสถานะ';
+        statusText = 'ไม่ทราบ';
+        statusIcon = Icons.help_outline_rounded;
     }
 
-    bool isInProgressTab = _currentTabIndex == 0;
     int notificationCount = request.requestModel.notifications?.length ?? 0;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        // 🌟 เปลี่ยนสีพื้นหลังของการ์ดเป็นสีขาวล้วน และเพิ่มเงาฟุ้งๆ ให้ดูมีมิติ
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border(left: BorderSide(color: mainColor, width: 6)),
-          ),
-          padding: const EdgeInsets.all(
-            16,
-          ), // ขยายพื้นที่ Padding ด้านในให้อ่านง่ายขึ้น
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '# ${request.id}',
-                    style: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusBgColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      statusText,
-                      style: TextStyle(
-                        color: statusTextColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: primaryPurple.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(statusIcon, color: primaryPurple, size: 26),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'ส่งเมื่อ: ${_formatThaiDateShort(request.requestModel.requestdate)}',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'จุดหมายปลายทาง',
-                style: TextStyle(
-                  color: Colors.grey.shade500,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusBgColor,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  statusText,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-              Text(
-                request.serviceName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: mainColor,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: mainColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.calendar_today,
-                      size: 20,
-                      color: mainColor,
-                    ),
+            ],
+          ),
+          const SizedBox(width: 14),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'REQ-${request.id.length > 6 ? request.id.substring(request.id.length - 6) : request.id}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade700,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+                const SizedBox(height: 6),
+
+                RichText(
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  text: TextSpan(
+                    style: const TextStyle(fontFamily: 'Kanit'),
                     children: [
-                      Text(
-                        'วัน-เวลานัดหมาย',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade500,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      const TextSpan(
+                        text: 'จุดหมายปลายทาง: ',
+                        style: TextStyle(fontSize: 14, color: Colors.black87),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        request.date,
-                        style: TextStyle(
+                      TextSpan(
+                        text: request.serviceName,
+                        style: const TextStyle(
                           fontSize: 14,
-                          color: mainColor,
                           fontWeight: FontWeight.bold,
+                          color: Colors.black,
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: isInProgressTab
-                    ? MainAxisAlignment.spaceBetween
-                    : MainAxisAlignment.end,
-                children: [
-                  if (isInProgressTab)
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => TrackStatusNotificationPage(
-                              loggedUid: widget.loggedUid,
-                              requestModel: request.requestModel,
-                              caretakerName: request.caregiverName,
-                            ),
-                          ),
-                        ).then((_) {
-                          _fetchMyRequests();
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: primaryPurple.withOpacity(
-                            0.08,
-                          ), // สีพื้นหลังปุ่มอ่อนๆ
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                // ไอคอนกระดิ่งแบบเส้น (คล้ายในรูป)
-                                Icon(
-                                  Icons.notifications_outlined,
-                                  color: primaryPurple,
-                                  size: 25,
-                                ),
+                ),
+                const SizedBox(height: 6),
 
-                                // วงกลมสีแดงแจ้งเตือน (แสดงเมื่อมีตัวเลข > 0)
-                                if (notificationCount > 0)
-                                  Positioned(
-                                    top: -4,
-                                    right: -4,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: const BoxDecoration(
-                                        color: Color(
-                                          0xFFE91E63,
-                                        ), // สีแดงอมชมพูแบบในรูป
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Text(
-                                        notificationCount > 9
-                                            ? '9+'
-                                            : '+$notificationCount', // ใส่ + ด้านหน้าเหมือนในรูป
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          height: 1,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'แจ้งเตือน',
-                              style: TextStyle(
-                                color: primaryPurple,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
+                // 🌟 ข้อมูลที่นำมาแสดงใหม่พร้อมคำนำหน้า
+                Text(
+                  'ผู้ให้บริการ: ${request.caregiverName}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                ),
+                const SizedBox(height: 4),
+
+                Text(
+                  'วันที่ส่งคำขอ: ${request.submitDate}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 4),
+
+                Text(
+                  'วันนัดบริการ: ${request.date}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: darkPurple,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (request.statusType == 'accepted' ||
+                        request.statusType == 'pending_advice')
+                      InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => TrackStatusNotificationPage(
+                                loggedUid: widget.loggedUid,
+                                requestModel: request.requestModel,
+                                caretakerName: request.caregiverName,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  GestureDetector(
-                    onTap: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ViewRequestDetailPage(
-                            requestModel: request.requestModel,
-                            caretakerName: request.caregiverName,
-                            loggedUid:
-                                widget.loggedUid ??
-                                FirebaseAuth.instance.currentUser!.uid,
+                          ).then((_) => _fetchMyRequests());
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: notificationCount > 0
+                                ? primaryPurple.withOpacity(0.08)
+                                : Colors.white,
+                            border: Border.all(
+                              color: notificationCount > 0
+                                  ? primaryPurple
+                                  : Colors.grey.shade300,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                notificationCount > 0
+                                    ? Icons.notifications_active_rounded
+                                    : Icons.notifications_none_rounded,
+                                size: 18,
+                                color: notificationCount > 0
+                                    ? primaryPurple
+                                    : Colors.grey.shade600,
+                              ),
+                              if (notificationCount > 0) ...[
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.all(5),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.redAccent,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    notificationCount > 9
+                                        ? '9+'
+                                        : '$notificationCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      height: 1,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
-                      );
-                      _fetchMyRequests();
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
                       ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: const Color(0xFF9B59B6)),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'ดูรายละเอียด',
-                        style: TextStyle(
-                          color: Color(0xFF9B59B6),
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
+
+                    SizedBox(
+                      height: 30,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryPurple,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          elevation: 0,
+                        ),
+                        onPressed: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ViewRequestDetailPage(
+                                requestModel: request.requestModel,
+                                caretakerName: request.caregiverName,
+                                loggedUid:
+                                    widget.loggedUid ??
+                                    FirebaseAuth.instance.currentUser!.uid,
+                              ),
+                            ),
+                          );
+                          _fetchMyRequests();
+                        },
+                        child: const Text(
+                          'รายละเอียด',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -787,6 +977,7 @@ class RequestCardData {
   final String serviceName;
   final String statusType;
   final String date;
+  final String submitDate;
   final String category;
   final String caregiverName;
   final RequestModel requestModel;
@@ -796,6 +987,7 @@ class RequestCardData {
     required this.serviceName,
     required this.statusType,
     required this.date,
+    required this.submitDate,
     required this.category,
     required this.caregiverName,
     required this.requestModel,

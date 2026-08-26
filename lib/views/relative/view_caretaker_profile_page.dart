@@ -701,7 +701,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             child: Divider(thickness: 1),
           ),
           const Text(
-            'การให้บริการเพิ่มเติม:',
+            'บริการเสริมที่มอบให้:',
             style: TextStyle(
               fontSize: 13,
               color: Colors.black54,

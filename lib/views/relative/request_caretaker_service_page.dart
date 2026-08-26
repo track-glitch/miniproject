@@ -59,7 +59,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   // ข้อมูลจากโปรไฟล์
   Map<String, dynamic>? _relativeData;
   Map<String, dynamic>? _patientData;
-  List<DateTime> _caretakerBusyDates = [];
+  List<String> _caretakerBusyDates = [];
 
   // ตัวแปรเก็บที่อยู่เดิมจากโปรไฟล์
   String _profileAddress = '';
@@ -69,9 +69,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   @override
   void initState() {
     super.initState();
-    _selectedDate =
-        widget.initialSelectedDate ??
-        DateTime.now().add(const Duration(days: 1));
+    _selectedDate = widget.initialSelectedDate ?? DateTime.now();
 
     _generatedRequestId = _generateCustomRequestId();
 
@@ -120,7 +118,15 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
       final snapshot = await FirebaseDatabase.instance.ref('Login').get();
       if (snapshot.exists && snapshot.value is Map) {
         final allUsers = snapshot.value as Map;
-        List<DateTime> busy = [];
+        List<String> busy = [];
+
+        // ดึง UID ของญาติที่กำลังใช้งานอยู่ตอนนี้
+        String myUid =
+            widget.loggedUid ?? FirebaseAuth.instance.currentUser!.uid;
+
+        // 🌟 ดึงเลขบัตรประชาชนของผู้ดูแล จากก้อนข้อมูล Profile ที่ส่งมา
+        String realCaretakerIdCard =
+            widget.caretakerData['caretakerId']?.toString() ?? '';
 
         allUsers.forEach((key, val) {
           if (val is Map &&
@@ -128,17 +134,29 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
               val['Relative']['Request'] != null) {
             final reqs = val['Relative']['Request'] as Map;
             reqs.forEach((reqId, reqData) {
-              if (reqData['caretakerId'] == widget.caretakerId) {
+              // 🌟 เช็กว่างานนี้เป็นของผู้ดูแลคนนี้ไหม โดยใช้ "เลขบัตรประชาชน" เทียบ
+              bool isThisCaretaker =
+                  reqData['caretakerId']?.toString() == realCaretakerIdCard;
+
+              bool isMyRequest = key == myUid;
+
+              // ถ้าตรงกับเงื่อนไขใดเงื่อนไขหนึ่ง ให้นำมาตรวจสอบสถานะ
+              if (isThisCaretaker || isMyRequest) {
                 String status = (reqData['requeststatus'] ?? '')
                     .toString()
                     .toLowerCase();
+                // ล็อกวันไว้ถ้ายังติดพันกับคำขอนี้
                 if (status == 'pending' ||
                     status == 'accepted' ||
                     status == 'pending_advice') {
                   String dateStr = reqData['appointmentdate'] ?? '';
                   if (dateStr.isNotEmpty) {
-                    DateTime d = DateTime.parse(dateStr);
-                    busy.add(DateTime(d.year, d.month, d.day));
+                    try {
+                      DateTime d = DateTime.parse(dateStr);
+                      String formattedDate =
+                          "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+                      busy.add(formattedDate);
+                    } catch (e) {}
                   }
                 }
               }
@@ -146,25 +164,90 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
           }
         });
         setState(() {
-          _caretakerBusyDates = busy;
+          _caretakerBusyDates = busy.toSet().toList();
         });
+
+        _adjustSelectedDate();
       }
     } catch (e) {
       print("Error fetching busy dates: $e");
     }
   }
 
+  // 🌟 ฟังก์ชันใหม่: ตรวจสอบและปัดวันเริ่มต้นให้ถูกต้องเสมอ
+  // 🌟 ฟังก์ชันใหม่: ปรับให้เริ่มที่ "วันนี้" ได้
+  void _adjustSelectedDate() {
+    DateTime now = DateTime.now();
+    // ใช้ "วันนี้" แทนพรุ่งนี้
+    DateTime today = DateTime(now.year, now.month, now.day);
+
+    DateTime validDate = _selectedDate;
+    DateTime validDateOnly = DateTime(
+      validDate.year,
+      validDate.month,
+      validDate.day,
+    );
+
+    // 1. ถ้าวันที่ถูกส่งมาเป็น "อดีต" ให้ปัดมาเป็นวันนี้
+    if (validDateOnly.isBefore(today)) {
+      validDate = today;
+    }
+
+    // 2. ลูปเช็ควันที่ติดจอง
+    while (true) {
+      String checkFormat =
+          "${validDate.year}-${validDate.month.toString().padLeft(2, '0')}-${validDate.day.toString().padLeft(2, '0')}";
+      if (!_caretakerBusyDates.contains(checkFormat)) {
+        break; // ว่างชัวร์
+      }
+      validDate = validDate.add(
+        const Duration(days: 1),
+      ); // ไม่ว่าง ขยับไปอีกวัน
+    }
+
+    if (validDate != _selectedDate) {
+      setState(() {
+        _selectedDate = validDate;
+      });
+    }
+  }
+
   Future<void> _selectDate(BuildContext context) async {
+    DateTime now = DateTime.now();
+    DateTime today = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ); // 🌟 เริ่มที่วันนี้
+
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.utc(2030, 12, 31),
+      firstDate: today, // 🌟 ปลดล็อก! ให้เลือกวันนี้ได้แล้ว
+      lastDate: DateTime(now.year + 2, 12, 31),
+      helpText:
+          'กรุณาส่งคำขอก่อนวันนัด 1 วัน', // 🌟 โชว์คำเตือนแทนคำว่า SELECT DATE บนหัวปฏิทิน
       selectableDayPredicate: (DateTime val) {
-        DateTime checkDate = DateTime(val.year, val.month, val.day);
-        return !_caretakerBusyDates.contains(checkDate);
+        String formatVal =
+            "${val.year}-${val.month.toString().padLeft(2, '0')}-${val.day.toString().padLeft(2, '0')}";
+        return !_caretakerBusyDates.contains(
+          formatVal,
+        ); // ล็อกแค่วันที่ติดจองไปแล้ว
+      },
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: primaryColor,
+              onPrimary: Colors.white,
+              onSurface: darkPurple,
+            ),
+          ),
+          child: child!,
+        );
       },
     );
+
     if (picked != null && picked != _selectedDate) {
       setState(() => _selectedDate = picked);
     }
@@ -405,6 +488,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 24),
 
                 // ── ข้อมูลบุคคล ──
@@ -626,14 +710,17 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                               'longitude': _dropoffLocation.longitude,
                             };
 
+                            String realCaretakerIdCard =
+                                widget.caretakerData['caretakerId']
+                                    ?.toString() ??
+                                widget.caretakerId;
                             await requestRef.set({
                               "requestId": _generatedRequestId,
-                              "caretakerId": widget.caretakerId,
+                              "caretakerId":
+                                  realCaretakerIdCard, // 🌟 เปลี่ยนมาบันทึกเลขบัตรประชาชนแทน UID
                               "requestdetail": _detailController.text.trim(),
-                              "PickupLocation":
-                                  pickupNode, // โครงสร้างตาม LocationModel
-                              "DropoffLocation":
-                                  dropoffNode, // โครงสร้างตาม LocationModel
+                              "PickupLocation": pickupNode,
+                              "DropoffLocation": dropoffNode,
                               "hospitalname": _hospitalController.text.trim(),
                               "departmentname": _departmentController.text
                                   .trim(),

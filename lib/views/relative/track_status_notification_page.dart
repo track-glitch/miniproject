@@ -33,12 +33,11 @@ class _TrackStatusNotificationPageState
   List<_NotificationItem> _items = [];
   bool _isLoading = true;
 
-  // 🌟 ปรับโทนสีใหม่ให้เข้ากันและโดดเด่นขึ้น
   static const Color primaryPurple = Color(0xFF8763E6);
   static const Color darkPurple = Color(0xFF7D3C98);
   static const Color lightPurpleBg = Color(0xFFF4EDFB);
-  // 🌟 ใช้สีส้มทองสำหรับไฮไลต์สถานะล่าสุด (ตัดกับสีม่วงได้ดีมากและดูพรีเมียม)
-  static const Color highlightColor = Color(0xFFFF8F00);
+  // 🌟 เปลี่ยนสี Highlight สำหรับสถานะล่าสุดเป็น "สีเขียว" ตามรีเควส
+  static const Color highlightColor = Color(0xFF00C853);
 
   @override
   void initState() {
@@ -119,6 +118,192 @@ class _TrackStatusNotificationPageState
       print("Error fetching tracking notifications: $e");
       setState(() => _isLoading = false);
     }
+  }
+
+  // 🌟 ฟังก์ชันจัด Format วัน/เวลา สำหรับการ์ดข้อมูลบริการ
+  String _formatApptDate(DateTime? date, DateTime? time) {
+    if (date == null || time == null) return '-';
+    List<String> months = [
+      'ม.ค.',
+      'ก.พ.',
+      'มี.ค.',
+      'เม.ย.',
+      'พ.ค.',
+      'มิ.ย.',
+      'ก.ค.',
+      'ส.ค.',
+      'ก.ย.',
+      'ต.ค.',
+      'พ.ย.',
+      'ธ.ค.',
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year + 543} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} น.';
+  }
+
+  // 🌟 Widget สร้างการ์ด "ข้อมูลบริการปัจจุบัน" (ดีไซน์ใหม่ กะทัดรัด แบ่งซ้าย-ขวา)
+  Widget _buildServiceInfoCard() {
+    final req = widget.requestModel;
+    if (req == null) return const SizedBox.shrink();
+
+    String apptStr = _formatApptDate(req.appointmentdate, req.appointmenttime);
+
+    // จัด Format Request ID ให้สวยงาม
+    String displayReqId = req.requestId ?? '';
+    if (!displayReqId.toUpperCase().startsWith('REQ-') &&
+        !displayReqId.toUpperCase().startsWith('RQ-')) {
+      if (displayReqId.length > 6) {
+        displayReqId = 'RQ-${displayReqId.substring(displayReqId.length - 6)}';
+      }
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 14,
+      ), // ลด Padding นิดนึงให้กระชับ
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.grey.shade300,
+          width: 1.5,
+        ), // ขอบสีเทาอ่อนให้ดูคลีนขึ้น
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ส่วนหัวการ์ด
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'ข้อมูลบริการปัจจุบัน',
+                style: TextStyle(
+                  color: Color(0xFF8763E6), // สีม่วง
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF4EDFB),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  displayReqId,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF7D3C98),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 10),
+            child: Divider(
+              height: 1,
+              thickness: 1,
+              color: Color(0xFFEEEEEE),
+            ), // เส้นคั่นบางๆ
+          ),
+
+          // 🌟 ส่วนข้อมูล แบ่งเป็น 2 คอลัมน์ (ซ้าย-ขวา)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // คอลัมน์ซ้าย
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildCompactInfo(
+                      'ผู้ให้บริการ',
+                      widget.caretakerName ?? 'ไม่ระบุ',
+                      isBold: true,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildCompactInfo('สถานที่', req.hospitalname ?? '-'),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12), // ช่องไฟตรงกลาง
+              // คอลัมน์ขวา
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildCompactInfo('วันที่นัดหมาย', apptStr),
+                    const SizedBox(height: 12),
+                    _buildCompactInfo('แผนก', req.departmentname ?? '-'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 🌟 ฟังก์ชันย่อยสำหรับวาดข้อมูลแต่ละช่องให้ออกมาเป็น 2 บรรทัด (หัวข้อ - รายละเอียด)
+  Widget _buildCompactInfo(String label, String value, {bool isBold = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+            color: Colors.black87,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value, {bool isBold = false}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 85,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 14, color: Colors.black87),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              color: Colors.black,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   void _showLoginRequiredDialog() {
@@ -218,50 +403,56 @@ class _TrackStatusNotificationPageState
         ),
         centerTitle: true,
       ),
+      // 🌟 นำ ListView มาครอบทั้งการ์ดข้อมูลบริการและการแจ้งเตือน เพื่อให้เลื่อนได้ทั้งหมด
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: primaryPurple))
-          : _items.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.notifications_off_outlined,
-                    size: 80,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'ยังไม่มีการแจ้งเตือนสถานะ',
-                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
+          : ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              itemCount: _items.length,
-              itemBuilder: (context, index) {
-                final item = _items[index];
-                return Column(
-                  children: [
-                    if (item.isLatest) _buildLatestDivider(),
-                    _NotificationCard(item: item),
-                    const SizedBox(height: 16),
-                  ],
-                );
-              },
+              children: [
+                _buildServiceInfoCard(), // 🌟 แสดงการ์ดบนสุดเสมอ
+
+                if (_items.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 40),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.notifications_off_outlined,
+                          size: 80,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'ยังไม่มีการแจ้งเตือนสถานะ',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  ..._items.asMap().entries.map((entry) {
+                    var item = entry.value;
+                    return Column(
+                      children: [
+                        if (item.isLatest) _buildLatestDivider(),
+                        _NotificationCard(item: item),
+                        const SizedBox(height: 16),
+                      ],
+                    );
+                  }).toList(),
+              ],
             ),
       bottomNavigationBar: Container(
         height: 65,
         decoration: BoxDecoration(
-          color:
-              primaryPurple, // 🌟 เปลี่ยนจาก darkPurple เป็น primaryPurple ตรงนี้
+          color: primaryPurple,
           boxShadow: [
             BoxShadow(
-              color: primaryPurple.withOpacity(
-                0.27,
-              ), // 🌟 เปลี่ยนสีเงาให้เข้ากัน
+              color: primaryPurple.withOpacity(0.27),
               blurRadius: 12,
               offset: const Offset(0, -3),
             ),
@@ -493,7 +684,7 @@ class _TrackStatusNotificationPageState
                 Icon(Icons.stars_rounded, color: highlightColor, size: 16),
                 SizedBox(width: 6),
                 Text(
-                  'อัปเดตล่าสุด',
+                  'สถานะล่าสุด',
                   style: TextStyle(
                     color: highlightColor,
                     fontSize: 13,
@@ -541,7 +732,6 @@ class _NotificationCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        // 🌟 เพิ่มความหนาของขอบและปรับเงาให้การ์ดล่าสุดดูเด้งออกมา
         border: latest
             ? const Border(
                 left: BorderSide(
@@ -592,26 +782,7 @@ class _NotificationCard extends StatelessWidget {
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: latest
-                      ? _TrackStatusNotificationPageState.highlightColor
-                            .withOpacity(0.1)
-                      : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  item.requestId,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: latest
-                        ? _TrackStatusNotificationPageState.highlightColor
-                        : Colors.grey.shade600,
-                  ),
-                ),
-              ),
+              // 🌟 เอาการแสดงผลของ Request ID ตรงนี้ออกไปแล้ว ตามคำขอ!
             ],
           ),
           const SizedBox(height: 12),

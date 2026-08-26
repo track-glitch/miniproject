@@ -46,6 +46,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   List<dynamic> provinceData = [];
   List<dynamic> districtData = [];
   List<dynamic> subdistrictsData = [];
+  List<String> _myBookedDates = [];
 
   final Geocoding geocoding = Geocoding();
 
@@ -95,6 +96,35 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                     "${relNode['firstname'] ?? ''} ${relNode['lastname'] ?? ''}"
                         .trim();
               });
+
+              // 🌟 โค้ดส่วนที่เพิ่มมา: ดึงวันที่ ที่ญาติคนนี้เคยส่งคำขอไปแล้ว
+              _myBookedDates.clear();
+              if (relNode.containsKey('Request')) {
+                var requests = relNode['Request'];
+                if (requests is Map) {
+                  requests.forEach((reqId, reqData) {
+                    if (reqData is Map) {
+                      String status = (reqData['requeststatus'] ?? '')
+                          .toString()
+                          .toLowerCase();
+                      // 🌟 ล็อกเฉพาะวันที่กำลังรอตอบรับ หรือ ตอบรับแล้ว (ถ้ายกเลิก/เสร็จแล้ว ปล่อยให้จองซ้ำได้)
+                      if (status == 'pending' ||
+                          status == 'accepted' ||
+                          status == 'pending_advice') {
+                        String dateStr = reqData['appointmentdate'] ?? '';
+                        if (dateStr.isNotEmpty) {
+                          try {
+                            DateTime d = DateTime.parse(dateStr);
+                            String formattedDate =
+                                "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+                            _myBookedDates.add(formattedDate);
+                          } catch (_) {}
+                        }
+                      }
+                    }
+                  });
+                }
+              }
             }
             break;
           }
@@ -102,6 +132,62 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
       }
     } catch (e) {
       print("Error fetching username: $e");
+    }
+  }
+
+  void _openFilterCalendar() async {
+    // 🌟 1. เปลี่ยนจากพรุ่งนี้ เป็น "วันนี้"
+    DateTime now = DateTime.now();
+    DateTime today = DateTime(now.year, now.month, now.day);
+
+    // 🌟 2. วนลูปหาวันแรกที่ "ยังไม่ถูกจอง" เพื่อใช้เป็น initialDate
+    DateTime validInitialDate = today;
+    while (true) {
+      String checkFormat =
+          "${validInitialDate.year}-${validInitialDate.month.toString().padLeft(2, '0')}-${validInitialDate.day.toString().padLeft(2, '0')}";
+
+      if (!_myBookedDates.contains(checkFormat)) {
+        break; // ว่างชัวร์
+      }
+      validInitialDate = validInitialDate.add(
+        const Duration(days: 1),
+      ); // ขยับไปอีกวัน
+    }
+
+    DateTime? selectedDate = await showDatePicker(
+      context: context,
+      initialDate: validInitialDate,
+      firstDate: today, // 🌟 3. บังคับเริ่มเลือกได้ตั้งแต่วันนี้เป็นต้นไป
+      lastDate: DateTime(now.year + 2, 12, 31),
+      selectableDayPredicate: (DateTime day) {
+        String formattedDay =
+            "${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}";
+
+        if (_myBookedDates.contains(formattedDay)) {
+          return false; // บล็อกให้เป็นสีเทา กดไม่ได้
+        }
+        return true;
+      },
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: primaryColor,
+              onPrimary: Colors.white,
+              onSurface: darkPurple,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (selectedDate != null) {
+      setState(() {
+        _selectedFilterDate = selectedDate;
+        // ปิดการพิมพ์ในช่องค้นหา เพราะเราใช้วันที่แล้ว
+        _searchController.text = "";
+      });
     }
   }
 
@@ -125,30 +211,145 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
     super.dispose();
   }
 
-  void _openFilterCalendar() async {
-    DateTime? selectedDate = await showDatePicker(
+  void _showPricingDetailsDialog() {
+    showDialog(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2024, 1, 1),
-      lastDate: DateTime(2030, 12, 31),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: primaryColor,
-              onPrimary: Colors.white,
-              onSurface: darkPurple,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: primaryColor, width: 1.5),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.payments_outlined,
+                      color: primaryColor,
+                      size: 28,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'รายละเอียดค่าใช้จ่าย',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: headingColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 24, thickness: 1),
+                Row(
+                  children: [
+                    Icon(Icons.style, size: 18, color: darkPurple),
+                    const SizedBox(width: 6),
+                    Text(
+                      'อัตราค่าบริการแพ็กเกจ',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: darkPurple,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        '• ครึ่งวัน (4 ชั่วโมง): 600 บาท/ครั้ง',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '• เต็มวัน (8 ชั่วโมง): 1,000 บาท/ครั้ง',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '• เกินเวลาที่กำหนด: คิดเพิ่มชั่วโมงละ 150 บาท',
+                        style: TextStyle(fontSize: 13, color: Colors.black87),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '• ค่าบริการคิดตามแพ็กเกจที่เลือกในการจอง 1 ครั้ง',
+                        style: TextStyle(fontSize: 12.5, color: Colors.black87),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.directions_car_outlined,
+                      size: 18,
+                      color: darkPurple,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'ค่าเดินทางเพิ่มเติม',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: darkPurple,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Padding(
+                  padding: EdgeInsets.only(left: 8.0),
+                  child: Text(
+                    'หากจุดรับส่งหรือพื้นที่ใช้บริการอยู่นอกเหนือเขตอำเภอที่ผู้ดูแลกำหนด จะคิดค่าเดินทางเพิ่มเติม กิโลเมตรละ 10 บาท โดยคำนวณตามระยะทางจริงจากระบบแอปพลิเคชัน',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: Colors.black87,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 42,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(21),
+                      ),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'เข้าใจแล้ว',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          child: child!,
         );
       },
     );
-    if (selectedDate != null) {
-      setState(() {
-        _selectedFilterDate = selectedDate;
-      });
-    }
   }
 
   void _showServiceStepsModal() {
@@ -301,147 +502,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                 ),
               ),
             ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showPricingDetailsDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: primaryColor, width: 1.5),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.payments_outlined,
-                      color: primaryColor,
-                      size: 28,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'รายละเอียดค่าใช้จ่าย',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: headingColor,
-                      ),
-                    ),
-                  ],
-                ),
-                const Divider(height: 24, thickness: 1),
-                Row(
-                  children: [
-                    Icon(Icons.style, size: 18, color: darkPurple),
-                    const SizedBox(width: 6),
-                    Text(
-                      'อัตราค่าบริการแพ็กเกจ',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: darkPurple,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        '• ครึ่งวัน (4 ชั่วโมง): 600 บาท/ครั้ง',
-                        style: TextStyle(fontSize: 13),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        '• เต็มวัน (8 ชั่วโมง): 1,000 บาท/ครั้ง',
-                        style: TextStyle(fontSize: 13),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        '• เกินเวลาที่กำหนด: คิดเพิ่มชั่วโมงละ 150 บาท',
-                        style: TextStyle(fontSize: 13, color: Colors.black87),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        '• ค่าบริการคิดตามแพ็กเกจที่เลือกในการจอง 1 ครั้ง',
-                        style: TextStyle(fontSize: 12.5, color: Colors.black87),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.directions_car_outlined,
-                      size: 18,
-                      color: darkPurple,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'ค่าเดินทางเพิ่มเติม',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: darkPurple,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Padding(
-                  padding: EdgeInsets.only(left: 8.0),
-                  child: Text(
-                    'หากจุดรับส่งหรือพื้นที่ใช้บริการอยู่นอกเหนือเขตอำเภอที่ผู้ดูแลกำหนด จะคิดค่าเดินทางเพิ่มเติม กิโลเมตรละ 10 บาท โดยคำนวณตามระยะทางจริงจากระบบแอปพลิเคชัน',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: Colors.black87,
-                      height: 1.3,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  height: 42,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(21),
-                      ),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      'เข้าใจแล้ว',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
         );
       },
@@ -857,60 +917,82 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  // 🌟 แปะโค้ดนี้ลงไป ใต้ Row ข้อมูลนัดหมายครับ 🌟
+                  const SizedBox(height: 8),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.info_outline, color: Colors.red, size: 16),
+                      SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          'แนะนำให้ส่งคำขอก่อนวันนัดอย่างน้อย 1 วัน เพื่อให้ผู้ดูแลมีเวลาเตรียมตัว',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // 🌟 ปรับเปลี่ยนจาก Row (แนวนอน) มาเป็น Column (แนวตั้ง)
+                  Column(
                     children: [
-                      Expanded(
-                        child: Material(
-                          color: Colors.transparent,
+                      // ปุ่มที่ 1: ค้นหาใกล้ฉัน (สีฟ้าพาสเทล)
+                      Material(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(22),
+                        child: InkWell(
                           borderRadius: BorderRadius.circular(22),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(22),
-                            onTap: _findNearMe,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 9),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [primaryColor, darkPurple],
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
+                          onTap: _findNearMe,
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 11),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [primaryColor, darkPurple],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                              ),
+                              borderRadius: BorderRadius.circular(22),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: primaryColor.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
                                 ),
-                                borderRadius: BorderRadius.circular(22),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: primaryColor.withOpacity(0.35),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.my_location_rounded,
+                              ],
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.my_location_rounded,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'ค้นหาใกล้ฉัน',
+                                  style: TextStyle(
                                     color: Colors.white,
-                                    size: 16,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'ค้นหาใกล้ฉัน',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // แถวปุ่มที่ 2: ขั้นตอนการทำงาน และ รายละเอียดค่าใช้จ่าย
+                      // ปุ่มที่ 2 & 3: ขั้นตอนการทำงาน (เขียวมินต์) และ รายละเอียดค่าใช้จ่าย (ส้มทอง)
                       Row(
                         children: [
+                          // ปุ่มที่ 2: ขั้นตอนการทำงาน (สีเขียวมินต์)
                           Expanded(
                             child: Material(
                               color: Colors.transparent,
@@ -920,18 +1002,25 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                 onTap: _showServiceStepsModal,
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                    vertical: 8,
+                                    vertical: 9,
+                                    horizontal: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: const Color(
+                                      0xFFF0FDF4,
+                                    ), // เขียวพาสเทลอ่อนมาก
                                     borderRadius: BorderRadius.circular(22),
                                     border: Border.all(
-                                      color: primaryColor,
+                                      color: const Color(
+                                        0xFF22C55E,
+                                      ).withOpacity(0.5),
                                       width: 1.2,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: primaryColor.withOpacity(0.12),
+                                        color: const Color(
+                                          0xFF22C55E,
+                                        ).withOpacity(0.08),
                                         blurRadius: 6,
                                         offset: const Offset(0, 2),
                                       ),
@@ -939,19 +1028,23 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                   ),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
+                                    children: const [
                                       Icon(
                                         Icons.format_list_bulleted_rounded,
-                                        color: primaryColor,
+                                        color: Color(0xFF16A34A), // เขียวเข้ม
                                         size: 15,
                                       ),
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        'ขั้นตอนการทำงาน',
-                                        style: TextStyle(
-                                          color: primaryColor,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
+                                      SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          'ขั้นตอนการทำงาน',
+                                          style: TextStyle(
+                                            color: Color(0xFF16A34A),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ],
@@ -961,6 +1054,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                             ),
                           ),
                           const SizedBox(width: 8),
+
+                          // ปุ่มที่ 3: รายละเอียดค่าใช้จ่าย (สีส้มทอง/พีช)
                           Expanded(
                             child: Material(
                               color: Colors.transparent,
@@ -970,18 +1065,25 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                 onTap: _showPricingDetailsDialog,
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                    vertical: 8,
+                                    vertical: 9,
+                                    horizontal: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: const Color(
+                                      0xFFFFFBEB,
+                                    ), // เหลือง/ส้มอ่อนละมุน
                                     borderRadius: BorderRadius.circular(22),
                                     border: Border.all(
-                                      color: primaryColor,
+                                      color: const Color(
+                                        0xFFF59E0B,
+                                      ).withOpacity(0.5),
                                       width: 1.2,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: primaryColor.withOpacity(0.12),
+                                        color: const Color(
+                                          0xFFF59E0B,
+                                        ).withOpacity(0.08),
                                         blurRadius: 6,
                                         offset: const Offset(0, 2),
                                       ),
@@ -989,19 +1091,23 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                   ),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
+                                    children: const [
                                       Icon(
-                                        Icons.info_outline_rounded,
-                                        color: primaryColor,
+                                        Icons.payments_outlined,
+                                        color: Color(0xFFD97706), // ส้มทอง
                                         size: 15,
                                       ),
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        'รายละเอียดค่าใช้จ่าย',
-                                        style: TextStyle(
-                                          color: primaryColor,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
+                                      SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          'รายละเอียดค่าใช้จ่าย',
+                                          style: TextStyle(
+                                            color: Color(0xFFD97706),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                     ],
