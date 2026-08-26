@@ -35,6 +35,34 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   final Color cardColor = Colors.white;
   final Color borderColor = const Color(0xFFDDD0F0);
 
+  // 🌟 ฟังก์ชันแปลงเพศเป็นคำนำหน้าชื่อ นาย / นาง
+  String getPrefix(String? gender) {
+    if (gender == null) return '';
+    final g = gender.trim();
+    if (g == 'ชาย' || g.toLowerCase() == 'male') {
+      return 'นาย';
+    } else if (g == 'หญิง' || g.toLowerCase() == 'female') {
+      return 'นาง';
+    }
+    return '';
+  }
+
+  // 🌟 ฟังก์ชันรวมคำนำหน้า + ชื่อ + นามสกุล (เว้นวรรค 1 เคาะหลังคำนำหน้า)
+  String formatFullNameWithTitle({
+    required String? gender,
+    required String? firstname,
+    required String? lastname,
+  }) {
+    String prefix = getPrefix(gender);
+    String fName = (firstname ?? '').trim();
+    String lName = (lastname ?? '').trim();
+
+    if (fName.isEmpty && lName.isEmpty) return 'ไม่ระบุ';
+    String prefixWithSpace = prefix.isNotEmpty ? '$prefix ' : '';
+
+    return '$prefixWithSpace$fName $lName'.trim();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -123,7 +151,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
           if (caretakerData!['Vehicle'] != null) {
             vehicleData = Map<String, dynamic>.from(caretakerData!['Vehicle']);
 
-            // 🌟 ปรับตรงนี้: ให้เช็คทั้ง 'vehiclephotos' และ 'VehiclePhoto'
             final photos =
                 vehicleData!['vehiclephotos'] ?? vehicleData!['VehiclePhoto'];
 
@@ -201,7 +228,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                       _buildProfileHeader(),
                       const SizedBox(height: 12),
 
-                      // 🌟 ส่วนประสบการณ์และบริการ (รวบ 2 การ์ดไว้ด้วยกัน)
+                      // ส่วนประสบการณ์และบริการ
                       _buildProfessionalInfo(),
                       const SizedBox(height: 12),
 
@@ -365,7 +392,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     );
   }
 
-  // 🌟 ส่วนรวมรูปโปรไฟล์ ชื่อ สถานะ และข้อมูลติดต่อจัดเป็นแถวให้สวยงาม
+  // 🌟 ส่วนรวมรูปโปรไฟล์ ชื่อ สถานะ และข้อมูลติดต่อ
   Widget _buildProfileHeader() {
     String rawStatus =
         (caretakerData?['servicestatus']?.toString() ?? 'ไม่พร้อมให้บริการ')
@@ -374,6 +401,13 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
         rawStatus.toLowerCase() == 'online' ||
         rawStatus.toLowerCase() == 'on' ||
         rawStatus == 'พร้อมให้บริการ';
+
+    // 🌟 จัดรูปแบบชื่อผู้ดูแลพร้อมคำนำหน้า นาย / นาง (เว้นวรรค)
+    String displayFullName = formatFullNameWithTitle(
+      gender: caretakerData?['gender']?.toString(),
+      firstname: caretakerData?['firstname']?.toString(),
+      lastname: caretakerData?['lastname']?.toString(),
+    );
 
     ImageProvider? caretakerImageProvider;
     if (caretakerData?['profilephoto'] != null &&
@@ -475,13 +509,14 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      '${caretakerData?['firstname'] ?? 'อัศวิน'} ${caretakerData?['lastname'] ?? 'จินดา'}',
+                      displayFullName,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 17,
                         color: Color(0xFF8763E6),
                       ),
                       maxLines: 1,
+                      softWrap: false,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
@@ -587,7 +622,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     return '$age ปี';
   }
 
-  // 🌟 ส่วนข้อมูลติดต่อ (แยกไว้เป็นฟังก์ชันสำรองตามโครงสร้างเดิม)
   Widget _buildContactInfo() {
     return _buildCard(
       child: Column(
@@ -631,7 +665,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     );
   }
 
-  // 🌟 Helper widget สำหรับข้อมูลชิ้นเล็กๆ
   Widget _buildMiniInfoItem(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -654,7 +687,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     );
   }
 
-  // 🌟 ส่วนประสบการณ์และบริการ (รวบเป็น 1 การ์ด)
   Widget _buildProfessionalInfo() {
     return _buildCard(
       child: Column(

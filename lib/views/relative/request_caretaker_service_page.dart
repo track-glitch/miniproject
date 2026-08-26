@@ -66,6 +66,34 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   double _profileLat = 0.0;
   double _profileLng = 0.0;
 
+  // 🌟 ฟังก์ชันแปลงเพศเป็นคำนำหน้าชื่อ นาย / นาง
+  String getPrefix(String? gender) {
+    if (gender == null) return '';
+    final g = gender.trim();
+    if (g == 'ชาย' || g.toLowerCase() == 'male') {
+      return 'นาย';
+    } else if (g == 'หญิง' || g.toLowerCase() == 'female') {
+      return 'นาง';
+    }
+    return '';
+  }
+
+  // 🌟 ฟังก์ชันรวมคำนำหน้า + ชื่อ + นามสกุล (เว้นวรรค 1 เคาะหลังคำนำหน้า)
+  String formatFullNameWithTitle({
+    required String? gender,
+    required String? firstname,
+    required String? lastname,
+  }) {
+    String prefix = getPrefix(gender);
+    String fName = (firstname ?? '').trim();
+    String lName = (lastname ?? '').trim();
+
+    if (fName.isEmpty && lName.isEmpty) return 'ไม่ระบุ';
+    String prefixWithSpace = prefix.isNotEmpty ? '$prefix ' : '';
+
+    return '$prefixWithSpace$fName $lName'.trim();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -175,10 +203,8 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   }
 
   // 🌟 ฟังก์ชันใหม่: ตรวจสอบและปัดวันเริ่มต้นให้ถูกต้องเสมอ
-  // 🌟 ฟังก์ชันใหม่: ปรับให้เริ่มที่ "วันนี้" ได้
   void _adjustSelectedDate() {
     DateTime now = DateTime.now();
-    // ใช้ "วันนี้" แทนพรุ่งนี้
     DateTime today = DateTime(now.year, now.month, now.day);
 
     DateTime validDate = _selectedDate;
@@ -188,21 +214,19 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
       validDate.day,
     );
 
-    // 1. ถ้าวันที่ถูกส่งมาเป็น "อดีต" ให้ปัดมาเป็นวันนี้
     if (validDateOnly.isBefore(today)) {
       validDate = today;
     }
 
-    // 2. ลูปเช็ควันที่ติดจอง
     while (true) {
       String checkFormat =
           "${validDate.year}-${validDate.month.toString().padLeft(2, '0')}-${validDate.day.toString().padLeft(2, '0')}";
       if (!_caretakerBusyDates.contains(checkFormat)) {
-        break; // ว่างชัวร์
+        break;
       }
       validDate = validDate.add(
         const Duration(days: 1),
-      ); // ไม่ว่าง ขยับไปอีกวัน
+      );
     }
 
     if (validDate != _selectedDate) {
@@ -218,21 +242,18 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
       now.year,
       now.month,
       now.day,
-    ); // 🌟 เริ่มที่วันนี้
+    );
 
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: today, // 🌟 ปลดล็อก! ให้เลือกวันนี้ได้แล้ว
+      firstDate: today,
       lastDate: DateTime(now.year + 2, 12, 31),
-      helpText:
-          'กรุณาส่งคำขอก่อนวันนัด 1 วัน', // 🌟 โชว์คำเตือนแทนคำว่า SELECT DATE บนหัวปฏิทิน
+      helpText: 'กรุณาส่งคำขอก่อนวันนัด 1 วัน',
       selectableDayPredicate: (DateTime val) {
         String formatVal =
             "${val.year}-${val.month.toString().padLeft(2, '0')}-${val.day.toString().padLeft(2, '0')}";
-        return !_caretakerBusyDates.contains(
-          formatVal,
-        ); // ล็อกแค่วันที่ติดจองไปแล้ว
+        return !_caretakerBusyDates.contains(formatVal);
       },
       builder: (context, child) {
         return Theme(
@@ -625,7 +646,6 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                           ),
                         ),
                         onPressed: () async {
-                          // 🌟 ตรวจสอบว่าเลือก Profile แล้วมีที่อยู่ไหม
                           if (_pickupOption == 1 && _profileAddress.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -637,7 +657,6 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                             );
                             return;
                           }
-                          // 🌟 ตรวจสอบว่าเลือกระบุที่อยู่ใหม่แล้วปักหมุดหรือยัง
                           if (_pickupOption == 2 && !_pickupHasPinned) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -647,7 +666,6 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                             );
                             return;
                           }
-                          // 🌟 ตรวจสอบว่าปักหมุดจุดส่งหรือยัง
                           if (!_dropoffHasPinned) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -683,7 +701,6 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                               _selectedTime!.minute,
                             );
 
-                            // 🌟 จัดเตรียมข้อมูล Pickup ให้โครงสร้างตรงกับ LocationModel
                             Map<String, dynamic> pickupNode = {};
                             if (_pickupOption == 1) {
                               pickupNode = {
@@ -701,11 +718,9 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                               };
                             }
 
-                            // 🌟 จัดเตรียมข้อมูล Dropoff ให้โครงสร้างตรงกับ LocationModel
                             Map<String, dynamic> dropoffNode = {
                               'locationId': 'dropoff_loc',
-                              'address': _hospitalController.text
-                                  .trim(), // อ้างอิงชื่อ รพ. เพื่อให้แสดงผลใน Location ได้
+                              'address': _hospitalController.text.trim(),
                               'latitude': _dropoffLocation.latitude,
                               'longitude': _dropoffLocation.longitude,
                             };
@@ -716,8 +731,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                                 widget.caretakerId;
                             await requestRef.set({
                               "requestId": _generatedRequestId,
-                              "caretakerId":
-                                  realCaretakerIdCard, // 🌟 เปลี่ยนมาบันทึกเลขบัตรประชาชนแทน UID
+                              "caretakerId": realCaretakerIdCard,
                               "requestdetail": _detailController.text.trim(),
                               "PickupLocation": pickupNode,
                               "DropoffLocation": dropoffNode,
@@ -801,7 +815,6 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🌟 1. จุดนัดหมายรับ
           Row(
             children: [
               Text(
@@ -820,7 +833,6 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
           ),
           const SizedBox(height: 8),
 
-          // ตัวเลือก Checkbox (Radio)
           RadioListTile(
             title: Text(
               'เลือกจุดรับตามหน้าโปรไฟล์\n(${_profileAddress.isNotEmpty ? _profileAddress : 'ไม่พบข้อมูลที่อยู่'})',
@@ -866,7 +878,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
     );
   }
 
-  // ---------------- วิดเจ็ตรวม: สร้างช่องกรอกที่อยู่ (เปิด/ปิดได้) + ปุ่มแผนที่ ----------------
+  // ---------------- วิดเจ็ตรวม: สร้างช่องกรอกที่อยู่ + ปุ่มแผนที่ ----------------
   Widget _buildAddressAndPinFields({
     TextEditingController? addressController,
     required LatLng location,
@@ -918,8 +930,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                     child: LocationPickerWidget(
                       initialLocation: location,
                       initialAddress: addressController?.text ?? '',
-                      showAddressTextField:
-                          false, // 🌟 ปิดช่องกรอกที่อยู่ในแผนที่เสมอ ตามที่คุณต้องการ
+                      showAddressTextField: false,
                       onLocationChanged: onLocationChanged,
                     ),
                   ),
@@ -984,6 +995,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
     if (_patientData == null) return const SizedBox();
     return _buildInfoCard(
       title: 'ผู้ป่วย',
+      gender: _patientData!['gender']?.toString(),
       firstName: _patientData!['firstname'] ?? '',
       lastName: _patientData!['lastname'] ?? '',
       phone: _patientData!['phonenumber'] ?? '-',
@@ -997,7 +1009,8 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
     if (_relativeData == null) return const SizedBox();
     return _buildInfoCard(
       title: 'ญาติ (ผู้ติดต่อ)',
-      firstName: _relativeData!['firstname'] ?? '',
+      gender: _relativeData!['gender']?.toString(),
+      firstName:'คุณ ${_relativeData!['firstname'] ?? ''}'.trim(),
       lastName: _relativeData!['lastname'] ?? '',
       phone: _relativeData!['phonenumber'] ?? '-',
       extraInfo: 'ความสัมพันธ์: ${_relativeData!['relationship'] ?? '-'}',
@@ -1008,6 +1021,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   Widget _buildCaretakerCard() {
     return _buildInfoCard(
       title: 'ผู้ดูแล',
+      gender: widget.caretakerData['gender']?.toString(),
       firstName: widget.caretakerData['firstname'] ?? '',
       lastName: widget.caretakerData['lastname'] ?? '',
       phone: widget.caretakerData['phonenumber'] ?? '-',
@@ -1018,6 +1032,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
 
   Widget _buildInfoCard({
     required String title,
+    String? gender,
     required String firstName,
     required String lastName,
     required String phone,
@@ -1026,6 +1041,13 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
     bool isCaretaker = false,
     bool showAvatar = true,
   }) {
+    // 🌟 จัดรูปแบบชื่อพร้อม นาย / นาง (เว้นวรรค 1 เคาะ)
+    String fullName = formatFullNameWithTitle(
+      gender: gender,
+      firstname: firstName,
+      lastname: lastName,
+    );
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -1065,11 +1087,14 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                   ),
                 ),
                 Text(
-                  'คุณ $firstName $lastName'.trim(),
+                  fullName,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 if (isCaretaker) ...[
                   Row(

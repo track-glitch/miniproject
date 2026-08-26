@@ -34,6 +34,34 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
   List<Map<String, dynamic>> allReviews = [];
   List<Map<String, dynamic>> filteredReviews = [];
 
+  // 🌟 ฟังก์ชันแปลงเพศเป็นคำนำหน้าชื่อ นาย / นาง
+  String getPrefix(String? gender) {
+    if (gender == null) return '';
+    final g = gender.trim();
+    if (g == 'ชาย' || g.toLowerCase() == 'male') {
+      return 'นาย';
+    } else if (g == 'หญิง' || g.toLowerCase() == 'female') {
+      return 'นาง';
+    }
+    return '';
+  }
+
+  // 🌟 ฟังก์ชันรวมคำนำหน้า + ชื่อ + นามสกุล (เว้นวรรค 1 เคาะหลังคำนำหน้า)
+  String formatFullNameWithTitle({
+    required String? gender,
+    required String? firstname,
+    required String? lastname,
+  }) {
+    String prefix = getPrefix(gender);
+    String fName = (firstname ?? '').trim();
+    String lName = (lastname ?? '').trim();
+
+    if (fName.isEmpty && lName.isEmpty) return 'ไม่ระบุ';
+    String prefixWithSpace = prefix.isNotEmpty ? '$prefix ' : '';
+
+    return '$prefixWithSpace$fName $lName'.trim();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -44,8 +72,12 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
     try {
       final profile = await _service.getCaretakerProfile(widget.caretakerId);
       if (profile != null) {
-        caretakerName =
-            "${profile['firstname'] ?? ''} ${profile['lastname'] ?? ''}".trim();
+        // 🌟 ใส่คำนำหน้าชื่อ นาย / นาง แบบเว้นวรรค
+        caretakerName = formatFullNameWithTitle(
+          gender: profile['gender']?.toString(),
+          firstname: profile['firstname']?.toString(),
+          lastname: profile['lastname']?.toString(),
+        );
         caretakerCitizenId = profile['caretakerId'] ?? '';
         caretakerImage = profile['profilephoto'] ?? '';
       }
@@ -98,7 +130,7 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
       backgroundColor: bgColor,
       appBar: AppBar(
         title: Text(
-          'รีวิว (${_formatCount(allReviews.length)})', // 🌟 โชว์จำนวนรีวิวรวมบน AppBar ด้วย
+          'รีวิว (${_formatCount(allReviews.length)})',
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -221,10 +253,9 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // 🌟 เปลี่ยนจาก Dropdown เป็น Wrap Chip
                           Wrap(
-                            spacing: 8.0, // ระยะห่างแนวนอน
-                            runSpacing: 10.0, // ระยะห่างแนวตั้ง
+                            spacing: 8.0,
+                            runSpacing: 10.0,
                             children: _filterValues.map((star) {
                               int count = _getReviewCount(star);
                               bool isSelected = _selectedFilterValue == star;
@@ -254,7 +285,6 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
-                                    // 🌟 สีพื้นหลังดำแบบในรูปตอนเลือก และสีเทาอ่อนตอนไม่ได้เลือก
                                     color: isSelected
                                         ? const Color(0xFF1C1B1F)
                                         : const Color(0xFFF2F2F2),
@@ -290,7 +320,6 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
                                           ),
                                         ),
                                       ] else if (star == 1) ...[
-                                        // 🌟 1 ดาวโชว์แค่ไอคอนกับตัวเลขในวงเล็บ
                                         const Icon(
                                           Icons.star_rounded,
                                           color: Color(0xFFFFC107),
@@ -307,7 +336,6 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
                                           ),
                                         ),
                                       ] else ...[
-                                        // 🌟 2-5 ดาว โชว์ไอคอน เลขดาว และตัวเลขในวงเล็บ
                                         const Icon(
                                           Icons.star_rounded,
                                           color: Color(0xFFFFC107),

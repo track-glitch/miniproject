@@ -9,7 +9,6 @@ import 'package:latlong2/latlong.dart';
 import 'package:miniproject/views/relative/relative_home_page.dart';
 import 'package:miniproject/widgets/location_picker_widget.dart';
 
-// 🌟 Import LocationPickerWidget เข้ามาใช้งาน (ตรวจสอบ Path ให้ตรงกับโปรเจกต์ของคุณ)
 import 'package:miniproject/models/patient_model.dart';
 import 'package:miniproject/models/relative_model.dart';
 
@@ -33,28 +32,15 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
 
-  // 🌟 บังคับให้หน้าจอโหลดจนกว่าจะดึงที่อยู่เดิมเสร็จ
   bool _isLoading = true;
 
-  // 🎨 Theme ใหม่ - อ้างอิงจากตัวอย่างหน้า "ค้นหาบัญชี" (โทนม่วงสบายตา การ์ดสีขาว)
-  final Color primaryColor = const Color(
-    0xFF7C5CFC,
-  ); // ม่วงหลัก ใช้กับปุ่ม/ไอคอนสำคัญ
-  final Color darkPurple = const Color(
-    0xFF6E5ABF,
-  ); // ม่วงเข้ม ใช้กับหัวข้อ/ตัวหนา
-  final Color lightPurple = const Color(
-    0xFFF3E5F5,
-  ); // คงไว้เผื่อมีการใช้งานที่อื่น
-  final Color bgColor = const Color.fromARGB(
-    255,
-    225,
-    202,
-    255,
-  ); // พื้นหลังม่วงอ่อนสบายตา
-  final Color greyBorder = const Color(0xFFB9A4F2); // เส้นขอบม่วงอ่อน
+  // 🎨 โทนสีม่วง
+  final Color primaryColor = const Color(0xFF7C5CFC);
+  final Color darkPurple = const Color(0xFF6E5ABF);
+  final Color lightPurple = const Color(0xFFF3E5F5);
+  final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
+  final Color greyBorder = const Color(0xFFB9A4F2);
 
-  // สีเพิ่มเติมสำหรับ Gradient ของ AppBar และพื้นหลัง ให้ตรงกับภาพตัวอย่าง
   final Color headerGradientStart = const Color(0xFF8E6FF0);
   final Color headerGradientEnd = const Color(0xFF7C5CFC);
   final Color bgGradientTop = const Color.fromARGB(255, 225, 202, 255);
@@ -74,9 +60,18 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   final TextEditingController _patPhoneController = TextEditingController();
   final TextEditingController _patGenderController = TextEditingController();
   final TextEditingController _patBirthDateController = TextEditingController();
+  final TextEditingController _patAgeController = TextEditingController();
   final TextEditingController _patDiseaseController = TextEditingController();
-  final TextEditingController _patMobilityController = TextEditingController();
   final TextEditingController _patAddressController = TextEditingController();
+
+  // 🌟 Dropdown ความคล่องตัว
+  String? _selectedMobility;
+  final List<String> _mobilityOptions = [
+    'เดินได้ปกติ',
+    'เดินได้ไม่คล่อง',
+    'ต้องพยุง',
+    'ติดเตียง',
+  ];
 
   final TextEditingController _relFirstNameController = TextEditingController();
   final TextEditingController _relLastNameController = TextEditingController();
@@ -90,7 +85,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     super.initState();
     _initData();
 
-    // 🌟 รอจนกว่า _fetchAndForceShowData จะทำงานเสร็จค่อยปิด Loading
     _fetchAndForceShowData().then((_) {
       if (mounted) {
         setState(() {
@@ -100,6 +94,39 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     });
   }
 
+  // 🌟 คำนวณอายุจากวันเกิด
+  void _calculateAge(String birthDateStr) {
+    if (birthDateStr.isEmpty) {
+      _patAgeController.text = '';
+      return;
+    }
+    try {
+      List<String> parts = birthDateStr.split('/');
+      if (parts.length == 3) {
+        int day = int.parse(parts[0]);
+        int month = int.parse(parts[1]);
+        int year = int.parse(parts[2]);
+
+        if (year > 2400) {
+          year -= 543;
+        }
+
+        DateTime birthDate = DateTime(year, month, day);
+        DateTime today = DateTime.now();
+
+        int age = today.year - birthDate.year;
+        if (today.month < birthDate.month ||
+            (today.month == birthDate.month && today.day < birthDate.day)) {
+          age--;
+        }
+
+        _patAgeController.text = age >= 0 ? '$age ปี' : '0 ปี';
+      }
+    } catch (e) {
+      _patAgeController.text = '';
+    }
+  }
+
   void _initData() {
     _patFirstNameController.text = widget.currentPatient.firstname ?? '';
     _patLastNameController.text = widget.currentPatient.lastname ?? '';
@@ -107,7 +134,12 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     _patPhoneController.text = widget.currentPatient.phonenumber ?? '';
     _patGenderController.text = widget.currentPatient.gender ?? '';
     _patDiseaseController.text = widget.currentPatient.disease ?? '';
-    _patMobilityController.text = widget.currentPatient.mobility ?? '';
+
+    if (widget.currentPatient.mobility != null &&
+        _mobilityOptions.contains(widget.currentPatient.mobility)) {
+      _selectedMobility = widget.currentPatient.mobility;
+    }
+
     _patAddressController.text = widget.currentPatient.location?.address ?? '';
     _patLineIdController.text = widget.currentRelative.lineId ?? '';
 
@@ -125,6 +157,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
       final date = widget.currentPatient.birthdate!;
       _patBirthDateController.text =
           "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year + 543}";
+      _calculateAge(_patBirthDateController.text);
     }
 
     _relFirstNameController.text = widget.currentRelative.firstname ?? '';
@@ -136,7 +169,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     _profilePhotoBase64 = widget.currentPatient.patientphoto;
   }
 
-  Future<void> _fetchAndForceShowData() async {
+ Future<void> _fetchAndForceShowData() async {
     String uid = widget.loggedUid;
 
     if (uid.isNotEmpty) {
@@ -144,7 +177,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           .ref('Login/$uid/Relative')
           .get();
 
-      // 🌟 เพิ่มบรรทัดนี้: ถ้าผู้ใช้กดปิดหน้าไปแล้ว ให้หยุดทำงานทันที
       if (!mounted) return;
 
       if (relSnapshot.exists && relSnapshot.value is Map) {
@@ -160,39 +192,56 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           .ref('Login/$uid/Relative/Patient')
           .get();
 
-      // 🌟 เพิ่มบรรทัดนี้: เช็คอีกครั้งก่อนเอาข้อมูล Patient มาแสดง
       if (!mounted) return;
 
       if (patSnapshot.exists && patSnapshot.value is Map) {
         final data = Map<String, dynamic>.from(patSnapshot.value as Map);
-        _patAddressController.text =
-            data['address'] ?? _patAddressController.text;
-        _patDiseaseController.text =
-            data['disease'] ?? _patDiseaseController.text;
-        _patMobilityController.text =
-            data['mobility'] ?? _patMobilityController.text;
 
-        if (data['birthdate'] != null) {
-          setState(() {
+        setState(() {
+          // 🌟 แก้ไขจุดนี้: บังคับดึงจากก้อน Location ก่อนเป็นอันดับแรก
+          if (data['Location'] != null && data['Location'] is Map) {
+            final loc = Map<String, dynamic>.from(data['Location'] as Map);
+            _patAddressController.text = loc['address']?.toString() ?? '';
+
+            double lat = double.tryParse(loc['latitude']?.toString() ?? '0') ?? 0.0;
+            double lng = double.tryParse(loc['longitude']?.toString() ?? '0') ?? 0.0;
+            if (lat != 0.0 && lng != 0.0) {
+              _selectedLocation = LatLng(lat, lng);
+              _hasPinned = true;
+            }
+          } 
+          // ถ้าไม่มีก้อน Location ค่อยมาเช็คฟิลด์ address นอกสุด (เผื่อมีข้อมูล)
+          else if (data['address'] != null && data['address'].toString().isNotEmpty) {
+            _patAddressController.text = data['address'].toString();
+            double lat = double.tryParse(data['latitude']?.toString() ?? '0') ?? 0.0;
+            double lng = double.tryParse(data['longitude']?.toString() ?? '0') ?? 0.0;
+            if (lat != 0.0 && lng != 0.0) {
+              _selectedLocation = LatLng(lat, lng);
+              _hasPinned = true;
+            }
+          }
+
+          _patDiseaseController.text =
+              data['disease'] ?? _patDiseaseController.text;
+
+          if (data['mobility'] != null &&
+              _mobilityOptions.contains(data['mobility'])) {
+            _selectedMobility = data['mobility'];
+          }
+
+          if (data['birthdate'] != null) {
             try {
               DateTime parsedDate = DateTime.parse(
                 data['birthdate'].toString(),
               );
-              _patBirthDateController.text = DateFormat(
-                'dd/MM/yyyy',
-              ).format(parsedDate);
+              _patBirthDateController.text =
+                  "${parsedDate.day.toString().padLeft(2, '0')}/${parsedDate.month.toString().padLeft(2, '0')}/${parsedDate.year + 543}";
             } catch (e) {
               _patBirthDateController.text = data['birthdate'].toString();
             }
-          });
-        }
-
-        double lat = data['latitude']?.toDouble() ?? 0.0;
-        double lng = data['longitude']?.toDouble() ?? 0.0;
-        if (lat != 0.0 && lng != 0.0) {
-          _selectedLocation = LatLng(lat, lng);
-          _hasPinned = true;
-        }
+            _calculateAge(_patBirthDateController.text);
+          }
+        });
       }
     }
   }
@@ -206,8 +255,8 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     _patPhoneController.dispose();
     _patGenderController.dispose();
     _patBirthDateController.dispose();
+    _patAgeController.dispose();
     _patDiseaseController.dispose();
-    _patMobilityController.dispose();
     _patAddressController.dispose();
 
     _relFirstNameController.dispose();
@@ -230,6 +279,47 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
       setState(() {
         _profileImageFile = file;
         _profilePhotoBase64 = base64Encode(imageBytes);
+      });
+    }
+  }
+
+  Future<void> _selectBirthDate() async {
+    DateTime initialDate =
+        DateTime.now().subtract(const Duration(days: 365 * 20));
+    try {
+      if (_patBirthDateController.text.isNotEmpty) {
+        final parts = _patBirthDateController.text.split('/');
+        int year = int.parse(parts[2]);
+        if (year > 2400) year -= 543;
+        initialDate =
+            DateTime(year, int.parse(parts[1]), int.parse(parts[0]));
+      }
+    } catch (_) {}
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: primaryColor,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _patBirthDateController.text =
+            "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year + 543}";
+        _calculateAge(_patBirthDateController.text);
       });
     }
   }
@@ -261,38 +351,49 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
               'gender': _patGenderController.text.trim(),
               'birthdate': _patBirthDateController.text.trim(),
               'disease': _patDiseaseController.text.trim(),
-              'mobility': _patMobilityController.text.trim(),
+              'mobility': _selectedMobility ?? '',
               'patientphoto': _profilePhotoBase64 ?? '',
               'address': _patAddressController.text.trim(),
               'latitude': _hasPinned ? _selectedLocation.latitude : 0.0,
               'longitude': _hasPinned ? _selectedLocation.longitude : 0.0,
+              'location': {
+                'address': _patAddressController.text.trim(),
+                'latitude': _hasPinned ? _selectedLocation.latitude : 0.0,
+                'longitude': _hasPinned ? _selectedLocation.longitude : 0.0,
+              },
             });
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('แก้ไขข้อมูลสำเร็จแล้ว')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('แก้ไขข้อมูลสำเร็จแล้ว')),
+        );
 
-      // ปรับปรุงการย้อนกลับหลัง Save สำเร็จ
-      if (Navigator.canPop(context)) {
-        Navigator.pop(context);
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => RelativeHomePage(loggedUid: widget.loggedUid),
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  RelativeHomePage(loggedUid: widget.loggedUid),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('เกิดข้อผิดพลาด: $e'),
+            backgroundColor: Colors.red,
           ),
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('เกิดข้อผิดพลาด: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -308,9 +409,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(0)),
-        ),
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -318,25 +416,19 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
               end: Alignment.bottomRight,
               colors: [headerGradientStart, headerGradientEnd],
             ),
-            borderRadius: const BorderRadius.vertical(
-              bottom: Radius.circular(0),
-            ),
           ),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () {
-            // เช็คว่าย้อนกลับแบบปกติได้ไหม ถ้าได้ให้ย้อน ถ้าไม่ได้ค่อยสร้างหน้าใหม่พร้อมส่ง UID
             if (Navigator.canPop(context)) {
               Navigator.pop(context);
             } else {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => RelativeHomePage(
-                    loggedUid: widget
-                        .loggedUid, // ส่ง UID กลับไปเพื่อไม่ให้หลุดล็อกอิน
-                  ),
+                  builder: (context) =>
+                      RelativeHomePage(loggedUid: widget.loggedUid),
                 ),
               );
             }
@@ -356,7 +448,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           child: _isLoading
               ? Center(
                   child: CircularProgressIndicator(color: primaryColor),
-                ) // 🌟 แสดงโหลดดิ้งรอให้ดึงที่อยู่ให้เสร็จ
+                )
               : SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
@@ -403,42 +495,60 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                               controller: _patPhoneController,
                               keyboardType: TextInputType.phone,
                             ),
+                            _buildInputField(
+                              hint: 'เพศ',
+                              controller: _patGenderController,
+                            ),
+
+                            // 🌟 วันเกิด และ อายุ
                             Row(
                               children: [
                                 Expanded(
+                                  flex: 6,
                                   child: _buildInputField(
-                                    hint: 'เพศ',
-                                    controller: _patGenderController,
+                                    hint: 'วันเกิด [DD/MM/YYYY]',
+                                    controller: _patBirthDateController,
+                                    readOnly: true,
+                                    onTap: _selectBirthDate,
+                                    suffixIcon: const Icon(
+                                      Icons.calendar_month,
+                                      color: Color(0xFF7C5CFC),
+                                      size: 20,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
+                                  flex: 4,
                                   child: _buildInputField(
-                                    hint: 'วันเกิด [DD/MM/YYYY]',
-                                    controller: _patBirthDateController,
+                                    hint: 'อายุ',
+                                    controller: _patAgeController,
+                                    enabled: false,
                                   ),
                                 ),
                               ],
                             ),
+
                             _buildInputField(
                               hint: 'โรคประจำตัว',
                               controller: _patDiseaseController,
                             ),
-                            _buildInputField(
-                              hint: 'ความคล่องตัว (Mobility)',
-                              controller: _patMobilityController,
-                            ),
+
+                            // 🌟 ความคล่องตัว (Mobility Dropdown)
+                            _buildMobilityDropdown(),
                           ],
                         ),
 
-                        // 🌟 2. ใช้งาน LocationPickerWidget เหมือนหน้า Register ทุกประการ
+                        // 🌟 ส่วนข้อมูลที่อยู่ผู้ป่วย (ใส่ Key เพื่อบังคับให้แสดงข้อความที่ดึงมาจาก Firebase)
                         _buildSectionContainer(
                           title: 'ข้อมูลที่อยู่ผู้ป่วย',
                           children: [
                             LocationPickerWidget(
+                              key: ValueKey(
+                                '${_selectedLocation.latitude}_${_selectedLocation.longitude}_${_patAddressController.text}',
+                              ),
                               initialLocation: _selectedLocation,
-                              initialAddress: _patAddressController
-                                  .text, // ส่งที่อยู่ที่ดึงมาให้ Widget
+                              initialAddress: _patAddressController.text,
                               onLocationChanged: (newLocation, newAddress) {
                                 setState(() {
                                   _selectedLocation = newLocation;
@@ -543,7 +653,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                     ),
                                   ),
                                   onPressed: () {
-                                    // ใช้โค้ดชุดเดียวกันกับปุ่ม Back
                                     if (Navigator.canPop(context)) {
                                       Navigator.pop(context);
                                     } else {
@@ -708,7 +817,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           ],
         ),
         const SizedBox(height: 10),
-        Text(
+        const Text(
           'รูปโปรไฟล์ผู้ป่วย',
           style: TextStyle(
             fontWeight: FontWeight.bold,
@@ -720,25 +829,14 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     );
   }
 
-  Widget _buildInputField({
-    required String hint,
-    required TextEditingController controller,
-    int maxLines = 1,
-    TextInputType keyboardType = TextInputType.text,
-  }) {
+  Widget _buildMobilityDropdown() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: TextFormField(
-        controller: controller,
-        maxLines: maxLines,
-        keyboardType: keyboardType,
-        style: TextStyle(fontSize: 14, color: Colors.black),
-        validator: (v) => v!.isEmpty ? 'กรุณากรอกข้อมูล' : null,
+      child: DropdownButtonFormField<String>(
+        value: _selectedMobility,
         decoration: InputDecoration(
-          labelText: hint,
-          hintText: hint,
-          hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-          labelStyle: TextStyle(fontSize: 13, color: Color(0xFF8D7AE6)),
+          labelText: 'ความคล่องตัว (Mobility)',
+          labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF8D7AE6)),
           filled: true,
           fillColor: const Color(0xFFFAF8FF),
           contentPadding: const EdgeInsets.symmetric(
@@ -750,6 +848,92 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
             borderSide: BorderSide(color: greyBorder, width: 2.3),
           ),
           enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: greyBorder, width: 2.3),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: primaryColor, width: 2.3),
+          ),
+        ),
+        items: const [
+          DropdownMenuItem(
+            value: 'เดินได้ปกติ',
+            child: Text('เดินได้ปกติ', style: TextStyle(fontSize: 14)),
+          ),
+          DropdownMenuItem(
+            value: 'เดินได้ไม่คล่อง',
+            child: Text('เดินได้ไม่คล่อง', style: TextStyle(fontSize: 14)),
+          ),
+          DropdownMenuItem(
+            value: 'ต้องพยุง',
+            child: Text('ต้องพยุง', style: TextStyle(fontSize: 14)),
+          ),
+          DropdownMenuItem(
+            value: 'ติดเตียง',
+            child: Text('ติดเตียง', style: TextStyle(fontSize: 14)),
+          ),
+        ],
+        onChanged: (val) {
+          setState(() {
+            _selectedMobility = val;
+          });
+        },
+        validator: (v) =>
+            (v == null || v.isEmpty) ? 'กรุณาเลือกความคล่องตัว' : null,
+      ),
+    );
+  }
+
+  Widget _buildInputField({
+    required String hint,
+    required TextEditingController controller,
+    int maxLines = 1,
+    TextInputType keyboardType = TextInputType.text,
+    bool readOnly = false,
+    bool enabled = true,
+    VoidCallback? onTap,
+    Widget? suffixIcon,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextFormField(
+        controller: controller,
+        maxLines: maxLines,
+        keyboardType: keyboardType,
+        readOnly: readOnly,
+        enabled: enabled,
+        onTap: onTap,
+        style: const TextStyle(
+          fontSize: 14,
+          color: Colors.black,
+          fontWeight: FontWeight.normal,
+        ),
+        validator: (v) {
+          if (!enabled) return null;
+          return (v == null || v.isEmpty) ? 'กรุณากรอกข้อมูล' : null;
+        },
+        decoration: InputDecoration(
+          labelText: hint,
+          hintText: hint,
+          suffixIcon: suffixIcon,
+          hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+          labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF8D7AE6)),
+          filled: true,
+          fillColor: const Color(0xFFFAF8FF),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 12,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: greyBorder, width: 2.3),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: greyBorder, width: 2.3),
+          ),
+          disabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: greyBorder, width: 2.3),
           ),

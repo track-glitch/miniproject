@@ -64,6 +64,34 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   Map<dynamic, dynamic>? doctorAdviceData;
   String? caretakerUidForReview;
 
+  // 🌟 ฟังก์ชันแปลงเพศเป็นคำนำหน้าชื่อ นาย / นาง
+  String getPrefix(String? gender) {
+    if (gender == null) return '';
+    final g = gender.trim();
+    if (g == 'ชาย' || g.toLowerCase() == 'male') {
+      return 'นาย';
+    } else if (g == 'หญิง' || g.toLowerCase() == 'female') {
+      return 'นาง';
+    }
+    return '';
+  }
+
+  // 🌟 ฟังก์ชันรวมคำนำหน้า + ชื่อ + นามสกุล (เว้นวรรค 1 เคาะหลังคำนำหน้า)
+  String formatFullNameWithTitle({
+    required String? gender,
+    required String? firstname,
+    required String? lastname,
+  }) {
+    String prefix = getPrefix(gender);
+    String fName = (firstname ?? '').trim();
+    String lName = (lastname ?? '').trim();
+
+    if (fName.isEmpty && lName.isEmpty) return 'ไม่ระบุ';
+    String prefixWithSpace = prefix.isNotEmpty ? '$prefix ' : '';
+
+    return '$prefixWithSpace$fName $lName'.trim();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -210,7 +238,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     String? imageBase64;
     bool isSubmitting = false;
 
-    // 🌟 อัปเดตรายการหัวข้อประเภทการรายงานให้ครอบคลุมปัญหาจริง
     final List<String> reportTypes = [
       'ไม่มาตามนัดหมาย',
       'กิริยามารยาทไม่เหมาะสม',
@@ -783,7 +810,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       statusText = 'ตอบรับแล้ว';
       statusColor = const Color(0xFF00C853);
       statusBgColor = const Color(0xFFE8F5E9);
-      ;
     } else if (currentStatus == RequestStatus.completed) {
       statusText = 'สิ้นสุดบริการ';
       statusColor = const Color(0xFF00B0FF);
@@ -793,6 +819,13 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       statusColor = const Color(0xFFF44336);
       statusBgColor = const Color(0xFFFFEBEE);
     }
+
+    // 🌟 แปลงชื่อผู้ป่วยพร้อม นาย / นาง (เว้นวรรค 1 เคาะ)
+    String patientFullName = formatFullNameWithTitle(
+      gender: patientData?['gender']?.toString(),
+      firstname: patientData?['firstname']?.toString(),
+      lastname: patientData?['lastname']?.toString(),
+    );
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -1033,7 +1066,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                             Expanded(
                               child: _buildDocField(
                                 'ชื่อ - นามสกุล',
-                                '${patientData?['firstname'] ?? '-'} ${patientData?['lastname'] ?? ''}',
+                                patientFullName, // 🌟 แสดงผลชื่อพร้อม นาย / นาง
                               ),
                             ),
                           ],

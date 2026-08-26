@@ -50,6 +50,34 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
   final Geocoding geocoding = Geocoding();
 
+  // 🌟 ฟังก์ชันแปลงเพศเป็นคำนำหน้าชื่อ นาย / นาง
+  String getPrefix(String? gender) {
+    if (gender == null) return '';
+    final g = gender.trim();
+    if (g == 'ชาย' || g.toLowerCase() == 'male') {
+      return 'นาย';
+    } else if (g == 'หญิง' || g.toLowerCase() == 'female') {
+      return 'นาง';
+    }
+    return '';
+  }
+
+  // 🌟 ฟังก์ชันรวมคำนำหน้า + ชื่อ + นามสกุล พร้อมเว้นวรรค 1 เคาะหลังคำนำหน้า
+  String formatFullNameWithTitle({
+    required String? gender,
+    required String? firstname,
+    required String? lastname,
+  }) {
+    String prefix = getPrefix(gender);
+    String fName = (firstname ?? '').trim();
+    String lName = (lastname ?? '').trim();
+
+    if (fName.isEmpty && lName.isEmpty) return 'ไม่ระบุ';
+    String prefixWithSpace = prefix.isNotEmpty ? '$prefix ' : '';
+
+    return '$prefixWithSpace$fName $lName'.trim();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -92,12 +120,13 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                 childData['Relative'] as Map,
               );
               setState(() {
-                _userName =
-                    "${relNode['firstname'] ?? ''} ${relNode['lastname'] ?? ''}"
-                        .trim();
+                _userName = formatFullNameWithTitle(
+                  gender: relNode['gender']?.toString(),
+                  firstname: relNode['firstname']?.toString(),
+                  lastname: relNode['lastname']?.toString(),
+                );
               });
 
-              // 🌟 โค้ดส่วนที่เพิ่มมา: ดึงวันที่ ที่ญาติคนนี้เคยส่งคำขอไปแล้ว
               _myBookedDates.clear();
               if (relNode.containsKey('Request')) {
                 var requests = relNode['Request'];
@@ -107,7 +136,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                       String status = (reqData['requeststatus'] ?? '')
                           .toString()
                           .toLowerCase();
-                      // 🌟 ล็อกเฉพาะวันที่กำลังรอตอบรับ หรือ ตอบรับแล้ว (ถ้ายกเลิก/เสร็จแล้ว ปล่อยให้จองซ้ำได้)
                       if (status == 'pending' ||
                           status == 'accepted' ||
                           status == 'pending_advice') {
@@ -136,35 +164,33 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   }
 
   void _openFilterCalendar() async {
-    // 🌟 1. เปลี่ยนจากพรุ่งนี้ เป็น "วันนี้"
     DateTime now = DateTime.now();
     DateTime today = DateTime(now.year, now.month, now.day);
 
-    // 🌟 2. วนลูปหาวันแรกที่ "ยังไม่ถูกจอง" เพื่อใช้เป็น initialDate
     DateTime validInitialDate = today;
     while (true) {
       String checkFormat =
           "${validInitialDate.year}-${validInitialDate.month.toString().padLeft(2, '0')}-${validInitialDate.day.toString().padLeft(2, '0')}";
 
       if (!_myBookedDates.contains(checkFormat)) {
-        break; // ว่างชัวร์
+        break;
       }
       validInitialDate = validInitialDate.add(
         const Duration(days: 1),
-      ); // ขยับไปอีกวัน
+      );
     }
 
     DateTime? selectedDate = await showDatePicker(
       context: context,
       initialDate: validInitialDate,
-      firstDate: today, // 🌟 3. บังคับเริ่มเลือกได้ตั้งแต่วันนี้เป็นต้นไป
+      firstDate: today,
       lastDate: DateTime(now.year + 2, 12, 31),
       selectableDayPredicate: (DateTime day) {
         String formattedDay =
             "${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}";
 
         if (_myBookedDates.contains(formattedDay)) {
-          return false; // บล็อกให้เป็นสีเทา กดไม่ได้
+          return false;
         }
         return true;
       },
@@ -185,14 +211,12 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
     if (selectedDate != null) {
       setState(() {
         _selectedFilterDate = selectedDate;
-        // ปิดการพิมพ์ในช่องค้นหา เพราะเราใช้วันที่แล้ว
         _searchController.text = "";
       });
     }
   }
 
   Future<void> loadThailandData() async {
-    // 🌟 แก้จาก jsonEncode เป็น jsonDecode เพื่อให้มันแปลงเป็น List ได้ถูกต้อง
     String jsonString = await rootBundle.loadString(
       'assets/data/provinces.json',
     );
@@ -581,7 +605,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   }
 
   Future<void> _findNearMe() async {
-    // 1. แสดง Dialog โหลดระหว่างค้นหา
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -590,7 +613,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
     );
 
     try {
-      // 2. ตรวจสอบ GPS
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) throw Exception('กรุณาเปิด GPS บนอุปกรณ์ของคุณ');
 
@@ -605,12 +627,10 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
         throw Exception('สิทธิ์ GPS ถูกปิดกั้นถาวร กรุณาเปิดในตั้งค่า');
       }
 
-      // 3. ดึงพิกัดปัจจุบัน
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      // 4. แปลงพิกัด (บังคับเป็นภาษาอังกฤษ เพื่อให้ Map กับ JSON ง่ายและชัวร์ที่สุด)
       List<Placemark> placemarks = await geocoding.placemarkFromCoordinates(
         position.latitude,
         position.longitude,
@@ -640,7 +660,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
         String finalDistrictTh = cleanDistEn;
         int? provCode;
 
-        // Map หาจังหวัด
         for (var p in provinceData) {
           String pEn = (p['provinceNameEn'] ?? '').toString().toLowerCase();
           if (pEn == cleanProvEn || cleanProvEn.contains(pEn)) {
@@ -650,7 +669,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
           }
         }
 
-        // Map หาอำเภอ
         for (var d in districtData) {
           String dEn = (d['districtNameEn'] ?? '').toString().toLowerCase();
           int pCode = d['provinceCode'];
@@ -663,7 +681,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
           }
         }
 
-        // 🌟 นำคำไปสร้างเป็นประโยคสวยๆ "อำเภอ ... จังหวัด ..." แล้วใส่ในช่องค้นหา
         setState(() {
           String displayText = '';
           if (finalDistrictTh.isNotEmpty && finalDistrictTh != cleanDistEn) {
@@ -917,7 +934,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                       ],
                     ),
                   ),
-                  // 🌟 แปะโค้ดนี้ลงไป ใต้ Row ข้อมูลนัดหมายครับ 🌟
                   const SizedBox(height: 8),
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -938,10 +954,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // 🌟 ปรับเปลี่ยนจาก Row (แนวนอน) มาเป็น Column (แนวตั้ง)
                   Column(
                     children: [
-                      // ปุ่มที่ 1: ค้นหาใกล้ฉัน (สีฟ้าพาสเทล)
                       Material(
                         color: Colors.transparent,
                         borderRadius: BorderRadius.circular(22),
@@ -989,10 +1003,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // ปุ่มที่ 2 & 3: ขั้นตอนการทำงาน (เขียวมินต์) และ รายละเอียดค่าใช้จ่าย (ส้มทอง)
                       Row(
                         children: [
-                          // ปุ่มที่ 2: ขั้นตอนการทำงาน (สีเขียวมินต์)
                           Expanded(
                             child: Material(
                               color: Colors.transparent,
@@ -1006,21 +1018,15 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                     horizontal: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFFF0FDF4,
-                                    ), // เขียวพาสเทลอ่อนมาก
+                                    color: const Color(0xFFF0FDF4),
                                     borderRadius: BorderRadius.circular(22),
                                     border: Border.all(
-                                      color: const Color(
-                                        0xFF22C55E,
-                                      ).withOpacity(0.5),
+                                      color: const Color(0xFF22C55E).withOpacity(0.5),
                                       width: 1.2,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(
-                                          0xFF22C55E,
-                                        ).withOpacity(0.08),
+                                        color: const Color(0xFF22C55E).withOpacity(0.08),
                                         blurRadius: 6,
                                         offset: const Offset(0, 2),
                                       ),
@@ -1031,7 +1037,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                     children: const [
                                       Icon(
                                         Icons.format_list_bulleted_rounded,
-                                        color: Color(0xFF16A34A), // เขียวเข้ม
+                                        color: Color(0xFF16A34A),
                                         size: 15,
                                       ),
                                       SizedBox(width: 4),
@@ -1054,8 +1060,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                             ),
                           ),
                           const SizedBox(width: 8),
-
-                          // ปุ่มที่ 3: รายละเอียดค่าใช้จ่าย (สีส้มทอง/พีช)
                           Expanded(
                             child: Material(
                               color: Colors.transparent,
@@ -1069,21 +1073,15 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                     horizontal: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFFFFFBEB,
-                                    ), // เหลือง/ส้มอ่อนละมุน
+                                    color: const Color(0xFFFFFBEB),
                                     borderRadius: BorderRadius.circular(22),
                                     border: Border.all(
-                                      color: const Color(
-                                        0xFFF59E0B,
-                                      ).withOpacity(0.5),
+                                      color: const Color(0xFFF59E0B).withOpacity(0.5),
                                       width: 1.2,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(
-                                          0xFFF59E0B,
-                                        ).withOpacity(0.08),
+                                        color: const Color(0xFFF59E0B).withOpacity(0.08),
                                         blurRadius: 6,
                                         offset: const Offset(0, 2),
                                       ),
@@ -1094,7 +1092,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                     children: const [
                                       Icon(
                                         Icons.payments_outlined,
-                                        color: Color(0xFFD97706), // ส้มทอง
+                                        color: Color(0xFFD97706),
                                         size: 15,
                                       ),
                                       SizedBox(width: 4),
@@ -1147,8 +1145,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   Map<String, List<Map<String, dynamic>>> caregiverReviewsMap =
                       {};
                   Map<String, List<String>> busyDatesMap = {};
-
-                  // 🌟 เพิ่ม Map เก็บจำนวนการให้บริการสำเร็จ[cite: 18]
                   Map<String, int> completedServicesMap = {};
 
                   if (rootValue is Map) {
@@ -1167,7 +1163,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                     .toString()
                                     .toLowerCase();
 
-                                // เก็บวันที่ไม่ว่าง
                                 if (status == 'pending' ||
                                     status == 'accepted' ||
                                     status == 'pending_advice') {
@@ -1185,7 +1180,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                   }
                                 }
 
-                                // 🌟 เช็กจำนวนครั้งที่บริการสำเร็จ (สถานะสำเร็จ หรือ มีรีวิว)[cite: 18]
                                 if (status == 'completed' ||
                                     status == 'success' ||
                                     status == 'pending_advice' ||
@@ -1194,7 +1188,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                       (completedServicesMap[cId] ?? 0) + 1;
                                 }
 
-                                // ดึงรีวิว
                                 var reviewData =
                                     reqData['Review'] ?? reqData['review'];
                                 if (reviewData != null && reviewData is Map) {
@@ -1212,9 +1205,27 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                   String reviewDateStr =
                                       reviewData['reviewdate']?.toString() ??
                                       DateTime.now().toIso8601String();
-                                  String reviewerName =
-                                      '${relativeNode['firstname'] ?? ''} ${relativeNode['lastname'] ?? ''}'
-                                          .trim();
+
+                                  // 🌟 ดึงเพศและประกอบชื่อคนรีวิวพร้อม นาย / นาง (เว้นวรรค)
+                                  String reviewerGender = (relativeNode['Patient']?['gender'] ??
+                                          relativeNode['gender'] ??
+                                          '')
+                                      .toString();
+                                  String rFirstname =
+                                      (relativeNode['firstname'] ?? '').toString();
+                                  String rLastname =
+                                      (relativeNode['lastname'] ?? '').toString();
+
+                                  String reviewerName = formatFullNameWithTitle(
+                                    gender: reviewerGender,
+                                    firstname: rFirstname,
+                                    lastname: rLastname,
+                                  );
+
+                                  if (reviewerName.isEmpty || reviewerName == 'ไม่ระบุ') {
+                                    reviewerName = 'ผู้ใช้บริการ';
+                                  }
+
                                   String reviewerImage =
                                       relativeNode['profilephoto']
                                           ?.toString() ??
@@ -1229,9 +1240,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                     'ratingscore': ratingScore,
                                     'comment': commentStr,
                                     'reviewdate': reviewDateStr,
-                                    'reviewerName': reviewerName.isEmpty
-                                        ? 'ผู้ใช้บริการ'
-                                        : reviewerName,
+                                    'reviewerName': reviewerName,
                                     'reviewerImage': reviewerImage,
                                   });
                                 }
@@ -1262,7 +1271,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                           List<Map<String, dynamic>> reviewList =
                               caregiverReviewsMap[idCard] ?? [];
 
-                          // 🌟 เพิ่ม Service Count ยัดใส่ก้อนข้อมูล[cite: 18]
                           data['serviceCount'] =
                               completedServicesMap[idCard] ?? 0;
 
@@ -1296,8 +1304,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                       .toLowerCase()
                       .trim();
 
-                  // 🌟 แอบลบคำว่า "อำเภอ", "จังหวัด", "อ.", "จ." ออกก่อนเอาไปค้นหาจริง
-                  // เพื่อให้เหลือแค่ คีย์เวิร์ดเน้นๆ เช่น "เมืองเชียงใหม่", "เชียงใหม่"
                   String cleanQuery = searchQuery
                       .replaceAll('อำเภอ', '')
                       .replaceAll('จังหวัด', '')
@@ -1305,13 +1311,9 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                       .replaceAll('ต.', '')
                       .replaceAll('อ.', '')
                       .replaceAll('จ.', '')
-                      .replaceAll(
-                        'เมือง',
-                        '',
-                      ) // 🌟 จุดสำคัญ: ตัดคำว่าเมืองทิ้ง จะได้เหลือแค่ "เชียงใหม่"
+                      .replaceAll('เมือง', '')
                       .trim();
 
-                  // แยกคำด้วยช่องว่าง เพื่อหาทีละคำ
                   final searchTerms = cleanQuery.split(RegExp(r'\s+'));
 
                   final filteredList = caretakersList.where((data) {
@@ -1350,7 +1352,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
                     if (cleanQuery.isEmpty) return true;
 
-                    // เช็คว่า "ทุกคำ" ที่ค้นหา มีอยู่ในชื่อ หรือ ที่อยู่ หรือไม่
                     bool isMatch = true;
                     for (String term in searchTerms) {
                       if (term.isEmpty) continue;
@@ -1577,11 +1578,14 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   }
 
   Widget _buildCaretakerCard(Map<String, dynamic> data, String docId) {
-    String firstname = data['firstname'] ?? 'ไม่ระบุ';
-    String lastname = data['lastname'] ?? '';
-    String fullName = '$firstname $lastname'.trim();
-    String location = '';
+    // 🌟 ดึงเพศและจัดรูปแบบชื่อพร้อม นาย / นาง (เว้นวรรค)
+    String fullName = formatFullNameWithTitle(
+      gender: data['gender']?.toString(),
+      firstname: data['firstname']?.toString(),
+      lastname: data['lastname']?.toString(),
+    );
 
+    String location = '';
     if (data['address'] != null) {
       location = data['address'];
     } else if (data['Location'] != null &&
@@ -1615,7 +1619,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
     List<Map<String, dynamic>> reviewsList =
         (data['reviewsList'] as List<Map<String, dynamic>>?) ?? [];
 
-    // 🌟 ดึงค่า serviceCount ที่เราเขียนโค้ดนับไว้[cite: 18]
     int serviceCount = data['serviceCount'] ?? 0;
 
     String rawProfilePhoto = data['profilephoto']?.toString() ?? '';
@@ -1674,6 +1677,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                             fontSize: 15,
                             color: headingColor,
                           ),
+                          maxLines: 1,
+                          softWrap: false,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -1777,7 +1782,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   ),
                   const SizedBox(height: 6),
 
-                  // 🌟 เพิ่ม Badge โชว์จำนวนครั้งที่ให้บริการสำเร็จที่นี่[cite: 18]
                   if (serviceCount > 0)
                     Container(
                       margin: const EdgeInsets.only(bottom: 6),
