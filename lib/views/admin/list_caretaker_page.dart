@@ -23,11 +23,18 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
   String _selectedStatus = 'Pending';
   bool _isLoading = true;
 
-  // แยก List เก็บสถานะต่างๆ เพื่อใช้นับจำนวน
+  // แยก List เก็บสถานะต่างๆ
   List<CaretakerModel> _pendingList = [];
   List<CaretakerModel> _approvedList = [];
   List<CaretakerModel> _suspendedList = [];
   Map<String, int> _reportCounts = {};
+
+  // 🌟 ระบบ Pagination (Lazy Loading)
+  final ScrollController _scrollController = ScrollController();
+  final int _perPage = 20;
+  int _pendingPage = 1;
+  int _approvedPage = 1;
+  int _suspendedPage = 1;
 
   final Color primaryColor = const Color(0xFFA052BE);
   final Color backgroundColor = const Color(0xFFF4EDFB);
@@ -37,6 +44,56 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
   void initState() {
     super.initState();
     _fetchInitialData();
+
+    // 🌟 ดักจับการเลื่อนจอ ถ้าถึงล่างสุดให้โหลดเพิ่มทีละ 20
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 50) {
+        _loadMoreCurrentTab();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _loadMoreCurrentTab() {
+    setState(() {
+      if (_selectedStatus == 'Pending' &&
+          (_pendingPage * _perPage) < _pendingList.length) {
+        _pendingPage++;
+      } else if (_selectedStatus == 'Approved' &&
+          (_approvedPage * _perPage) < _approvedList.length) {
+        _approvedPage++;
+      } else if (_selectedStatus == 'Suspended' &&
+          (_suspendedPage * _perPage) < _suspendedList.length) {
+        _suspendedPage++;
+      }
+    });
+  }
+
+  // 🌟 ดึงข้อมูลมาแสดงตามจำนวนหน้า (ทีละ 20)
+  List<CaretakerModel> _getCurrentDisplayList() {
+    if (_selectedStatus == 'Pending') {
+      return _pendingList.take(_pendingPage * _perPage).toList();
+    } else if (_selectedStatus == 'Approved') {
+      return _approvedList.take(_approvedPage * _perPage).toList();
+    } else {
+      return _suspendedList.take(_suspendedPage * _perPage).toList();
+    }
+  }
+
+  bool _hasMoreInCurrentTab() {
+    if (_selectedStatus == 'Pending') {
+      return (_pendingPage * _perPage) < _pendingList.length;
+    } else if (_selectedStatus == 'Approved') {
+      return (_approvedPage * _perPage) < _approvedList.length;
+    } else {
+      return (_suspendedPage * _perPage) < _suspendedList.length;
+    }
   }
 
   Future<void> _fetchInitialData() async {
@@ -44,12 +101,10 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
     try {
       String name = await _adminService.getAdminName(widget.uid);
 
-      // ดึงข้อมูลตามสถานะ
       var pending = await _adminService.getCaretakersByStatus('Pending');
       var approved = await _adminService.getCaretakersByStatus('Approved');
       var suspended = await _adminService.getCaretakersByStatus('Suspended');
 
-      // ดึงจำนวนรีพอร์ตจาก Firebase มาเก็บไว้ใน Map
       for (var caretaker in approved) {
         if (caretaker.caretakerId != null) {
           var reports = await _fetchReportsForCaretaker(caretaker.caretakerId);
@@ -57,7 +112,6 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
         }
       }
 
-      // เรียงลำดับหน้าอนุมัติ ตามจำนวนรีพอร์ตจากมากไปน้อย
       approved.sort((a, b) {
         int aReports = _reportCounts[a.caretakerId] ?? 0;
         int bReports = _reportCounts[b.caretakerId] ?? 0;
@@ -77,7 +131,6 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
     }
   }
 
-  // ฟังก์ชันดึง Report
   Future<List<ReportModel>> _fetchReportsForCaretaker(
     String? caretakerId,
   ) async {
@@ -172,16 +225,19 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
     }
   }
 
-  // ---------------------------------------------------------
-  // UI: แถบ Tab เลือกสถานะ
-  // ---------------------------------------------------------
   Widget _buildTab(String title, String status, int count, Color dotColor) {
     bool isActive = _selectedStatus == status;
     String displayTitle = count > 0 ? '$title ($count)' : title;
 
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _selectedStatus = status),
+        onTap: () {
+          setState(() {
+            _selectedStatus = status;
+            // 🌟 เลื่อนกลับไปบนสุดเมื่อสลับแท็บ
+            if (_scrollController.hasClients) _scrollController.jumpTo(0);
+          });
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
@@ -228,9 +284,6 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
     );
   }
 
-  // ---------------------------------------------------------
-  // UI: ข้อมูลด้านในกรอบเทา
-  // ---------------------------------------------------------
   Widget _buildDetailRow(IconData icon, String text, {Color? iconColor}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -250,9 +303,6 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
     );
   }
 
-  // ---------------------------------------------------------
-  // UI: Card แสดงข้อมูล (ดีไซน์ใหม่)
-  // ---------------------------------------------------------
   Widget _buildCaretakerCard(CaretakerModel caretaker, String status) {
     final int age = _calculateAge(caretaker.birthdate);
     final String address = caretaker.location?.address ?? 'ไม่ระบุที่อยู่';
@@ -261,13 +311,13 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
     Color statusColor;
     String statusText;
     if (status == 'Pending') {
-      statusColor = const Color(0xFFFF9800); // สีส้มอำพัน
+      statusColor = const Color(0xFFFF9800);
       statusText = 'รอตรวจสอบ';
     } else if (status == 'Approved') {
-      statusColor = const Color(0xFF4CAF50); // สีเขียว
+      statusColor = const Color(0xFF4CAF50);
       statusText = 'อนุมัติแล้ว';
     } else {
-      statusColor = const Color(0xFFF44336); // สีแดง
+      statusColor = const Color(0xFFF44336);
       statusText = 'ระงับบัญชี';
     }
 
@@ -288,7 +338,6 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
       ),
       child: Column(
         children: [
-          // ส่วนหัวโปรไฟล์
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -321,7 +370,6 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        // Badge สถานะ
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
@@ -360,7 +408,6 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    // เพศ และ อายุ
                     Row(
                       children: [
                         Icon(
@@ -392,8 +439,6 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                         ),
                       ],
                     ),
-
-                    // 🌟 ดาวและรีพอร์ต (ซ่อนเมื่อสถานะเป็น Pending)
                     if (status != 'Pending')
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
@@ -463,10 +508,7 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-
-          // กล่องข้อมูลรายละเอียด
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
@@ -535,10 +577,7 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                     ],
                   ),
           ),
-
           const SizedBox(height: 12),
-
-          // ปุ่ม Action ด้านล่าง
           if (status == 'Pending')
             SizedBox(
               width: double.infinity,
@@ -633,6 +672,9 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
 
   @override
   Widget build(BuildContext context) {
+    final displayList = _getCurrentDisplayList();
+    final bool hasMore = _hasMoreInCurrentTab();
+
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
@@ -670,8 +712,6 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                     ),
                   ),
                 ),
-
-                // แถบเลือกสถานะ
                 Transform.translate(
                   offset: const Offset(0, -15),
                   child: Padding(
@@ -713,22 +753,9 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                     ),
                   ),
                 ),
-
-                // รายการการ์ด
                 Expanded(
-                  child: Builder(
-                    builder: (context) {
-                      List<CaretakerModel> currentList;
-                      if (_selectedStatus == 'Pending') {
-                        currentList = _pendingList;
-                      } else if (_selectedStatus == 'Approved') {
-                        currentList = _approvedList;
-                      } else {
-                        currentList = _suspendedList;
-                      }
-
-                      if (currentList.isEmpty) {
-                        return Center(
+                  child: displayList.isEmpty
+                      ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -747,24 +774,34 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                               ),
                             ],
                           ),
-                        );
-                      }
-
-                      return ListView.builder(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 4,
+                        )
+                      : ListView.builder(
+                          controller:
+                              _scrollController, // 🌟 ใช้งาน ScrollController ดักการเลื่อน
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          itemCount: displayList.length + (hasMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == displayList.length) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    color: primaryColor,
+                                  ),
+                                ),
+                              );
+                            }
+                            return _buildCaretakerCard(
+                              displayList[index],
+                              _selectedStatus,
+                            );
+                          },
                         ),
-                        itemCount: currentList.length,
-                        itemBuilder: (context, index) {
-                          return _buildCaretakerCard(
-                            currentList[index],
-                            _selectedStatus,
-                          );
-                        },
-                      );
-                    },
-                  ),
                 ),
               ],
             ),

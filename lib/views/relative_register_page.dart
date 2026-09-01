@@ -44,12 +44,16 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
   bool _isPolicyAccepted = false;
 
   String _selectedPatGender = "";
-  String _selectedPatMobility = "";
+  // 🌟 ตั้งค่าเริ่มต้นเป็น 'ปกติ'
+  String _selectedPatMobility = "ปกติ";
+
   DateTime? _patBirthDate;
   int? _patAge;
 
   LatLng _selectedLocation = const LatLng(18.2881, 99.4921);
   bool _hasPinned = false;
+  // 🌟 ตัวแปรควบคุมการกางแผนที่
+  bool _isMapExpanded = false;
 
   File? _profileImageFile;
   String? _profilePhotoName;
@@ -75,6 +79,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
   final TextEditingController _relLineIdController = TextEditingController();
   final TextEditingController _relRelationController = TextEditingController();
   final TextEditingController _patDiseaseController = TextEditingController();
+  // 🌟 ใช้สำหรับรับค่ารายละเอียดเวลาเลือก 'ไม่ปกติ'
   final TextEditingController _patMobilityController = TextEditingController();
 
   @override
@@ -114,9 +119,9 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
           _relLineIdController,
           _relRelationController,
           _patDiseaseController,
+          _patMobilityController,
         ].any((c) => c.text.trim().isNotEmpty) ||
         _selectedPatGender.isNotEmpty ||
-        _selectedPatMobility.isNotEmpty ||
         _patBirthDate != null ||
         _profileImageFile != null ||
         _hasPinned;
@@ -301,6 +306,11 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     setState(() => _submitErrorMessage = null);
 
     try {
+      // 🌟 นำข้อมูลความคล่องตัวมารวมกัน (ถ้าไม่ปกติให้ต่อด้วยข้อความ)
+      String finalMobility = _selectedPatMobility == 'ไม่ปกติ'
+          ? 'ไม่ปกติ: ${_patMobilityController.text.trim()}'
+          : 'ปกติ';
+
       PatientModel patientData = PatientModel(
         patientId: _patIdCardController.text.trim(),
         patientphoto: _profilePhotoBase64!,
@@ -310,7 +320,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         gender: _selectedPatGender,
         birthdate: _patBirthDate,
         disease: _patDiseaseController.text.trim(),
-        mobility: _selectedPatMobility,
+        mobility: finalMobility,
         location: LocationModel(
           address: _patAddressController.text.trim(),
           latitude: _hasPinned ? _selectedLocation.latitude : 0.0,
@@ -417,7 +427,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     );
   }
 
-  // Step 1: ข้อตกลงและเงื่อนไข
   Widget _buildStep1() {
     final List<String> terms = [
       '1. ผู้ใช้บริการต้องลงทะเบียนและให้ข้อมูลส่วนบุคคลของตนเองและผู้สูงอายุที่ถูกต้อง ครบถ้วน และเป็นปัจจุบัน',
@@ -486,7 +495,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     );
   }
 
-  // Step 2: ข้อมูลผู้ป่วย
   Widget _buildStep2() {
     return Form(
       key: _patientFormKey,
@@ -669,79 +677,81 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                 hint: 'เช่น เบาหวาน, ความดัน (ถ้าไม่มีให้เว้นว่าง)',
                 controller: _patDiseaseController,
               ),
+
+              // 🌟 เปลี่ยนความคล่องตัวเป็น Radio Button
               _buildLabelField('สภาพร่างกายในการเคลื่อนไหว', isRequired: true),
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: DropdownButtonFormField<String>(
-                  value: _selectedPatMobility.isEmpty
-                      ? null
-                      : _selectedPatMobility,
-                  decoration: InputDecoration(
-                    hintText: 'เลือกระดับสภาพร่างกาย',
-                    hintStyle: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Radio<String>(
+                          value: 'ปกติ',
+                          groupValue: _selectedPatMobility,
+                          activeColor: primaryColor,
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedPatMobility = value!;
+                              _patMobilityController
+                                  .clear(); // ล้างข้อความถ้าเลือกกลับมาปกติ
+                            });
+                          },
+                        ),
+                        const Text('ปกติ', style: TextStyle(fontSize: 14)),
+                        const SizedBox(width: 20),
+                        Radio<String>(
+                          value: 'ไม่ปกติ',
+                          groupValue: _selectedPatMobility,
+                          activeColor: primaryColor,
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedPatMobility = value!;
+                            });
+                          },
+                        ),
+                        const Text('ไม่ปกติ', style: TextStyle(fontSize: 14)),
+                      ],
                     ),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: greyBorder),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: greyBorder),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: primaryColor, width: 1.5),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    errorStyle: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 11,
-                    ),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'เดินได้ปกติ',
-                      child: Text(
-                        'เดินได้ปกติ',
-                        style: TextStyle(fontSize: 14),
+
+                    // แสดงกล่องข้อความเมื่อเลือก "ไม่ปกติ"
+                    AnimatedCrossFade(
+                      firstChild: const SizedBox(
+                        width: double.infinity,
+                        height: 0,
                       ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'เดินได้ไม่คล่อง',
-                      child: Text(
-                        'เดินได้ไม่คล่อง',
-                        style: TextStyle(fontSize: 14),
+                      secondChild: Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: _buildInputField(
+                          hint:
+                              'โปรดระบุ (เช่น ต้องพยุง, นั่งรถเข็น, ติดเตียง)',
+                          controller: _patMobilityController,
+                          maxLength: 100, // จำกัดคำอธิบายอาการไว้ที่ 100
+                          validator: (val) {
+                            if (_selectedPatMobility == 'ไม่ปกติ' &&
+                                (val == null || val.trim().isEmpty)) {
+                              return 'กรุณาระบุอาการเมื่อเลือก "ไม่ปกติ"';
+                            }
+                            return null;
+                          },
+                        ),
                       ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'ต้องพยุง',
-                      child: Text('ต้องพยุง', style: TextStyle(fontSize: 14)),
-                    ),
-                    DropdownMenuItem(
-                      value: 'ติดเตียง',
-                      child: Text('ติดเตียง', style: TextStyle(fontSize: 14)),
+                      crossFadeState: _selectedPatMobility == 'ไม่ปกติ'
+                          ? CrossFadeState.showSecond
+                          : CrossFadeState.showFirst,
+                      duration: const Duration(milliseconds: 300),
                     ),
                   ],
-                  onChanged: (value) =>
-                      setState(() => _selectedPatMobility = value ?? ''),
-                  validator: (value) => (value == null || value.isEmpty)
-                      ? 'กรุณาระบุสภาพร่างกาย'
-                      : null,
                 ),
               ),
+
               _buildLabelField('เบอร์โทรศัพท์', isRequired: true),
               _buildInputField(
                 hint: 'เช่น 081234****',
                 controller: _patPhoneController,
                 keyboardType: TextInputType.phone,
-                maxLength: 10, // ล็อก 10 หลักและแสดงตัวนับ 0/10
+                maxLength: 10,
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) {
                     return 'กรุณากรอกเบอร์โทรศัพท์';
@@ -752,7 +762,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                   return null;
                 },
               ),
-              _buildLabelField('ไอดีไลน์'),
+              _buildLabelField('ไอดีไลน์(LINE)'),
               _buildInputField(
                 hint: 'ไอดีไลน์ (ถ้ามี)',
                 controller: _patLineIdController,
@@ -798,20 +808,130 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
             ],
           ),
 
+          // 🌟 ปรับปรุงส่วนที่อยู่ให้เป็นปุ่มกดแล้วกางแผนที่ลงมา (Accordion/Dropdown Style)
           _buildSectionContainer(
             title: 'ข้อมูลที่อยู่ผู้ป่วย',
             children: [
-              LocationPickerWidget(
-                initialLocation: _selectedLocation,
-                initialAddress: _patAddressController.text,
-                onLocationChanged: (newLocation, newAddress) {
-                  setState(() {
-                    _selectedLocation = newLocation;
-                    _patAddressController.text = newAddress;
-                    _hasPinned = true;
-                  });
-                },
+              _buildLabelField('รายละเอียดที่อยู่', isRequired: true),
+              _buildInputField(
+                hint: 'บ้านเลขที่, ซอย, ถนน, ตำบล, อำเภอ, จังหวัด...',
+                controller: _patAddressController,
+                maxLines: 3,
+                maxLength: 500, // 🌟 จำกัดความยาวข้อความที่อยู่ 500 คำ
+                validator: (val) =>
+                    val!.isEmpty ? 'กรุณากรอกที่อยู่ผู้ป่วย' : null,
               ),
+              const SizedBox(height: 16),
+
+              _buildLabelField(
+                'พิกัดบนแผนที่ (ค้นหาหรือปักหมุด)',
+                isRequired: true,
+              ),
+
+              // 🌟 ทำเป็นกล่องที่กดแล้วกางแผนที่ลงมาได้
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _hasPinned
+                        ? Colors.green
+                        : primaryColor.withOpacity(0.5),
+                    width: 1.5,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    // ส่วนหัวที่ไว้กดเปิด/ปิด
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          _isMapExpanded = !_isMapExpanded; // สลับสถานะเปิดปิด
+                        });
+                      },
+                      borderRadius: _isMapExpanded
+                          ? const BorderRadius.vertical(
+                              top: Radius.circular(10),
+                            )
+                          : BorderRadius.circular(10),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _hasPinned
+                                  ? Icons.check_circle_rounded
+                                  : Icons.map_rounded,
+                              color: _hasPinned ? Colors.green : primaryColor,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _hasPinned
+                                    ? 'ปักหมุดพิกัดเรียบร้อยแล้ว'
+                                    : 'ปักหมุดที่อยู่ของผู็ป่วย',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: _hasPinned
+                                      ? Colors.green.shade700
+                                      : primaryColor,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              _isMapExpanded
+                                  ? Icons.keyboard_arrow_up_rounded
+                                  : Icons.keyboard_arrow_down_rounded,
+                              color: Colors.grey.shade600,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // 🌟 ส่วนเนื้อหาแผนที่จะกางออกเมื่อ _isMapExpanded เป็น true
+                    AnimatedCrossFade(
+                      firstChild: const SizedBox(
+                        width: double.infinity,
+                        height: 0,
+                      ),
+                      secondChild: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                        child: LocationPickerWidget(
+                          initialLocation: _selectedLocation,
+                          initialAddress: _patAddressController.text,
+                          showAddressTextField:
+                              false, // ปิดช่องกรอกที่อยู่ของเก่าทิ้ง
+                          onLocationChanged: (newLocation, newAddress) {
+                            setState(() {
+                              _selectedLocation = newLocation;
+                              _hasPinned = true;
+                              // ❌ เอาการ Autofill ที่อยู่ทับ Text Box ออกไปแล้วครับ
+                            });
+                          },
+                        ),
+                      ),
+                      crossFadeState: _isMapExpanded
+                          ? CrossFadeState.showSecond
+                          : CrossFadeState.showFirst,
+                      duration: const Duration(milliseconds: 300),
+                    ),
+                  ],
+                ),
+              ),
+
+              if (!_hasPinned)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8, left: 4),
+                  child: Text(
+                    '* กรุณากางแผนที่และปักหมุดพิกัดเพื่อยืนยัน',
+                    style: TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ),
             ],
           ),
         ],
@@ -819,7 +939,6 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
     );
   }
 
-  // Step 3: ข้อมูลญาติ
   Widget _buildStep3() {
     return Form(
       key: _relativeFormKey,
@@ -878,7 +997,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                           hint: 'เช่น 089876****',
                           controller: _relPhoneController,
                           keyboardType: TextInputType.phone,
-                          maxLength: 10, // ล็อก 10 หลักและแสดงตัวนับ 0/10
+                          maxLength: 10,
                           validator: (val) {
                             if (val == null || val.trim().isEmpty) {
                               return 'กรุณากรอกเบอร์โทรศัพท์';
@@ -909,14 +1028,12 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                 ],
               ),
 
-              // 🌟 ปรับปรุง: เอาบังคับกรอกออก (isRequired: false)
               _buildLabelField('อีเมล (ถ้ามี)', isRequired: false),
               _buildInputField(
                 hint: 'เช่น example@gmail.com',
                 controller: _relEmailController,
                 keyboardType: TextInputType.emailAddress,
                 validator: (val) {
-                  // หากมีการกรอกข้อมูลเข้ามา ค่อยตรวจสอบความถูกต้องของรูปแบบอีเมล
                   if (val != null && val.trim().isNotEmpty) {
                     if (!RegExp(
                       r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
@@ -924,7 +1041,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
                       return 'รูปแบบอีเมลไม่ถูกต้อง';
                     }
                   }
-                  return null; // ยินยอมให้เว้นว่างได้
+                  return null;
                 },
               ),
 

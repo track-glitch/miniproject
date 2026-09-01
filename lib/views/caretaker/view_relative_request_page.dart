@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
-import 'package:firebase_database/firebase_database.dart'; // 🌟 เพิ่ม import Firebase
+import 'package:firebase_database/firebase_database.dart';
 
 import '../../widgets/custom_header_nav.dart';
 import '../../widgets/custom_bottom_nav.dart';
@@ -41,7 +41,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
   bool _isLoading = true;
 
   // ── 🎨 ชุดสีหลักควบคุมธีม ─────────────────────────────────────────
-  final Color primaryPurple = const Color(0xFF8763E6);
+  final Color primaryPurple = const Color(0xFF9B59B6);
   final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
   final Color lightPurple = const Color(0xFFECE2FE);
   final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
@@ -55,6 +55,48 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
   String _distanceText = 'กำลังคำนวณ...';
 
   final String maptilerApiKey = 'JCT1H6ehzlMaKZyrC5mp';
+
+  // 🌟 ฟังก์ชันแปลงเพศเป็นคำนำหน้าชื่อ (บังคับใช้ นาย / นาง เท่านั้น)
+  String getPrefix(String? gender) {
+    if (gender == null) return '';
+    final g = gender.trim();
+    if (g == 'ชาย' || g.toLowerCase() == 'male') {
+      return 'นาย';
+    } else if (g == 'หญิง' || g.toLowerCase() == 'female') {
+      return 'นาง';
+    }
+    return '';
+  }
+
+  // 🌟 ฟังก์ชันรวมคำนำหน้า + ชื่อ + นามสกุล
+  String formatFullNameWithTitle({
+    required String? gender,
+    required String? firstname,
+    required String? lastname,
+  }) {
+    String fName = (firstname ?? '').trim();
+    String lName = (lastname ?? '').trim();
+
+    // ล้างคำนำหน้าเก่าออกก่อน (เผื่อติดมาใน DB)
+    fName = fName
+        .replaceFirst(RegExp(r'^(คุณ|นาย|นางสาว|นาง|ด\.ช\.|ด\.ญ\.)\s*'), '')
+        .trim();
+
+    String prefix = '';
+    if (gender != null) {
+      final g = gender.trim();
+      if (g == 'ชาย' || g.toLowerCase() == 'male') {
+        prefix = 'นาย';
+      } else if (g == 'หญิง' || g.toLowerCase() == 'female') {
+        prefix = 'นาง';
+      }
+    }
+
+    if (fName.isEmpty && lName.isEmpty) return 'ไม่ระบุ';
+    String prefixWithSpace = prefix.isNotEmpty ? '$prefix ' : '';
+
+    return '$prefixWithSpace$fName $lName'.trim();
+  }
 
   void _onBottomNavTapped(int index) {
     setState(() {
@@ -150,7 +192,6 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     }
   }
 
-  // 🌟 ฟังก์ชันเช็คคิวงานซ้ำในวันเดียวกัน[cite: 24]
   Future<bool> _checkIsBusyOnDate(DateTime requestedDate) async {
     try {
       final snapshot = await FirebaseDatabase.instance.ref('Login').get();
@@ -165,21 +206,18 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
 
             for (var reqData in requests.values) {
               if (reqData['caretakerId'] == widget.uid) {
-                // เช็คเฉพาะงานของผู้ดูแลคนนี้
                 String status = (reqData['requeststatus'] ?? '')
                     .toString()
                     .toLowerCase();
 
-                // ตรวจสอบเฉพาะงานที่ตอบรับแล้ว หรือรอประเมิน
                 if (status == 'accepted' || status == 'pending_advice') {
                   String dateStr = reqData['appointmentdate'] ?? '';
                   if (dateStr.isNotEmpty) {
                     DateTime apptDate = DateTime.parse(dateStr);
-                    // ถ้าปี เดือน วัน ตรงกัน แสดงว่าติดคิวแล้ว
                     if (apptDate.year == requestedDate.year &&
                         apptDate.month == requestedDate.month &&
                         apptDate.day == requestedDate.day) {
-                      return true; // ติดคิว
+                      return true;
                     }
                   }
                 }
@@ -191,17 +229,13 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     } catch (e) {
       print("Error checking busy dates: $e");
     }
-    return false; // ว่าง
+    return false;
   }
 
   void _showConfirmationDialog(bool isAccept) async {
-    // 🌟 เปลี่ยนเป็น async เพื่อรอผลการเช็คคิว
-
-    // 🌟 ถ้ายืนยันรับงาน ให้เช็คคิวก่อน[cite: 24]
     if (isAccept) {
       DateTime? requestedDate = widget.requestData.requestModel.appointmentdate;
       if (requestedDate != null) {
-        // เปิดหน้าต่างโหลดรอ
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -211,11 +245,9 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
 
         bool isBusy = await _checkIsBusyOnDate(requestedDate);
 
-        // ปิดหน้าต่างโหลด
         if (context.mounted) Navigator.pop(context);
 
         if (isBusy) {
-          // ถ้าติดคิว ให้แสดง Pop-up แจ้งเตือนและหยุดการทำงาน[cite: 24]
           if (context.mounted) {
             showDialog(
               context: context,
@@ -253,12 +285,11 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
               },
             );
           }
-          return; // ออกจากฟังก์ชัน ไม่ต้องโชว์ Pop-up ยืนยัน
+          return;
         }
       }
     }
 
-    // ถ้าผ่านการเช็ค (หรือกดปฏิเสธ) ให้แสดง Pop-up ยืนยันตามปกติ[cite: 24]
     if (!mounted) return;
     showDialog(
       context: context,
@@ -388,7 +419,6 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     );
   }
 
-  // 🌟 Helper สร้างกรอบ Card คุมสไตล์ธีม
   BoxDecoration _cardDecoration() {
     return BoxDecoration(
       color: Colors.white,
@@ -404,7 +434,6 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     );
   }
 
-  // 🌟 Helper สร้างกรอบแต่ละ Section ด้านใน
   Widget _buildSectionWrapper({
     required String title,
     required IconData icon,
@@ -440,6 +469,31 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
         ],
       ),
     );
+  }
+
+  // 🌟 ฟังก์ชัน Format วันและเวลาให้เป๊ะแบบเดียวกับหน้าญาติ
+  String _formatThaiDateFull(DateTime? date) {
+    if (date == null) return '-';
+    List<String> months = [
+      'มกราคม',
+      'กุมภาพันธ์',
+      'มีนาคม',
+      'เมษายน',
+      'พฤษภาคม',
+      'มิถุนายน',
+      'กรกฎาคม',
+      'สิงหาคม',
+      'กันยายน',
+      'ตุลาคม',
+      'พฤศจิกายน',
+      'ธันวาคม',
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year + 543}';
+  }
+
+  String _formatTime(DateTime? time) {
+    if (time == null) return '-';
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} น.';
   }
 
   @override
@@ -499,27 +553,26 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
         patAge = 'ระบุอายุไม่ได้';
       }
     }
-    String patGender = pat['gender'] ?? 'ไม่ระบุเพศ';
 
-    String patPrefix = patGender == 'ชาย'
-        ? 'นาย '
-        : (patGender == 'หญิง' ? 'นาง ' : 'คุณ ');
-    String patName =
-        "$patPrefix${pat['firstname'] ?? ''} ${pat['lastname'] ?? ''}".trim();
-    if (patName == 'คุณ' || patName.isEmpty) patName = 'ไม่ระบุชื่อผู้ป่วย';
+    String patGender = pat['gender'] ?? 'ไม่ระบุเพศ';
+    String patName = formatFullNameWithTitle(
+      gender: patGender,
+      firstname: pat['firstname']?.toString(),
+      lastname: pat['lastname']?.toString(),
+    );
 
     String patMobility = pat['mobility'] ?? 'ไม่ระบุ';
     String patDisease = pat['disease'] ?? 'ไม่มีโรคประจำตัว';
     String patPhone = pat['phonenumber'] ?? 'ไม่มีเบอร์โทรศัพท์';
     String patImage = pat['patientphoto'] ?? '';
-    String relGender = rel['gender'] ?? '';
 
-    String relPrefix = relGender == 'ชาย'
-        ? 'นาย '
-        : (relGender == 'หญิง' ? 'นาง ' : 'คุณ ');
-    String relName =
-        "$relPrefix${rel['firstname'] ?? ''} ${rel['lastname'] ?? ''}".trim();
-    if (relName == 'คุณ' || relName.trim().isEmpty) relName = 'ไม่ระบุชื่อญาติ';
+    String relGender = rel['gender'] ?? '';
+    String relName = formatFullNameWithTitle(
+      gender: relGender,
+      firstname: rel['firstname']?.toString(),
+      lastname: rel['lastname']?.toString(),
+    );
+
     String relRelation = rel['relationship'] ?? 'ไม่ระบุ';
     String relPhone = rel['phonenumber'] ?? 'ไม่มีเบอร์โทรศัพท์';
     String relLine = rel['lineId'] ?? 'ไม่มีข้อมูล';
@@ -535,34 +588,34 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
 
     switch (currentStatus) {
       case RequestStatus.pending:
-        statusColor = const Color(0xFF00C853);
-        statusBgColor = const Color(0xFFE8F5E9);
+        statusColor = const Color(0xFFE65100);
+        statusBgColor = const Color(0xFFFFF3E0);
         statusText = 'รอตอบรับ';
         break;
       case RequestStatus.acceptedEarly:
       case RequestStatus.acceptedReady:
-        statusColor = const Color(0xFF00C853);
-        statusBgColor = const Color(0xFFE8F5E9);
+        statusColor = const Color(0xFF2ECC71);
+        statusBgColor = const Color(0xFFE9F7EF);
         statusText = 'ตอบรับแล้ว';
         break;
       case RequestStatus.completed:
-        statusColor = const Color(0xFF00B0FF);
-        statusBgColor = const Color(0xFFE1F5FE);
+        statusColor = const Color(0xFF3498DB);
+        statusBgColor = const Color(0xFFEBF5FB);
         statusText = 'สิ้นสุดบริการ';
         break;
       case RequestStatus.cancelled:
-        statusColor = const Color(0xFFFF5C5C);
-        statusBgColor = const Color(0xFFFFEBEE);
+        statusColor = const Color(0xFFE74C3C);
+        statusBgColor = const Color(0xFFFDEDEC);
         statusText = 'ยกเลิกบริการ';
         break;
       default:
         statusColor = Colors.grey;
+        statusBgColor = Colors.grey.shade100;
         statusText = 'ไม่ทราบสถานะ';
     }
-
-    List<String> dateParts = widget.requestData.date.split('·');
-    String dateOnly = dateParts[0].trim();
-    String timeOnly = dateParts.length > 1 ? dateParts[1].trim() : '';
+    // 🌟 ดึงข้อมูลจาก Model มาแปลงโดยตรง ป้องกันข้อความยืดหรือตัดคำพลาด
+    String dateOnly = _formatThaiDateFull(reqModel.appointmentdate);
+    String timeOnly = _formatTime(reqModel.appointmenttime);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -615,7 +668,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '#REQ-${widget.requestData.id}',
+                                    widget.requestData.id,
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -674,6 +727,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                                       dateOnly,
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
                                   Expanded(
                                     child: _buildInfoField(
                                       'เวลานัดหมาย',
@@ -693,6 +747,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                                       maxLines: 2,
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
                                   Expanded(
                                     child: _buildInfoField(
                                       'แผนก',
@@ -751,6 +806,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                                   Expanded(
                                     child: _buildInfoField('อายุ', patAge),
                                   ),
+                                  const SizedBox(width: 8),
                                   Expanded(
                                     child: _buildInfoField('เพศ', patGender),
                                   ),
@@ -766,6 +822,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                                       patDisease,
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
                                   Expanded(
                                     child: _buildInfoField(
                                       'สภาพร่างกาย',
@@ -793,9 +850,10 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                                   Expanded(
                                     child: _buildInfoField(
                                       'ชื่อ-นามสกุล',
-                                      relName,
+                                      'คุณ $relName', // 🌟 ลบคำว่า 'คุณ ' ที่ถูกฮาร์ดโค้ดไว้ออกเรียบร้อยแล้ว
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
                                   Expanded(
                                     child: _buildInfoField(
                                       'ความสัมพันธ์',
@@ -814,6 +872,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
                                       relPhone,
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
                                   Expanded(
                                     child: _buildInfoField('LINE ID', relLine),
                                   ),
@@ -993,6 +1052,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
   Widget _buildInfoField(String label, String value, {int maxLines = 1}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label,
@@ -1026,6 +1086,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Row(
           children: [

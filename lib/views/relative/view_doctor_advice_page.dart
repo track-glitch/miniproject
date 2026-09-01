@@ -24,8 +24,8 @@ class ViewDoctorAdvicePage extends StatefulWidget {
 
 class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
   // ── 🎨 ชุดสีหลักของธีม ──
-  static const Color primaryPurple = Color(0xFF8763E6);
-  static const Color darkPurple = Color.fromARGB(255, 153, 116, 255);
+  static const Color primaryPurple = Color(0xFF9B59B6);
+  static const Color darkPurple = Color(0xFF9B59B6);
   static const Color lightPink = Color(0xFFECE2FE);
   static const Color bgGray = Color.fromARGB(255, 225, 202, 255);
   static const Color borderColor = Color(0xFFD3C2F0);

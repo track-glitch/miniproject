@@ -28,8 +28,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   final TextEditingController _searchController = TextEditingController();
 
   // ── 🎨 ชุดสีหลักของธีม ──────────
-  final Color primaryColor = const Color(0xFF8763E6);
-  final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
+  final Color primaryColor = const Color(0xFF9B59B6);
+  final Color darkPurple = const Color(0xFF9B59B6);
   final Color lightPurple = const Color(0xFFECE2FE);
   final Color accentTeal = const Color(0xFF0F766E);
   final Color accentPink = const Color(0xFFBE185D);
@@ -49,6 +49,12 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   List<String> _myBookedDates = [];
 
   final Geocoding geocoding = Geocoding();
+
+  // 🌟 ระบบ Pagination
+  final ScrollController _scrollController = ScrollController();
+  final int _perPage = 20;
+  int _currentPage = 1;
+  int _currentFilteredLength = 0;
 
   // 🌟 ฟังก์ชันแปลงเพศเป็นคำนำหน้าชื่อ นาย / นาง
   String getPrefix(String? gender) {
@@ -82,10 +88,24 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   void initState() {
     super.initState();
     _searchController.addListener(() {
-      setState(() {});
+      setState(() {
+        _currentPage = 1; // 🌟 รีเซ็ตกลับไปหน้าแรกเสมอเมื่อพิมพ์ค้นหา
+      });
     });
     _loadUserName();
     loadThailandData();
+
+    // 🌟 ดักจับการเลื่อนจอ ถ้าถึงด้านล่างสุดให้โหลดหน้าต่อไป
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 50) {
+        if ((_currentPage * _perPage) < _currentFilteredLength) {
+          setState(() {
+            _currentPage++;
+          });
+        }
+      }
+    });
   }
 
   Future<void> _loadUserName() async {
@@ -175,9 +195,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
       if (!_myBookedDates.contains(checkFormat)) {
         break;
       }
-      validInitialDate = validInitialDate.add(
-        const Duration(days: 1),
-      );
+      validInitialDate = validInitialDate.add(const Duration(days: 1));
     }
 
     DateTime? selectedDate = await showDatePicker(
@@ -212,6 +230,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
       setState(() {
         _selectedFilterDate = selectedDate;
         _searchController.text = "";
+        _currentPage = 1; // 🌟 รีเซ็ตกลับไปหน้าแรกเสมอเมื่อเลือกวันที่
       });
     }
   }
@@ -232,6 +251,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose(); // 🌟 คืนหน่วยความจำของ ScrollController
     super.dispose();
   }
 
@@ -942,7 +962,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                       SizedBox(width: 4),
                       Flexible(
                         child: Text(
-                          'แนะนำให้ส่งคำขอก่อนวันนัดอย่างน้อย 1 วัน เพื่อให้ผู้ดูแลมีเวลาเตรียมตัว',
+                          'แนะนำให้ส่งคำขอล่วงหน้าก่อน 3 วันเพื่อให้ผู้ดูแลมีเวลาเตรียมตัว',
                           style: TextStyle(
                             color: Colors.red,
                             fontSize: 12,
@@ -966,15 +986,17 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(vertical: 11),
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [primaryColor, darkPurple],
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFA78BFA), Color(0xFF7C3AED)],
                                 begin: Alignment.centerLeft,
                                 end: Alignment.centerRight,
                               ),
                               borderRadius: BorderRadius.circular(22),
                               boxShadow: [
                                 BoxShadow(
-                                  color: primaryColor.withOpacity(0.3),
+                                  color: const Color(
+                                    0xFF7C3AED,
+                                  ).withOpacity(0.3),
                                   blurRadius: 8,
                                   offset: const Offset(0, 3),
                                 ),
@@ -1021,12 +1043,16 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                     color: const Color(0xFFF0FDF4),
                                     borderRadius: BorderRadius.circular(22),
                                     border: Border.all(
-                                      color: const Color(0xFF22C55E).withOpacity(0.5),
+                                      color: const Color(
+                                        0xFF22C55E,
+                                      ).withOpacity(0.5),
                                       width: 1.2,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFF22C55E).withOpacity(0.08),
+                                        color: const Color(
+                                          0xFF22C55E,
+                                        ).withOpacity(0.08),
                                         blurRadius: 6,
                                         offset: const Offset(0, 2),
                                       ),
@@ -1076,12 +1102,16 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                     color: const Color(0xFFFFFBEB),
                                     borderRadius: BorderRadius.circular(22),
                                     border: Border.all(
-                                      color: const Color(0xFFF59E0B).withOpacity(0.5),
+                                      color: const Color(
+                                        0xFFF59E0B,
+                                      ).withOpacity(0.5),
                                       width: 1.2,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFFF59E0B).withOpacity(0.08),
+                                        color: const Color(
+                                          0xFFF59E0B,
+                                        ).withOpacity(0.08),
                                         blurRadius: 6,
                                         offset: const Offset(0, 2),
                                       ),
@@ -1206,15 +1236,17 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                       reviewData['reviewdate']?.toString() ??
                                       DateTime.now().toIso8601String();
 
-                                  // 🌟 ดึงเพศและประกอบชื่อคนรีวิวพร้อม นาย / นาง (เว้นวรรค)
-                                  String reviewerGender = (relativeNode['Patient']?['gender'] ??
-                                          relativeNode['gender'] ??
-                                          '')
-                                      .toString();
+                                  String reviewerGender =
+                                      (relativeNode['Patient']?['gender'] ??
+                                              relativeNode['gender'] ??
+                                              '')
+                                          .toString();
                                   String rFirstname =
-                                      (relativeNode['firstname'] ?? '').toString();
+                                      (relativeNode['firstname'] ?? '')
+                                          .toString();
                                   String rLastname =
-                                      (relativeNode['lastname'] ?? '').toString();
+                                      (relativeNode['lastname'] ?? '')
+                                          .toString();
 
                                   String reviewerName = formatFullNameWithTitle(
                                     gender: reviewerGender,
@@ -1222,7 +1254,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                     lastname: rLastname,
                                   );
 
-                                  if (reviewerName.isEmpty || reviewerName == 'ไม่ระบุ') {
+                                  if (reviewerName.isEmpty ||
+                                      reviewerName == 'ไม่ระบุ') {
                                     reviewerName = 'ผู้ใช้บริการ';
                                   }
 
@@ -1371,13 +1404,34 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   if (filteredList.isEmpty)
                     return const Center(child: Text('ไม่พบผลลัพธ์การค้นหา'));
 
+                  // 🌟 จัดการ Pagination ที่ฝั่งแสดงผล
+                  _currentFilteredLength = filteredList.length;
+                  final displayList = filteredList
+                      .take(_currentPage * _perPage)
+                      .toList();
+                  bool hasMore =
+                      (_currentPage * _perPage) < filteredList.length;
+
                   return ListView.builder(
+                    controller:
+                        _scrollController, // 🌟 ใช้ ScrollController ดักการปัดจอลง
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: filteredList.length,
+                    itemCount: displayList.length + (hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
+                      // 🌟 ถ้ากำลังโหลดตัวถัดไป ให้แสดงวงกลมหมุนที่ล่างสุด
+                      if (index == displayList.length) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: primaryColor,
+                            ),
+                          ),
+                        );
+                      }
                       return _buildCaretakerCard(
-                        filteredList[index],
-                        filteredList[index]['id'],
+                        displayList[index],
+                        displayList[index]['id'],
                       );
                     },
                   );
@@ -1578,7 +1632,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   }
 
   Widget _buildCaretakerCard(Map<String, dynamic> data, String docId) {
-    // 🌟 ดึงเพศและจัดรูปแบบชื่อพร้อม นาย / นาง (เว้นวรรค)
     String fullName = formatFullNameWithTitle(
       gender: data['gender']?.toString(),
       firstname: data['firstname']?.toString(),

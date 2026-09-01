@@ -25,16 +25,23 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
   bool _isLoading = true;
   final CaretakerService _service = CaretakerService();
 
-  // 🌟 ปรับสีให้เหมือนหน้าของญาติ
   final Color bgColor = const Color(0xFFF5F5F5);
-  final Color primaryPurple = const Color(0xFF8763E6);
+  final Color primaryPurple = const Color(0xFF9B59B6);
   final Color darkPurple = const Color(0xFF7D3C98);
 
-  // 🌟 แยก List เป็น 4 หมวดหมู่
-  List<RequestCard> requestsPending = [];
-  List<RequestCard> requestsAccepted = [];
-  List<RequestCard> requestsCompleted = [];
-  List<RequestCard> requestsCancelled = [];
+  // 🌟 เก็บข้อมูลทั้งหมดไว้หลังบ้าน
+  List<RequestCard> _requestsPendingAll = [];
+  List<RequestCard> _requestsAcceptedAll = [];
+  List<RequestCard> _requestsCompletedAll = [];
+  List<RequestCard> _requestsCancelledAll = [];
+
+  // 🌟 ระบบ Pagination
+  final ScrollController _scrollController = ScrollController();
+  final int _perPage = 20;
+  int _pendingPage = 1;
+  int _acceptedPage = 1;
+  int _completedPage = 1;
+  int _cancelledPage = 1;
 
   String _userName = '';
 
@@ -57,6 +64,59 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
     super.initState();
     _fetchUserData();
     _fetchRequests();
+
+    // 🌟 ดักจับการเลื่อนจอ
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 50) {
+        _loadMoreCurrentTab();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _loadMoreCurrentTab() {
+    setState(() {
+      if (_currentTabIndex == 0 &&
+          (_pendingPage * _perPage) < _requestsPendingAll.length) {
+        _pendingPage++;
+      } else if (_currentTabIndex == 1 &&
+          (_acceptedPage * _perPage) < _requestsAcceptedAll.length) {
+        _acceptedPage++;
+      } else if (_currentTabIndex == 2 &&
+          (_completedPage * _perPage) < _requestsCompletedAll.length) {
+        _completedPage++;
+      } else if (_currentTabIndex == 3 &&
+          (_cancelledPage * _perPage) < _requestsCancelledAll.length) {
+        _cancelledPage++;
+      }
+    });
+  }
+
+  // 🌟 ดึงข้อมูลมาแสดงตามหน้าจอ
+  List<RequestCard> _getCurrentTabRequestsDisplay() {
+    if (_currentTabIndex == 0)
+      return _requestsPendingAll.take(_pendingPage * _perPage).toList();
+    if (_currentTabIndex == 1)
+      return _requestsAcceptedAll.take(_acceptedPage * _perPage).toList();
+    if (_currentTabIndex == 2)
+      return _requestsCompletedAll.take(_completedPage * _perPage).toList();
+    return _requestsCancelledAll.take(_cancelledPage * _perPage).toList();
+  }
+
+  bool _hasMoreInCurrentTab() {
+    if (_currentTabIndex == 0)
+      return (_pendingPage * _perPage) < _requestsPendingAll.length;
+    if (_currentTabIndex == 1)
+      return (_acceptedPage * _perPage) < _requestsAcceptedAll.length;
+    if (_currentTabIndex == 2)
+      return (_completedPage * _perPage) < _requestsCompletedAll.length;
+    return (_cancelledPage * _perPage) < _requestsCancelledAll.length;
   }
 
   Future<void> _fetchUserData() async {
@@ -125,7 +185,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
     );
   }
 
-  // 🌟 ฟอร์แมตวันที่แบบกระชับ (เปลี่ยน | เป็นคำว่า "เวลา")
   String _formatThaiDateExact(DateTime? date, DateTime? time) {
     if (date == null || time == null) return 'ไม่ระบุวัน-เวลา';
     List<String> months = [
@@ -186,7 +245,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
         isRead: isRead,
       );
 
-      // 🌟 แยกเข้า 4 กล่องให้ตรงกับ Tab
       if (statusType == 'pending') {
         pendingList.add(card);
       } else if (statusType == 'accepted' || statusType == 'pending_advice') {
@@ -198,7 +256,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
       }
     }
 
-    // Sort ใหม่สุดอยู่บน
     int sortDate(RequestCard a, RequestCard b) {
       DateTime dateA = a.requestModel.requestdate ?? DateTime.now();
       DateTime dateB = b.requestModel.requestdate ?? DateTime.now();
@@ -211,19 +268,12 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
     cancelledList.sort(sortDate);
 
     setState(() {
-      requestsPending = pendingList;
-      requestsAccepted = acceptedList;
-      requestsCompleted = completedList;
-      requestsCancelled = cancelledList;
+      _requestsPendingAll = pendingList;
+      _requestsAcceptedAll = acceptedList;
+      _requestsCompletedAll = completedList;
+      _requestsCancelledAll = cancelledList;
       _isLoading = false;
     });
-  }
-
-  List<RequestCard> _getCurrentTabRequests() {
-    if (_currentTabIndex == 0) return requestsPending;
-    if (_currentTabIndex == 1) return requestsAccepted;
-    if (_currentTabIndex == 2) return requestsCompleted;
-    return requestsCancelled;
   }
 
   @override
@@ -237,9 +287,9 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
       );
     }
 
-    // 🌟 คำนวณหาจำนวนที่ยังไม่ได้อ่าน เพื่อแปะจุดแดงบน Tab
-    int unreadPending = requestsPending.where((r) => !r.isRead).length;
-    int unreadAccepted = requestsAccepted.where((r) => !r.isRead).length;
+    final displayList = _getCurrentTabRequestsDisplay();
+    int unreadPending = _requestsPendingAll.where((r) => !r.isRead).length;
+    int unreadAccepted = _requestsAcceptedAll.where((r) => !r.isRead).length;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -315,7 +365,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🌟 4 Tabs แนวนอนแบบในภาพเรฟเฟอเรนซ์
           Container(
             color: Colors.white,
             child: DefaultTabController(
@@ -323,7 +372,13 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
               initialIndex: _currentTabIndex,
               child: TabBar(
                 isScrollable: false,
-                onTap: (index) => setState(() => _currentTabIndex = index),
+                onTap: (index) {
+                  setState(() {
+                    _currentTabIndex = index;
+                    if (_scrollController.hasClients)
+                      _scrollController.jumpTo(0);
+                  });
+                },
                 labelColor: darkPurple,
                 unselectedLabelColor: Colors.grey.shade500,
                 indicatorColor: darkPurple,
@@ -333,35 +388,33 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                   _buildTabItem(
                     Icons.access_time_rounded,
                     'รอตอบรับ',
-                    requestsPending.length,
+                    _requestsPendingAll.length,
                     showBadge: unreadPending > 0,
                   ),
                   _buildTabItem(
                     Icons.check_circle_outline_rounded,
                     'ตอบรับแล้ว',
-                    requestsAccepted.length,
+                    _requestsAcceptedAll.length,
                     showBadge: unreadAccepted > 0,
                   ),
                   _buildTabItem(
                     Icons.star_border_rounded,
                     'สิ้นสุด',
-                    requestsCompleted.length,
+                    _requestsCompletedAll.length,
                   ),
                   _buildTabItem(
                     Icons.cancel_outlined,
                     'ยกเลิก',
-                    requestsCancelled.length,
+                    _requestsCancelledAll.length,
                   ),
                 ],
               ),
             ),
           ),
-
           Container(height: 6, color: bgColor),
 
-          // 🌟 ตัวลิสต์รายการที่ถูกจัดหน้าตาใหม่
           Expanded(
-            child: _getCurrentTabRequests().isEmpty
+            child: displayList.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -384,10 +437,19 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                     ),
                   )
                 : ListView.builder(
+                    controller: _scrollController,
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: _getCurrentTabRequests().length,
-                    itemBuilder: (context, index) =>
-                        _buildRequestCard(_getCurrentTabRequests()[index]),
+                    itemCount:
+                        displayList.length + (_hasMoreInCurrentTab() ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == displayList.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      return _buildRequestCard(displayList[index]);
+                    },
                   ),
           ),
         ],
@@ -400,7 +462,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
     );
   }
 
-  // 🌟 สร้างหน้าตา Tab ให้มี Icon และตัวเลข (Count) พร้อมจุดแดงแจ้งเตือน
   Widget _buildTabItem(
     IconData icon,
     String label,
@@ -446,7 +507,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
     );
   }
 
-  // 🌟 การ์ดแบบใหม่เป๊ะตามแบบภาพเรฟเฟอเรนซ์
   Widget _buildRequestCard(RequestCard request) {
     Color statusColor;
     Color statusBgColor;
@@ -455,26 +515,26 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
 
     switch (request.statusType) {
       case 'pending':
-        statusColor = const Color(0xFFE65100); // สีส้มเข้ม
+        statusColor = const Color(0xFFE65100);
         statusBgColor = const Color(0xFFFFF3E0);
         statusText = 'รอตอบรับ';
         statusIcon = Icons.access_time_rounded;
         break;
       case 'accepted':
       case 'pending_advice':
-        statusColor = const Color(0xFF2ECC71); // สีเขียว
+        statusColor = const Color(0xFF2ECC71);
         statusBgColor = const Color(0xFFE9F7EF);
         statusText = 'ตอบรับแล้ว';
         statusIcon = Icons.check_circle_outline_rounded;
         break;
       case 'completed':
-        statusColor = const Color(0xFF3498DB); // สีฟ้า
+        statusColor = const Color(0xFF3498DB);
         statusBgColor = const Color(0xFFEBF5FB);
         statusText = 'สิ้นสุด';
         statusIcon = Icons.star_border_rounded;
         break;
       case 'cancelled':
-        statusColor = const Color(0xFFE74C3C); // สีแดง
+        statusColor = const Color(0xFFE74C3C);
         statusBgColor = const Color(0xFFFDEDEC);
         statusText = 'ยกเลิก';
         statusIcon = Icons.cancel_outlined;
@@ -503,7 +563,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- ด้านซ้าย: กล่องไอค่อน + Badge สถานะ ---
           Column(
             children: [
               Container(
@@ -535,17 +594,15 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
           ),
           const SizedBox(width: 14),
 
-          // --- ด้านขวา: รายละเอียด ---
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 🌟 รหัสคำขออยู่ด้านบนสุด และโชว์ป้าย NEW ถ้ายังไม่ได้อ่าน
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'REQ-${request.id.length > 6 ? request.id.substring(request.id.length - 6) : request.id}',
+                      request.id,
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade700,
@@ -575,8 +632,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                   ],
                 ),
                 const SizedBox(height: 6),
-
-                // 🌟 จุดหมายปลายทาง: ชื่อโรงพยาบาล
                 RichText(
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -599,8 +654,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                   ),
                 ),
                 const SizedBox(height: 6),
-
-                // 🌟 ชื่อผู้ป่วย
                 Text(
                   'ผู้ป่วย: ${request.patient}',
                   maxLines: 1,
@@ -608,15 +661,11 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                 ),
                 const SizedBox(height: 4),
-
-                // 🌟 วันที่ส่งคำขอ
                 Text(
                   'วันที่ส่งคำขอ: ${request.submitDate}',
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 4),
-
-                // 🌟 วันนัดบริการ
                 Text(
                   'วันนัดบริการ: ${request.date}',
                   style: TextStyle(
@@ -625,15 +674,12 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 const SizedBox(height: 14),
 
-                // 🌟 แถวปุ่มกดด้านล่าง
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    // ปุ่มอัปเดตสถานะ/คำแนะนำแพทย์ (เฉพาะตอนตอบรับแล้ว)
-                    if (_currentTabIndex == 1) // อยู่ในแท็บตอบรับแล้ว
+                    if (_currentTabIndex == 1)
                       InkWell(
                         onTap: () {
                           if (request.statusType == 'pending_advice') {
@@ -691,7 +737,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                               Text(
                                 request.statusType == 'pending_advice'
                                     ? 'คำแนะนำแพทย์'
-                                    : 'แก้ไขสถานะ',
+                                    : 'อัปเดตสถานะ',
                                 style: TextStyle(
                                   color: darkPurple,
                                   fontSize: 11,
@@ -703,7 +749,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                         ),
                       ),
 
-                    // ปุ่มรายละเอียด (สีม่วงทึบ)
                     SizedBox(
                       height: 30,
                       child: ElevatedButton(
@@ -716,12 +761,11 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                           elevation: 0,
                         ),
                         onPressed: () async {
-                          if (!request.isRead) {
+                          if (!request.isRead)
                             await _service.markRequestAsRead(
                               request.relativeUid,
                               request.id,
                             );
-                          }
                           await Navigator.push(
                             context,
                             MaterialPageRoute(

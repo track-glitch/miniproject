@@ -8,7 +8,7 @@ import 'package:miniproject/views/relative/view_doctor_advice_page.dart';
 import '../../widgets/custom_header_nav.dart';
 import '../../services/caretaker_service.dart';
 import 'package:miniproject/models/request_model.dart';
-import 'review_caretaker_page.dart';
+// ไม่จำเป็นต้อง import 'review_caretaker_page.dart' แล้วเพราะย้ายไปทำที่ List แทน
 
 enum RequestStatus {
   pending,
@@ -36,7 +36,7 @@ class ViewRequestDetailPage extends StatefulWidget {
 
 class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   // ── 🎨 ชุดสีหลักของธีม ─────────────────────────────────────────
-  final Color primaryColor = const Color(0xFF8763E6);
+  final Color primaryColor = const Color(0xFF9B59B6);
   final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
   final Color lightPurple = const Color(0xFFECE2FE);
   final Color accentTeal = const Color(0xFF0F766E);
@@ -58,11 +58,9 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   double caretakerRating = 0.0;
   int caretakerReviewCount = 0;
 
-  bool isReviewed = false;
   bool isReported = false;
 
   Map<dynamic, dynamic>? doctorAdviceData;
-  String? caretakerUidForReview;
 
   // 🌟 ฟังก์ชันแปลงเพศเป็นคำนำหน้าชื่อ นาย / นาง
   String getPrefix(String? gender) {
@@ -95,7 +93,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   @override
   void initState() {
     super.initState();
-    isReviewed = widget.requestModel.review != null;
     isReported = widget.requestModel.report != null;
     _setInitialStatus();
     _fetchDetailData();
@@ -156,65 +153,39 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
         if (usersSnap.exists && usersSnap.value is Map) {
           final users = usersSnap.value as Map<dynamic, dynamic>;
 
-          users.forEach((key, value) {
+          users.forEach((key, value) async {
             if (value['Caretaker'] != null &&
                 value['Caretaker']['caretakerId'] == targetId) {
-              caretakerUidForReview = key.toString();
               caretakerData = Map<String, dynamic>.from(value['Caretaker']);
               if (value['email'] != null) {
                 caretakerData!['email'] = value['email'];
               }
+              // ดึงรีวิวผู้ดูแลมานับคะแนน
+              final reviews = await CaretakerService().getAllReviews(
+                key.toString(),
+              );
+              if (mounted) {
+                setState(() {
+                  caretakerReviewCount = reviews.length;
+                  if (reviews.isNotEmpty) {
+                    double sum = reviews
+                        .map((r) => r['rating'] as double)
+                        .reduce((a, b) => a + b);
+                    caretakerRating = sum / reviews.length;
+                  }
+                });
+              }
             }
           });
-          if (caretakerUidForReview != null) {
-            final reviews = await CaretakerService().getAllReviews(
-              caretakerUidForReview!,
-            );
-            caretakerReviewCount = reviews.length;
-
-            if (reviews.isNotEmpty) {
-              double sum = reviews
-                  .map((r) => r['rating'] as double)
-                  .reduce((a, b) => a + b);
-              caretakerRating = sum / reviews.length;
-            }
-          }
         }
       }
     } catch (e) {
       print("Error fetching details: $e");
     } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  void _showReviewPage() {
-    if (caretakerUidForReview == null) return;
-
-    String dateStr = _formatThaiDateFull(widget.requestModel.appointmentdate);
-    String timeStr = _formatTime(widget.requestModel.appointmenttime);
-    String fullDateTime = '$dateStr เวลา $timeStr';
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ReviewCaretakerPage(
-          requestId: widget.requestModel.requestId!,
-          relativeUid: widget.loggedUid,
-          caretakerUid: caretakerUidForReview!,
-          caretakerName: widget.caretakerName,
-          hospitalName: widget.requestModel.hospitalname ?? 'ไม่ระบุโรงพยาบาล',
-          appointmentDateStr: fullDateTime,
-          caretakerImage: caretakerData?['profilephoto'],
-        ),
-      ),
-    ).then((value) {
-      if (value == true) {
-        setState(() {
-          isReviewed = true;
-        });
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
-    });
+    }
   }
 
   void _navigateToDoctorAdvicePage() {
@@ -802,25 +773,26 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
 
     var req = widget.requestModel;
     String statusText = 'รอตอบรับ';
-    Color statusColor = const Color(0xFF00C853);
-    Color statusBgColor = const Color(0xFFE8F5E9);
+    Color statusColor = const Color(0xFFE65100);
+    Color statusBgColor = const Color(0xFFFFF3E0);
 
     if (currentStatus == RequestStatus.acceptedEarly ||
         currentStatus == RequestStatus.acceptedReady) {
       statusText = 'ตอบรับแล้ว';
-      statusColor = const Color(0xFF00C853);
-      statusBgColor = const Color(0xFFE8F5E9);
+      statusColor = const Color(0xFF2ECC71);
+      statusBgColor = const Color(0xFFE9F7EF);
     } else if (currentStatus == RequestStatus.completed) {
-      statusText = 'สิ้นสุดบริการ';
-      statusColor = const Color(0xFF00B0FF);
-      statusBgColor = const Color(0xFFE1F5FE);
+      // 🌟 เปลี่ยนคำว่า สิ้นสุดบริการ เป็น เสร็จสิ้น
+      statusText = 'เสร็จสิ้น';
+      statusColor = const Color(0xFF3498DB);
+      statusBgColor = const Color(0xFFEBF5FB);
     } else if (currentStatus == RequestStatus.cancelled) {
-      statusText = 'ยกเลิกบริการ';
-      statusColor = const Color(0xFFF44336);
-      statusBgColor = const Color(0xFFFFEBEE);
+      // 🌟 เปลี่ยนคำว่า ยกเลิกบริการ เป็น ยกเลิก/ปฏิเสธ
+      statusText = 'ยกเลิก/ปฏิเสธ';
+      statusColor = const Color(0xFFE74C3C);
+      statusBgColor = const Color(0xFFFDEDEC);
     }
 
-    // 🌟 แปลงชื่อผู้ป่วยพร้อม นาย / นาง (เว้นวรรค 1 เคาะ)
     String patientFullName = formatFullNameWithTitle(
       gender: patientData?['gender']?.toString(),
       firstname: patientData?['firstname']?.toString(),
@@ -1066,7 +1038,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                             Expanded(
                               child: _buildDocField(
                                 'ชื่อ - นามสกุล',
-                                patientFullName, // 🌟 แสดงผลชื่อพร้อม นาย / นาง
+                                patientFullName,
                               ),
                             ),
                           ],
@@ -1138,6 +1110,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     );
   }
 
+  // 🌟 ถอดปุ่มให้คะแนนรีวิวออกไปจากหน้านี้แล้ว
   Widget _buildBottomActionButtons() {
     if (currentStatus == RequestStatus.cancelled) {
       return const SizedBox.shrink();
@@ -1161,33 +1134,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                 onPressed: _navigateToDoctorAdvicePage,
                 label: const Text(
                   'ดูคำแนะนำและนัดหมายถัดไป',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-
-          if (doctorAdviceData != null && !isReviewed)
-            const SizedBox(height: 12),
-
-          if (!isReviewed)
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  elevation: 3,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: _showReviewPage,
-                label: const Text(
-                  'ให้คะแนนบริการ',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.white,

@@ -46,10 +46,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
   int _currentImageIndex = 0;
 
   String? selectedGender;
-  DateTime? birthDate;
   final List<String> genderOptions = ['ชาย', 'หญิง', 'อื่นๆ'];
 
-  // 🌟 1. เปลี่ยนตัวแปรมารับ Experience แทน
   TextEditingController fnameController = TextEditingController();
   TextEditingController lnameController = TextEditingController();
   TextEditingController phoneController = TextEditingController();
@@ -57,13 +55,104 @@ class _EditProfilePageState extends State<EditProfilePage> {
   TextEditingController servicedescController = TextEditingController();
   TextEditingController serviceAreaController = TextEditingController();
 
+  // 🌟 เพิ่ม Controller สำหรับวันเกิดและอายุให้เหมือนฝั่งญาติ
+  TextEditingController birthDateController = TextEditingController();
+  TextEditingController ageController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     _loadProfileData();
   }
 
-  // เพิ่มฟังก์ชันนี้ไว้ในคลาส _EditProfilePageState
+  @override
+  void dispose() {
+    fnameController.dispose();
+    lnameController.dispose();
+    phoneController.dispose();
+    experienceController.dispose();
+    servicedescController.dispose();
+    serviceAreaController.dispose();
+    birthDateController.dispose();
+    ageController.dispose();
+    super.dispose();
+  }
+
+  // 🌟 ฟังก์ชันคำนวณอายุอัตโนมัติจากสตริง DD/MM/YYYY
+  void _calculateAge(String birthDateStr) {
+    if (birthDateStr.isEmpty) {
+      ageController.text = '';
+      return;
+    }
+    try {
+      List<String> parts = birthDateStr.split('/');
+      if (parts.length == 3) {
+        int day = int.parse(parts[0]);
+        int month = int.parse(parts[1]);
+        int year = int.parse(parts[2]);
+
+        if (year > 2400) {
+          year -= 543;
+        }
+
+        DateTime birthDate = DateTime(year, month, day);
+        DateTime today = DateTime.now();
+
+        int age = today.year - birthDate.year;
+        if (today.month < birthDate.month ||
+            (today.month == birthDate.month && today.day < birthDate.day)) {
+          age--;
+        }
+
+        ageController.text = age >= 0 ? '$age ปี' : '0 ปี';
+      }
+    } catch (e) {
+      ageController.text = '';
+    }
+  }
+
+  Future<void> _selectBirthDate() async {
+    DateTime initialDate = DateTime.now().subtract(
+      const Duration(days: 365 * 20),
+    );
+    try {
+      if (birthDateController.text.isNotEmpty) {
+        final parts = birthDateController.text.split('/');
+        int year = int.parse(parts[2]);
+        if (year > 2400) year -= 543;
+        initialDate = DateTime(year, int.parse(parts[1]), int.parse(parts[0]));
+      }
+    } catch (_) {}
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: primaryColor,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        // 🌟 อัปเดต Text ในช่องพร้อมคำนวณอายุทันที
+        birthDateController.text =
+            "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year + 543}";
+        _calculateAge(birthDateController.text);
+      });
+    }
+  }
+
   ImageProvider _getSafeBase64Image(String base64String) {
     try {
       String cleanBase64 = base64String;
@@ -77,7 +166,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
       return MemoryImage(base64Decode(cleanBase64));
     } catch (e) {
-      // คืนค่ารูปเปล่าๆ หากเกิด Error
       return MemoryImage(base64Decode('R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='));
     }
   }
@@ -129,19 +217,27 @@ class _EditProfilePageState extends State<EditProfilePage> {
         lnameController.text = data['lastname'] ?? '';
         phoneController.text = data['phonenumber'] ?? '';
 
-        // 🌟 2. ดึงข้อมูล Experience
         experienceController.text = data['experience'] ?? '';
         servicedescController.text = data['servicedesc'] ?? '';
 
-        // 🌟 3. ดักจับที่อยู่ทั้งแบบ Location (ใหม่) และ location (เก่า)
         var locData = data['Location'] ?? data['location'];
         serviceAreaController.text = locData != null
             ? (locData['address'] ?? '')
             : '';
 
         selectedGender = data['gender'];
+
+        // 🌟 ดึงวันเกิดมาแสดงในรูปแบบ DD/MM/YYYY
         if (data['birthdate'] != null) {
-          birthDate = DateTime.tryParse(data['birthdate'].toString());
+          try {
+            DateTime parsedDate = DateTime.parse(data['birthdate'].toString());
+            birthDateController.text =
+                "${parsedDate.day.toString().padLeft(2, '0')}/${parsedDate.month.toString().padLeft(2, '0')}/${parsedDate.year + 543}";
+            _calculateAge(birthDateController.text);
+          } catch (e) {
+            birthDateController.text = data['birthdate'].toString();
+            _calculateAge(birthDateController.text);
+          }
         }
 
         profileImageUrl = data['profilephoto'] ?? '';
@@ -154,11 +250,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
           vehicleModel = data['Vehicle']['model'] ?? '';
           vehiclePlate = data['Vehicle']['licenseplate'] ?? '';
 
-          // 🌟 เคลียร์ List เก่าก่อนโหลดใหม่
           vehicleImages.clear();
-
-          // 🌟 ดึงข้อมูลรูปรถ รองรับทั้ง 'vehiclephotos' และ 'VehiclePhoto'
-          final photos = data['Vehicle']['vehiclephotos'] ?? data['Vehicle']['VehiclePhoto'];
+          final photos =
+              data['Vehicle']['vehiclephotos'] ??
+              data['Vehicle']['VehiclePhoto'];
 
           if (photos != null) {
             if (photos is List) {
@@ -188,7 +283,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   void _saveProfile() async {
-    // 🌟 4. อัปเดตข้อมูลที่จะส่งไปเซฟให้ตรงกับ Model
+    // 🌟 แปลงสตริงจากช่องกรอกกลับเป็น DateTime มาตรฐาน (ISO 8601) ก่อนส่งลงฐานข้อมูล
+    DateTime? savedBirthDate;
+    if (birthDateController.text.isNotEmpty) {
+      try {
+        final parts = birthDateController.text.split('/');
+        int year = int.parse(parts[2]);
+        if (year > 2400) year -= 543;
+        savedBirthDate = DateTime(
+          year,
+          int.parse(parts[1]),
+          int.parse(parts[0]),
+        );
+      } catch (_) {}
+    }
+
     Map<String, dynamic> updateData = {
       'firstname': fnameController.text,
       'lastname': lnameController.text,
@@ -196,7 +305,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       'experience': experienceController.text,
       'servicedesc': servicedescController.text,
       'gender': selectedGender,
-      'birthdate': birthDate?.toIso8601String(),
+      'birthdate': savedBirthDate?.toIso8601String(),
       'Location': {
         'address': serviceAreaController.text,
         'latitude': 0.0,
@@ -297,6 +406,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             controller: null,
                             initialValue: citizenId,
                             isReadOnly: true,
+                            isEnabled: false,
                           ),
                           Row(
                             children: [
@@ -315,11 +425,35 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               ),
                             ],
                           ),
+                          _buildGenderDropdown(),
+                          // 🌟 แสดงผล วันเกิดและอายุ คู่กัน
                           Row(
                             children: [
-                              Expanded(child: _buildGenderDropdown()),
+                              Expanded(
+                                flex: 6,
+                                child: _buildInputField(
+                                  'วันเกิด [DD/MM/YYYY]',
+                                  controller: birthDateController,
+                                  isReadOnly: true,
+                                  isEnabled: true,
+                                  onTap: _selectBirthDate,
+                                  suffixIcon: const Icon(
+                                    Icons.calendar_month,
+                                    color: Color(0xFF7C5CFC),
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
                               const SizedBox(width: 10),
-                              Expanded(child: _buildDatePicker('วันเกิด')),
+                              Expanded(
+                                flex: 4,
+                                child: _buildInputField(
+                                  'อายุ',
+                                  controller: ageController,
+                                  isReadOnly: true,
+                                  isEnabled: false, // ปิดการพิมพ์โดยสมบูรณ์
+                                ),
+                              ),
                             ],
                           ),
                           _buildInputField(
@@ -327,15 +461,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             controller: phoneController,
                             keyboardType: TextInputType.phone,
                           ),
-
-                          // 🌟 5. ฟิลด์ประสบการณ์การทำงาน
                           _buildInputField(
                             'ประสบการณ์การทำงาน (ถ้ามี)',
                             controller: experienceController,
                             maxLines: 3,
                             maxLength: 500,
                           ),
-
                           _buildInputField(
                             'รายละเอียดการบริการ (ถ้ามี)',
                             controller: servicedescController,
@@ -367,6 +498,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   'ประเภท',
                                   initialValue: vehicleType,
                                   isReadOnly: true,
+                                  isEnabled: false,
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -375,6 +507,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   'สี',
                                   initialValue: vehicleColor,
                                   isReadOnly: true,
+                                  isEnabled: false,
                                 ),
                               ),
                             ],
@@ -386,6 +519,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   'ยี่ห้อ',
                                   initialValue: vehicleBrand,
                                   isReadOnly: true,
+                                  isEnabled: false,
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -394,6 +528,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   'รุ่น',
                                   initialValue: vehicleModel,
                                   isReadOnly: true,
+                                  isEnabled: false,
                                 ),
                               ),
                             ],
@@ -402,6 +537,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             'ป้ายทะเบียน',
                             initialValue: vehiclePlate,
                             isReadOnly: true,
+                            isEnabled: false,
                           ),
                           const SizedBox(height: 5),
                           Text(
@@ -431,7 +567,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                         img,
                                         fit: BoxFit.cover,
                                         width: double.infinity,
-                                        // 🌟 เพิ่ม loadingBuilder เพื่อโชว์ตอนรูปกำลังโหลด
                                         loadingBuilder:
                                             (
                                               BuildContext context,
@@ -455,7 +590,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                                 ),
                                               );
                                             },
-                                        // 🌟 ดัก Error กรณีลิงก์รูปเสีย
                                         errorBuilder:
                                             (context, error, stackTrace) {
                                               return Container(
@@ -486,7 +620,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                         image: _getSafeBase64Image(img),
                                         fit: BoxFit.cover,
                                         width: double.infinity,
-                                        // 🌟 ดัก Error กรณีแปลง Base64 ไม่ผ่าน
                                         errorBuilder:
                                             (context, error, stackTrace) {
                                               return Container(
@@ -505,6 +638,33 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               );
                             }).toList(),
                           ),
+                          // 🌟 จุด Dot Indicators บ่งบอกจำนวนรูปภาพ
+                          if (vehicleImages.length > 1)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 10),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: vehicleImages.asMap().entries.map((
+                                  entry,
+                                ) {
+                                  return Container(
+                                    width: _currentImageIndex == entry.key
+                                        ? 18.0
+                                        : 8.0,
+                                    height: 8.0,
+                                    margin: const EdgeInsets.symmetric(
+                                      horizontal: 4.0,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(4.0),
+                                      color: _currentImageIndex == entry.key
+                                          ? primaryColor
+                                          : Colors.grey.shade300,
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
                         ],
                       ),
                       _buildReviewSection(),
@@ -607,13 +767,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 child: CircleAvatar(
                   radius: 41,
                   backgroundColor: Colors.white,
-                  // เปลี่ยนจาก MemoryImage(base64Decode(profileImageUrl)) เป็น:
                   backgroundImage: profileImageUrl.isNotEmpty
                       ? (profileImageUrl.startsWith('http')
                             ? NetworkImage(profileImageUrl)
-                            : _getSafeBase64Image(
-                                profileImageUrl,
-                              )) // ใช้ฟังก์ชันที่สร้างใหม่
+                            : _getSafeBase64Image(profileImageUrl))
                       : null,
                   child: profileImageUrl.isEmpty
                       ? Icon(
@@ -723,33 +880,40 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
+  // 🌟 อัปเดตฟังก์ชัน Build ให้รองรับ onTap และ ReadOnly คล้ายหน้าฝั่งญาติ
   Widget _buildInputField(
     String label, {
     TextEditingController? controller,
     String? initialValue,
     bool isReadOnly = false,
+    bool isEnabled = true,
     int maxLines = 1,
     int? maxLength,
     TextInputType keyboardType = TextInputType.text,
+    VoidCallback? onTap,
+    Widget? suffixIcon,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextFormField(
         controller: controller,
         initialValue: initialValue,
-        enabled: !isReadOnly,
+        enabled: isEnabled,
+        readOnly: isReadOnly,
+        onTap: onTap,
         maxLines: maxLines,
         maxLength: maxLength,
         keyboardType: keyboardType,
         style: TextStyle(
           fontSize: 14,
-          color: isReadOnly ? Colors.grey.shade600 : darkPurple,
+          color: !isEnabled ? Colors.grey.shade600 : darkPurple,
         ),
         decoration: InputDecoration(
           labelText: label,
+          suffixIcon: suffixIcon,
           labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF8D7AE6)),
           filled: true,
-          fillColor: isReadOnly
+          fillColor: !isEnabled
               ? Colors.grey.shade200
               : const Color(0xFFFAF8FF),
           contentPadding: const EdgeInsets.symmetric(
@@ -816,61 +980,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
           );
         }).toList(),
         onChanged: (val) => setState(() => selectedGender = val),
-      ),
-    );
-  }
-
-  Widget _buildDatePicker(String label) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () async {
-          DateTime? picked = await showDatePicker(
-            context: context,
-            initialDate: birthDate ?? DateTime.now(),
-            firstDate: DateTime(1900),
-            lastDate: DateTime.now(),
-            helpText: 'เลือกวันเกิด',
-          );
-          if (picked != null) {
-            setState(() => birthDate = picked);
-          }
-        },
-        child: InputDecorator(
-          decoration: InputDecoration(
-            labelText: label,
-            labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF8D7AE6)),
-            filled: true,
-            fillColor: const Color(0xFFFAF8FF),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 12,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: greyBorder, width: 2.3),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: greyBorder, width: 2.3),
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                birthDate != null
-                    ? "${birthDate!.day.toString().padLeft(2, '0')}/${birthDate!.month.toString().padLeft(2, '0')}/${birthDate!.year}"
-                    : "วว/ดด/ปปปป",
-                style: TextStyle(
-                  fontSize: 14,
-                  color: birthDate != null ? darkPurple : Colors.grey.shade500,
-                ),
-              ),
-              Icon(Icons.calendar_today, size: 18, color: greyBorder),
-            ],
-          ),
-        ),
       ),
     );
   }

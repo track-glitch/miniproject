@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:miniproject/services/auto_cancel_service.dart';
 import 'package:miniproject/views/caretaker/add_doctor_advice_page.dart';
 import 'package:miniproject/views/caretaker/test_add_relative.dart';
 import 'views/login_page.dart';
@@ -10,6 +11,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'views/caretaker/edit_profile_page.dart';
 import 'views/caretaker/test_page.dart';
 import 'widgets/search_preview_page.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // import
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +20,7 @@ Future<void> main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await initializeDateFormatting('th_TH');
+  AutoCancelService.checkAndCancelExpiredRequests();
   runApp(const MyApp());
 }
 

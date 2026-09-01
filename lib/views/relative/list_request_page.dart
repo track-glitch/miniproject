@@ -11,6 +11,8 @@ import 'package:miniproject/views/relative/relative_home_page.dart';
 import 'package:miniproject/views/relative/track_status_notification_page.dart';
 import 'package:miniproject/views/relative/view_request_detail_page.dart';
 import 'package:miniproject/views/login_page.dart';
+// 🌟 Import หน้า Review เข้ามาเพื่อให้กดจากหน้า List ได้เลย
+import 'package:miniproject/views/relative/review_caretaker_page.dart';
 
 class ListRequestPage extends StatefulWidget {
   final String? loggedUid;
@@ -22,17 +24,27 @@ class ListRequestPage extends StatefulWidget {
 }
 
 class _ListRequestPageState extends State<ListRequestPage> {
-  int _currentTabIndex = 0; // 0=รอตอบรับ, 1=ตอบรับแล้ว, 2=สิ้นสุด, 3=ยกเลิก
+  int _currentTabIndex =
+      0; // 0=รอตอบรับ, 1=ตอบรับแล้ว, 2=เสร็จสิ้น, 3=ยกเลิก/ปฏิเสธ
   bool _isLoading = true;
 
   final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
-  final Color primaryPurple = const Color(0xFF8763E6);
+  final Color primaryPurple = const Color(0xFF9B59B6);
   final Color darkPurple = const Color(0xFF7D3C98);
 
-  List<RequestCardData> requestsPending = [];
-  List<RequestCardData> requestsAccepted = [];
-  List<RequestCardData> requestsCompleted = [];
-  List<RequestCardData> requestsCancelled = [];
+  // 🌟 เก็บข้อมูลทั้งหมดไว้หลังบ้าน
+  List<RequestCardData> _requestsPendingAll = [];
+  List<RequestCardData> _requestsAcceptedAll = [];
+  List<RequestCardData> _requestsCompletedAll = [];
+  List<RequestCardData> _requestsCancelledAll = [];
+
+  // 🌟 ระบบ Pagination
+  final ScrollController _scrollController = ScrollController();
+  final int _perPage = 20;
+  int _pendingPage = 1;
+  int _acceptedPage = 1;
+  int _completedPage = 1;
+  int _cancelledPage = 1;
 
   String _userName = '';
 
@@ -41,6 +53,60 @@ class _ListRequestPageState extends State<ListRequestPage> {
     super.initState();
     _fetchUserName();
     _fetchMyRequests();
+
+    // 🌟 ดักจับการเลื่อนจอ ถ้าเลื่อนสุดให้โหลดข้อมูลเพิ่ม
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 50) {
+        _loadMoreCurrentTab();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _loadMoreCurrentTab() {
+    setState(() {
+      if (_currentTabIndex == 0 &&
+          (_pendingPage * _perPage) < _requestsPendingAll.length) {
+        _pendingPage++;
+      } else if (_currentTabIndex == 1 &&
+          (_acceptedPage * _perPage) < _requestsAcceptedAll.length) {
+        _acceptedPage++;
+      } else if (_currentTabIndex == 2 &&
+          (_completedPage * _perPage) < _requestsCompletedAll.length) {
+        _completedPage++;
+      } else if (_currentTabIndex == 3 &&
+          (_cancelledPage * _perPage) < _requestsCancelledAll.length) {
+        _cancelledPage++;
+      }
+    });
+  }
+
+  // 🌟 ฟังก์ชันดึงข้อมูลมาแสดงผล (เอามาแค่เท่าที่คำนวณหน้าไว้ ทีละ 20)
+  List<RequestCardData> _getCurrentTabRequestsDisplay() {
+    if (_currentTabIndex == 0)
+      return _requestsPendingAll.take(_pendingPage * _perPage).toList();
+    if (_currentTabIndex == 1)
+      return _requestsAcceptedAll.take(_acceptedPage * _perPage).toList();
+    if (_currentTabIndex == 2)
+      return _requestsCompletedAll.take(_completedPage * _perPage).toList();
+    return _requestsCancelledAll.take(_cancelledPage * _perPage).toList();
+  }
+
+  // 🌟 เช็คว่ายังมีข้อมูลเหลือให้โหลดอีกไหม เพื่อโชว์หลอดหมุนๆ ด้านล่างสุด
+  bool _hasMoreInCurrentTab() {
+    if (_currentTabIndex == 0)
+      return (_pendingPage * _perPage) < _requestsPendingAll.length;
+    if (_currentTabIndex == 1)
+      return (_acceptedPage * _perPage) < _requestsAcceptedAll.length;
+    if (_currentTabIndex == 2)
+      return (_completedPage * _perPage) < _requestsCompletedAll.length;
+    return (_cancelledPage * _perPage) < _requestsCancelledAll.length;
   }
 
   Future<void> _fetchUserName() async {
@@ -158,12 +224,10 @@ class _ListRequestPageState extends State<ListRequestPage> {
       if (snapshot.exists && snapshot.value is Map) {
         final Map<dynamic, dynamic> requestsMap =
             snapshot.value as Map<dynamic, dynamic>;
-
         final allUsersSnapshot = await FirebaseDatabase.instance
             .ref('Login')
             .get();
 
-        // 🌟 เก็บข้อมูลแบบเต็มเพื่อเอามาเช็ค อายุ/เพศ
         Map<String, Map<String, dynamic>> caretakerDataMap = {};
         if (allUsersSnapshot.exists && allUsersSnapshot.value is Map) {
           final allUsers = allUsersSnapshot.value as Map<dynamic, dynamic>;
@@ -186,8 +250,9 @@ class _ListRequestPageState extends State<ListRequestPage> {
             );
             String statusType = (req.requeststatus ?? 'pending').toLowerCase();
 
-            // 🌟 ลอจิกการคำนวณ อายุและเพศ สำหรับคำนำหน้าชื่อผู้ให้บริการ
             String caretakerFullName = 'รอผู้ดูแลตอบรับ';
+            String caretakerImage = ''; // 🌟 เก็บรูปลงโมเดลเพื่อใช้ในหน้ารีวิว
+
             if (req.caretakerId != null &&
                 caretakerDataMap.containsKey(req.caretakerId)) {
               final cData = caretakerDataMap[req.caretakerId]!;
@@ -195,9 +260,9 @@ class _ListRequestPageState extends State<ListRequestPage> {
               String lName = cData['lastname']?.toString() ?? '';
               String gender = cData['gender']?.toString() ?? '';
               String bdStr = cData['birthdate']?.toString() ?? '';
+              caretakerImage = cData['profilephoto']?.toString() ?? '';
 
-              String prefix = 'คุณ '; // ค่าเริ่มต้น
-
+              String prefix = '';
               if (bdStr.isNotEmpty) {
                 try {
                   DateTime bd = DateTime.parse(bdStr);
@@ -207,7 +272,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
                           DateTime.now().day < bd.day)) {
                     age--;
                   }
-
                   if (gender == 'ชาย') {
                     prefix = age < 15 ? 'ด.ช. ' : 'นาย ';
                   } else if (gender == 'หญิง') {
@@ -221,8 +285,15 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 if (gender == 'ชาย') prefix = 'นาย ';
                 if (gender == 'หญิง') prefix = 'นางสาว ';
               }
-
               caretakerFullName = "$prefix$fName $lName".trim();
+            }
+
+            // 🌟 ตรวจสอบว่าถูกรีวิวไปหรือยัง
+            bool isRev = false;
+            if (reqData['Review'] != null ||
+                reqData['review'] != null ||
+                req.review != null) {
+              isRev = true;
             }
 
             RequestCardData card = RequestCardData(
@@ -238,8 +309,9 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 req.requestdate,
               ),
               category: req.departmentname ?? 'ทั่วไป',
-              caregiverName:
-                  caretakerFullName, // 🌟 ส่งชื่อเต็มที่คำนวณคำนำหน้าแล้ว
+              caregiverName: caretakerFullName,
+              caretakerImage: caretakerImage,
+              isReviewed: isRev,
               requestModel: req,
             );
 
@@ -272,10 +344,10 @@ class _ListRequestPageState extends State<ListRequestPage> {
 
       if (!mounted) return;
       setState(() {
-        requestsPending = pendingList;
-        requestsAccepted = acceptedList;
-        requestsCompleted = completedList;
-        requestsCancelled = cancelledList;
+        _requestsPendingAll = pendingList;
+        _requestsAcceptedAll = acceptedList;
+        _requestsCompletedAll = completedList;
+        _requestsCancelledAll = cancelledList;
         _isLoading = false;
       });
     } catch (e) {
@@ -303,13 +375,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
     return '${date.day} ${months[date.month - 1]} ${date.year + 543} เวลา ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} น.';
   }
 
-  List<RequestCardData> _getCurrentTabRequests() {
-    if (_currentTabIndex == 0) return requestsPending;
-    if (_currentTabIndex == 1) return requestsAccepted;
-    if (_currentTabIndex == 2) return requestsCompleted;
-    return requestsCancelled;
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -318,6 +383,8 @@ class _ListRequestPageState extends State<ListRequestPage> {
         body: Center(child: CircularProgressIndicator(color: primaryPurple)),
       );
     }
+
+    final displayList = _getCurrentTabRequestsDisplay();
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -379,7 +446,7 @@ class _ListRequestPageState extends State<ListRequestPage> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'ประวัติคำขอใช้บริการ',
+              'รายการคำขอใช้บริการ',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -390,7 +457,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
           ],
         ),
       ),
-
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -401,7 +467,14 @@ class _ListRequestPageState extends State<ListRequestPage> {
               initialIndex: _currentTabIndex,
               child: TabBar(
                 isScrollable: false,
-                onTap: (index) => setState(() => _currentTabIndex = index),
+                onTap: (index) {
+                  setState(() {
+                    _currentTabIndex = index;
+                    if (_scrollController.hasClients) {
+                      _scrollController.jumpTo(0);
+                    }
+                  });
+                },
                 labelColor: darkPurple,
                 unselectedLabelColor: Colors.grey.shade500,
                 indicatorColor: darkPurple,
@@ -410,33 +483,32 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 tabs: [
                   _buildTabItem(
                     Icons.access_time_rounded,
-                    'รอตอบรับ',
-                    requestsPending.length,
+                    'คำขอใช้บริการ',
+                    _requestsPendingAll.length,
                   ),
                   _buildTabItem(
                     Icons.check_circle_outline_rounded,
                     'ตอบรับแล้ว',
-                    requestsAccepted.length,
+                    _requestsAcceptedAll.length,
                   ),
+                  // 🌟 แก้ไขชื่อ Tab ให้เป็น เสร็จสิ้น และ ยกเลิก/ปฏิเสธ
                   _buildTabItem(
                     Icons.star_border_rounded,
-                    'สิ้นสุด',
-                    requestsCompleted.length,
+                    'ให้รีวิว',
+                    _requestsCompletedAll.length,
                   ),
                   _buildTabItem(
                     Icons.cancel_outlined,
-                    'ยกเลิก',
-                    requestsCancelled.length,
+                    'ยกเลิก/ปฏิเสธ',
+                    _requestsCancelledAll.length,
                   ),
                 ],
               ),
             ),
           ),
-
           Container(height: 6, color: bgColor),
-
           Expanded(
-            child: _getCurrentTabRequests().isEmpty
+            child: displayList.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -459,15 +531,27 @@ class _ListRequestPageState extends State<ListRequestPage> {
                     ),
                   )
                 : ListView.builder(
+                    controller: _scrollController,
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: _getCurrentTabRequests().length,
-                    itemBuilder: (context, index) =>
-                        _buildRequestCard(_getCurrentTabRequests()[index]),
+                    itemCount:
+                        displayList.length + (_hasMoreInCurrentTab() ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == displayList.length) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: primaryPurple,
+                            ),
+                          ),
+                        );
+                      }
+                      return _buildRequestCard(displayList[index]);
+                    },
                   ),
           ),
         ],
       ),
-
       bottomNavigationBar: Container(
         height: 65,
         decoration: BoxDecoration(
@@ -694,12 +778,21 @@ class _ListRequestPageState extends State<ListRequestPage> {
       case 'completed':
         statusColor = const Color(0xFF3498DB);
         statusBgColor = const Color(0xFFEBF5FB);
-        statusText = 'สิ้นสุด';
+        // 🌟 เปลี่ยนคำว่า สิ้นสุด เป็น เสร็จสิ้น
+        statusText = 'เสร็จสิ้น';
         statusIcon = Icons.star_border_rounded;
+        break;
+      case 'rejected':
+        statusColor = const Color(0xFFE74C3C);
+        statusBgColor = const Color(0xFFFDEDEC);
+        // 🌟 เปลี่ยนคำว่า ยกเลิก เป็น ยกเลิก/ปฏิเสธ
+        statusText = 'ปฏิเสธ';
+        statusIcon = Icons.cancel_outlined;
         break;
       case 'cancelled':
         statusColor = const Color(0xFFE74C3C);
         statusBgColor = const Color(0xFFFDEDEC);
+        // 🌟 เปลี่ยนคำว่า ยกเลิก เป็น ยกเลิก/ปฏิเสธ
         statusText = 'ยกเลิก';
         statusIcon = Icons.cancel_outlined;
         break;
@@ -740,22 +833,7 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 ),
                 child: Icon(statusIcon, color: primaryPurple, size: 26),
               ),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: statusBgColor,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  statusText,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+              // 🌟 เอากรอบสถานะตรงนี้ออก ย้ายไปไว้ใต้ วันนัดบริการ แทน!
             ],
           ),
           const SizedBox(width: 14),
@@ -797,12 +875,101 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 ),
                 const SizedBox(height: 6),
 
-                // 🌟 ข้อมูลที่นำมาแสดงใหม่พร้อมคำนำหน้า
-                Text(
-                  'ผู้ให้บริการ: ${request.caregiverName}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                // 🌟 ปรับแต่งปุ่มรีวิวและป้ายสถานะรีวิวให้เป็นทรงวงรี ชิดติดชื่อผู้ให้บริการ
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'ผู้ให้บริการ: ${request.caregiverName}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                    if (request.statusType == 'completed') ...[
+                      const SizedBox(width: 6),
+                      if (request.isReviewed)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            border: Border.all(color: Colors.orange.shade200),
+                            borderRadius: BorderRadius.circular(
+                              20,
+                            ), // 🌟 ปรับเป็นทรงวงรี
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.star, size: 11, color: Colors.orange),
+                              SizedBox(width: 3),
+                              Text(
+                                'รีวิวแล้ว',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.orange,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ReviewCaretakerPage(
+                                  requestId: request.id,
+                                  relativeUid:
+                                      widget.loggedUid ??
+                                      FirebaseAuth.instance.currentUser!.uid,
+                                  caretakerUid:
+                                      request.requestModel.caretakerId ?? '',
+                                  caretakerName: request.caregiverName,
+                                  hospitalName: request.serviceName,
+                                  appointmentDateStr: request.date,
+                                  caretakerImage: request.caretakerImage,
+                                ),
+                              ),
+                            ).then((value) {
+                              if (value == true) {
+                                _fetchMyRequests();
+                              }
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange,
+                              borderRadius: BorderRadius.circular(
+                                20,
+                              ), // 🌟 ปรับเป็นทรงวงรี
+                            ),
+                            child: const Text(
+                              'ให้รีวิว',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 4),
 
@@ -819,6 +986,29 @@ class _ListRequestPageState extends State<ListRequestPage> {
                     color: darkPurple,
                     fontWeight: FontWeight.bold,
                   ),
+                ),
+                const SizedBox(height: 6),
+
+                // 🌟 ย้ายกรอบบอกสถานะมาไว้ใต้ วันนัดบริการ
+                Row(
+                  children: [
+                    const Text(
+                      'สถานะ: ',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      statusText,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 14),
@@ -897,7 +1087,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
                           ),
                         ),
                       ),
-
                     SizedBox(
                       height: 30,
                       child: ElevatedButton(
@@ -980,6 +1169,9 @@ class RequestCardData {
   final String submitDate;
   final String category;
   final String caregiverName;
+  // 🌟 เพิ่มตัวแปรสำหรับเก็บภาพไปหน้ารีวิวและสถานะการรีวิว
+  final String caretakerImage;
+  final bool isReviewed;
   final RequestModel requestModel;
 
   RequestCardData({
@@ -990,6 +1182,8 @@ class RequestCardData {
     required this.submitDate,
     required this.category,
     required this.caregiverName,
+    required this.caretakerImage,
+    required this.isReviewed,
     required this.requestModel,
   });
 }

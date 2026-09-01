@@ -20,7 +20,7 @@ class CustomHeader extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       centerTitle: true,
-      backgroundColor: const Color(0xFF8E6FF0), // สีม่วงตามภาพ
+      backgroundColor: const Color(0xFF9B59B6), // สีม่วงตามภาพ
       elevation: 0,
       iconTheme: const IconThemeData(color: Colors.white),
       leading: showBackButton

@@ -224,9 +224,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
       if (!_caretakerBusyDates.contains(checkFormat)) {
         break;
       }
-      validDate = validDate.add(
-        const Duration(days: 1),
-      );
+      validDate = validDate.add(const Duration(days: 1));
     }
 
     if (validDate != _selectedDate) {
@@ -238,11 +236,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
 
   Future<void> _selectDate(BuildContext context) async {
     DateTime now = DateTime.now();
-    DateTime today = DateTime(
-      now.year,
-      now.month,
-      now.day,
-    );
+    DateTime today = DateTime(now.year, now.month, now.day);
 
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -484,7 +478,8 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                                   Text(
                                     _selectedTime == null
                                         ? '--:-- น.'
-                                        : '${_selectedTime!.format(context)} น.',
+                                        // 🌟 เปลี่ยนมาดึง hour และ minute มาเติม 0 ด้านหน้าให้ครบ 2 หลักแทน
+                                        : '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')} น.',
                                     style: TextStyle(
                                       color: _selectedTime == null
                                           ? Colors.grey
@@ -553,7 +548,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                   hasPinned: _dropoffHasPinned,
                   isExpanded: _dropoffMapExpanded,
                   showAddressField: false,
-                  pinButtonText: 'ระบุพิกัดสถานที่ไป',
+                  pinButtonText: 'ระบุพิกัดจุดหมายปลายทาง',
                   onToggleMap: () => setState(
                     () => _dropoffMapExpanded = !_dropoffMapExpanded,
                   ),
@@ -1010,7 +1005,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
     return _buildInfoCard(
       title: 'ญาติ (ผู้ติดต่อ)',
       gender: _relativeData!['gender']?.toString(),
-      firstName:'คุณ ${_relativeData!['firstname'] ?? ''}'.trim(),
+      firstName: 'คุณ ${_relativeData!['firstname'] ?? ''}'.trim(),
       lastName: _relativeData!['lastname'] ?? '',
       phone: _relativeData!['phonenumber'] ?? '-',
       extraInfo: 'ความสัมพันธ์: ${_relativeData!['relationship'] ?? '-'}',

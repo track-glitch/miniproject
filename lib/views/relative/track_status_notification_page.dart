@@ -33,11 +33,11 @@ class _TrackStatusNotificationPageState
   List<_NotificationItem> _items = [];
   bool _isLoading = true;
 
-  static const Color primaryPurple = Color(0xFF8763E6);
+  static const Color primaryPurple = Color(0xFF9B59B6);
   static const Color darkPurple = Color(0xFF7D3C98);
   static const Color lightPurpleBg = Color(0xFFF4EDFB);
-  // 🌟 เปลี่ยนสี Highlight สำหรับสถานะล่าสุดเป็น "สีเขียว" ตามรีเควส
-  static const Color highlightColor = Color(0xFF00C853);
+  // 🌟 สี Highlight สำหรับสถานะล่าสุด
+  static const Color highlightColor = Color(0xFF00B0FF);
 
   @override
   void initState() {
@@ -120,7 +120,6 @@ class _TrackStatusNotificationPageState
     }
   }
 
-  // 🌟 ฟังก์ชันจัด Format วัน/เวลา สำหรับการ์ดข้อมูลบริการ
   String _formatApptDate(DateTime? date, DateTime? time) {
     if (date == null || time == null) return '-';
     List<String> months = [
@@ -140,14 +139,12 @@ class _TrackStatusNotificationPageState
     return '${date.day} ${months[date.month - 1]} ${date.year + 543} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} น.';
   }
 
-  // 🌟 Widget สร้างการ์ด "ข้อมูลบริการปัจจุบัน" (ดีไซน์ใหม่ กะทัดรัด แบ่งซ้าย-ขวา)
   Widget _buildServiceInfoCard() {
     final req = widget.requestModel;
     if (req == null) return const SizedBox.shrink();
 
     String apptStr = _formatApptDate(req.appointmentdate, req.appointmenttime);
 
-    // จัด Format Request ID ให้สวยงาม
     String displayReqId = req.requestId ?? '';
     if (!displayReqId.toUpperCase().startsWith('REQ-') &&
         !displayReqId.toUpperCase().startsWith('RQ-')) {
@@ -158,17 +155,11 @@ class _TrackStatusNotificationPageState
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 14,
-      ), // ลด Padding นิดนึงให้กระชับ
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.grey.shade300,
-          width: 1.5,
-        ), // ขอบสีเทาอ่อนให้ดูคลีนขึ้น
+        border: Border.all(color: Colors.grey.shade300, width: 1.5),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -180,14 +171,13 @@ class _TrackStatusNotificationPageState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ส่วนหัวการ์ด
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
                 'ข้อมูลบริการปัจจุบัน',
                 style: TextStyle(
-                  color: Color(0xFF8763E6), // สีม่วง
+                  color: Color(0xFF8763E6),
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),
@@ -212,18 +202,12 @@ class _TrackStatusNotificationPageState
 
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 10),
-            child: Divider(
-              height: 1,
-              thickness: 1,
-              color: Color(0xFFEEEEEE),
-            ), // เส้นคั่นบางๆ
+            child: Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
           ),
 
-          // 🌟 ส่วนข้อมูล แบ่งเป็น 2 คอลัมน์ (ซ้าย-ขวา)
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // คอลัมน์ซ้าย
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,8 +222,7 @@ class _TrackStatusNotificationPageState
                   ],
                 ),
               ),
-              const SizedBox(width: 12), // ช่องไฟตรงกลาง
-              // คอลัมน์ขวา
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,7 +240,6 @@ class _TrackStatusNotificationPageState
     );
   }
 
-  // 🌟 ฟังก์ชันย่อยสำหรับวาดข้อมูลแต่ละช่องให้ออกมาเป็น 2 บรรทัด (หัวข้อ - รายละเอียด)
   Widget _buildCompactInfo(String label, String value, {bool isBold = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,31 +258,6 @@ class _TrackStatusNotificationPageState
           ),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value, {bool isBold = false}) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 85,
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 14, color: Colors.black87),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: Colors.black,
-            ),
-          ),
         ),
       ],
     );
@@ -403,13 +360,12 @@ class _TrackStatusNotificationPageState
         ),
         centerTitle: true,
       ),
-      // 🌟 นำ ListView มาครอบทั้งการ์ดข้อมูลบริการและการแจ้งเตือน เพื่อให้เลื่อนได้ทั้งหมด
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: primaryPurple))
           : ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
               children: [
-                _buildServiceInfoCard(), // 🌟 แสดงการ์ดบนสุดเสมอ
+                _buildServiceInfoCard(),
 
                 if (_items.isEmpty)
                   Padding(
@@ -719,6 +675,7 @@ class _NotificationItem {
   });
 }
 
+// 🌟 NotificationCard ที่นำไอคอนออกและชิดซ้าย
 class _NotificationCard extends StatelessWidget {
   final _NotificationItem item;
 
@@ -728,116 +685,132 @@ class _NotificationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool latest = item.isLatest;
 
+    // แยกวันที่กับเวลาออกจากกัน
+    String dateStr = item.dateTime;
+    String timeStr = '';
+    final parts = item.dateTime.split(' ');
+    if (parts.length >= 2) {
+      dateStr = parts[0];
+      timeStr = parts.sublist(1).join(' '); // นำเวลาและ น. มารวมกัน
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: latest
-            ? const Border(
-                left: BorderSide(
-                  color: _TrackStatusNotificationPageState.highlightColor,
-                  width: 5,
+        borderRadius: BorderRadius.circular(16),
+        // ขอบสีม่วง/เขียว ให้คล้าย Reference และเพิ่มแสงเงา
+        border: Border.all(
+          color: latest
+              ? _TrackStatusNotificationPageState.highlightColor
+              : _TrackStatusNotificationPageState.primaryPurple.withOpacity(
+                  0.6,
                 ),
-              )
-            : Border.all(color: Colors.grey.shade200),
-        boxShadow: latest
-            ? [
-                BoxShadow(
-                  color: _TrackStatusNotificationPageState.highlightColor
-                      .withOpacity(0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+          width: latest ? 2.0 : 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: latest
+                ? _TrackStatusNotificationPageState.highlightColor.withOpacity(
+                    0.15,
+                  )
+                : _TrackStatusNotificationPageState.primaryPurple.withOpacity(
+                    0.15,
+                  ),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
+      child: IntrinsicHeight(
+        // ให้การ์ดความสูงเท่ากันทั้งซ้าย-ขวา
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ฝั่งซ้าย: แสดงวันที่และเวลา
+            Container(
+              width: 95,
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+              decoration: BoxDecoration(
+                color: latest
+                    ? _TrackStatusNotificationPageState.highlightColor
+                          .withOpacity(0.05)
+                    : _TrackStatusNotificationPageState.lightPurpleBg,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(14),
+                  bottomLeft: Radius.circular(14),
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.access_time_filled_rounded,
-                    size: 16,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(width: 6),
                   Text(
-                    item.dateTime,
+                    dateStr,
                     style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade800,
                     ),
+                    textAlign: TextAlign.center,
                   ),
+                  if (timeStr.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      timeStr,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ],
               ),
-              // 🌟 เอาการแสดงผลของ Request ID ตรงนี้ออกไปแล้ว ตามคำขอ!
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            item.status,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: latest
-                  ? _TrackStatusNotificationPageState.highlightColor
-                  : _TrackStatusNotificationPageState.darkPurple,
             ),
-          ),
-          if (item.detail.isNotEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Divider(thickness: 1, height: 1),
+
+            // เส้นคั่นกลาง
+            VerticalDivider(
+              width: 1,
+              thickness: 1,
+              color: Colors.grey.shade200,
             ),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  size: 18,
-                  color: Colors.grey.shade500,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.detailLabel,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey.shade700,
-                        ),
+
+            // 🌟 ฝั่งขวา: แสดงสถานะ และรายละเอียด (นำ Icon ออก)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      item.status,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: latest
+                            ? _TrackStatusNotificationPageState.highlightColor
+                            : _TrackStatusNotificationPageState.darkPurple,
                       ),
-                      const SizedBox(height: 4),
+                    ),
+                    if (item.detail.isNotEmpty) ...[
+                      const SizedBox(height: 6),
                       Text(
                         item.detail,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.black87,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade700,
                           height: 1.4,
                         ),
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }

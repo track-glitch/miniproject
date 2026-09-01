@@ -32,8 +32,8 @@ class _ReviewCaretakerPageState extends State<ReviewCaretakerPage> {
   bool _isSubmitting = false;
 
   // ── 🎨 ชุดสีหลักตามธีม ─────────────────────────────────────────
-  final Color primaryPurple = const Color(0xFF8763E6);
-  final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
+  final Color primaryPurple = const Color(0xFF9B59B6);
+  final Color darkPurple = const Color(0xFF9B59B6);
   final Color lightPurple = const Color(0xFFECE2FE);
   final Color bgPurple = const Color.fromARGB(255, 225, 202, 255);
   final Color borderColor = const Color(0xFFD3C2F0);

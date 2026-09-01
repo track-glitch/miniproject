@@ -35,14 +35,14 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   bool _isLoading = true;
 
   // 🎨 โทนสีม่วง
-  final Color primaryColor = const Color(0xFF7C5CFC);
-  final Color darkPurple = const Color(0xFF6E5ABF);
+  final Color primaryColor = const Color(0xFF9B59B6);
+  final Color darkPurple = const Color(0xFF9B59B6);
   final Color lightPurple = const Color(0xFFF3E5F5);
   final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
-  final Color greyBorder = const Color(0xFFB9A4F2);
+  final Color greyBorder = const Color(0xFF9B59B6);
 
-  final Color headerGradientStart = const Color(0xFF8E6FF0);
-  final Color headerGradientEnd = const Color(0xFF7C5CFC);
+  final Color headerGradientStart = const Color(0xFF9B59B6);
+  final Color headerGradientEnd = const Color(0xFF9B59B6);
   final Color bgGradientTop = const Color.fromARGB(255, 225, 202, 255);
   final Color bgGradientBottom = const Color.fromARGB(255, 225, 202, 255);
   final Color cardColor = Colors.white;
@@ -169,7 +169,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     _profilePhotoBase64 = widget.currentPatient.patientphoto;
   }
 
- Future<void> _fetchAndForceShowData() async {
+  Future<void> _fetchAndForceShowData() async {
     String uid = widget.loggedUid;
 
     if (uid.isNotEmpty) {
@@ -203,18 +203,23 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
             final loc = Map<String, dynamic>.from(data['Location'] as Map);
             _patAddressController.text = loc['address']?.toString() ?? '';
 
-            double lat = double.tryParse(loc['latitude']?.toString() ?? '0') ?? 0.0;
-            double lng = double.tryParse(loc['longitude']?.toString() ?? '0') ?? 0.0;
+            double lat =
+                double.tryParse(loc['latitude']?.toString() ?? '0') ?? 0.0;
+            double lng =
+                double.tryParse(loc['longitude']?.toString() ?? '0') ?? 0.0;
             if (lat != 0.0 && lng != 0.0) {
               _selectedLocation = LatLng(lat, lng);
               _hasPinned = true;
             }
-          } 
+          }
           // ถ้าไม่มีก้อน Location ค่อยมาเช็คฟิลด์ address นอกสุด (เผื่อมีข้อมูล)
-          else if (data['address'] != null && data['address'].toString().isNotEmpty) {
+          else if (data['address'] != null &&
+              data['address'].toString().isNotEmpty) {
             _patAddressController.text = data['address'].toString();
-            double lat = double.tryParse(data['latitude']?.toString() ?? '0') ?? 0.0;
-            double lng = double.tryParse(data['longitude']?.toString() ?? '0') ?? 0.0;
+            double lat =
+                double.tryParse(data['latitude']?.toString() ?? '0') ?? 0.0;
+            double lng =
+                double.tryParse(data['longitude']?.toString() ?? '0') ?? 0.0;
             if (lat != 0.0 && lng != 0.0) {
               _selectedLocation = LatLng(lat, lng);
               _hasPinned = true;
@@ -284,15 +289,15 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   }
 
   Future<void> _selectBirthDate() async {
-    DateTime initialDate =
-        DateTime.now().subtract(const Duration(days: 365 * 20));
+    DateTime initialDate = DateTime.now().subtract(
+      const Duration(days: 365 * 20),
+    );
     try {
       if (_patBirthDateController.text.isNotEmpty) {
         final parts = _patBirthDateController.text.split('/');
         int year = int.parse(parts[2]);
         if (year > 2400) year -= 543;
-        initialDate =
-            DateTime(year, int.parse(parts[1]), int.parse(parts[0]));
+        initialDate = DateTime(year, int.parse(parts[1]), int.parse(parts[0]));
       }
     } catch (_) {}
 
@@ -365,9 +370,9 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('แก้ไขข้อมูลสำเร็จแล้ว')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('แก้ไขข้อมูลสำเร็จแล้ว')));
 
         if (Navigator.canPop(context)) {
           Navigator.pop(context);
@@ -446,9 +451,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         ),
         child: SafeArea(
           child: _isLoading
-              ? Center(
-                  child: CircularProgressIndicator(color: primaryColor),
-                )
+              ? Center(child: CircularProgressIndicator(color: primaryColor))
               : SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
