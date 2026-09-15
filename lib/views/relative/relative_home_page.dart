@@ -42,7 +42,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
   String _userName = '';
   DateTime? _selectedFilterDate;
-
+  bool _isLocating = false; // 🌟 เพิ่มตัวแปรเช็กสถานะกำลังค้นหาตำแหน่ง
   List<dynamic> provinceData = [];
   List<dynamic> districtData = [];
   List<dynamic> subdistrictsData = [];
@@ -52,7 +52,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
   // 🌟 ระบบ Pagination
   final ScrollController _scrollController = ScrollController();
-  final int _perPage = 20;
+  final int _perPage = 10;
   int _currentPage = 1;
   int _currentFilteredLength = 0;
 
@@ -229,8 +229,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
     if (selectedDate != null) {
       setState(() {
         _selectedFilterDate = selectedDate;
-        _searchController.text = "";
-        _currentPage = 1; // 🌟 รีเซ็ตกลับไปหน้าแรกเสมอเมื่อเลือกวันที่
+        // 🌟 ลบ _searchController.text = ""; ออกแล้ว ทำให้พิมพ์อะไรไว้ก็ไม่หาย
+        _currentPage = 1;
       });
     }
   }
@@ -625,12 +625,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   }
 
   Future<void> _findNearMe() async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) =>
-          Center(child: CircularProgressIndicator(color: primaryColor)),
-    );
+    // 🌟 เปลี่ยนจาก Popup เด้งบังจอ มาเป็นการอัปเดตปุ่มหมุนๆ แทน
+    setState(() => _isLocating = true);
 
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -718,7 +714,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
         SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
       );
     } finally {
-      if (mounted) Navigator.pop(context);
+      if (mounted) setState(() => _isLocating = false); // 🌟 ปิดสถานะโหลด
     }
   }
 
@@ -981,7 +977,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                         borderRadius: BorderRadius.circular(22),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(22),
-                          onTap: _findNearMe,
+                          // 🌟 ป้องกันการกดซ้ำตอนที่มันกำลังโหลด
+                          onTap: _isLocating ? null : _findNearMe,
                           child: Container(
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(vertical: 11),
@@ -1002,18 +999,31 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                 ),
                               ],
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
-                                  Icons.my_location_rounded,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
-                                SizedBox(width: 6),
+                                // 🌟 ถ้ากำลังค้นหาให้ขึ้นวงกลมหมุนๆ
+                                if (_isLocating)
+                                  const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                else
+                                  const Icon(
+                                    Icons.my_location_rounded,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                const SizedBox(width: 6),
                                 Text(
-                                  'ค้นหาใกล้ฉัน',
-                                  style: TextStyle(
+                                  _isLocating
+                                      ? 'กำลังค้นหา...'
+                                      : 'ค้นหาใกล้ฉัน',
+                                  style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,

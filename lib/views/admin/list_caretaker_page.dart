@@ -31,7 +31,7 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
 
   // 🌟 ระบบ Pagination (Lazy Loading)
   final ScrollController _scrollController = ScrollController();
-  final int _perPage = 20;
+  final int _perPage = 10;
   int _pendingPage = 1;
   int _approvedPage = 1;
   int _suspendedPage = 1;

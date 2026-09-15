@@ -4,6 +4,8 @@ import 'package:miniproject/models/patient_model.dart';
 import 'package:miniproject/models/relative_model.dart';
 import 'package:miniproject/views/relative/edit_relative_info_page.dart';
 import 'package:miniproject/views/relative/request_caretaker_service_page.dart';
+import 'package:miniproject/views/relative/list_request_page.dart';
+import 'package:miniproject/views/relative/relative_home_page.dart';
 import 'dart:convert';
 import 'package:firebase_database/firebase_database.dart';
 
@@ -118,7 +120,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                       Navigator.pop(context);
                     },
                     child: const Text(
-                      'ไปหน้าเข้าสู่ระบบ',
+                      'ปิดหน้าต่าง',
                       style: TextStyle(
                         fontSize: 15,
                         color: Colors.white,
@@ -244,150 +246,201 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
           );
         },
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: primaryColor,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white60,
-        currentIndex: 1,
-        selectedLabelStyle: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 11,
+      // 🌟 นำ Bottom Nav แบบ Home มาใช้
+      bottomNavigationBar: Container(
+        height: 65,
+        decoration: BoxDecoration(
+          color: primaryColor,
+          boxShadow: [
+            BoxShadow(
+              color: primaryColor.withOpacity(0.27),
+              blurRadius: 12,
+              offset: const Offset(0, -3),
+            ),
+          ],
         ),
-        unselectedLabelStyle: const TextStyle(fontSize: 11),
-        onTap: (index) async {
-          if (index == 3) {
-            String? uid = widget.loggedUid;
-
-            if (uid == null) {
-              final currentUser = FirebaseAuth.instance.currentUser;
-              uid = currentUser?.uid;
-            }
-
-            if (uid == null) {
-              _showLoginRequiredDialog();
-              return;
-            }
-
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) =>
-                  const Center(child: CircularProgressIndicator()),
-            );
-
-            try {
-              final snapshot = await FirebaseDatabase.instance
-                  .ref('Login/$uid')
-                  .get();
-              if (context.mounted) Navigator.pop(context);
-
-              if (snapshot.exists && snapshot.value is Map) {
-                final userData = Map<String, dynamic>.from(
-                  snapshot.value as Map,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildBottomNavItem(
+              Icons.home_outlined,
+              'บ้าน',
+              false,
+              onTap: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        RelativeHomePage(loggedUid: widget.loggedUid),
+                  ),
+                  (route) => false,
                 );
-                RelativeModel relative;
-                Map<String, dynamic> relativeMap = {};
-
-                if (userData.containsKey('Relative')) {
-                  relativeMap = Map<String, dynamic>.from(
-                    userData['Relative'] as Map,
-                  );
-                  relative = RelativeModel(
-                    relativeId: relativeMap['relativeId'] ?? '',
-                    firstname: relativeMap['firstname'] ?? '',
-                    lastname: relativeMap['lastname'] ?? '',
-                    phonenumber: relativeMap['phonenumber'] ?? '',
-                    relationship: relativeMap['relationship'] ?? '',
-                    email: relativeMap['email'] ?? '',
-                  );
-                } else {
-                  relative = RelativeModel(
-                    relativeId: '',
-                    firstname: '',
-                    lastname: '',
-                    phonenumber: '',
-                    relationship: '',
-                    email: '',
-                  );
-                }
-
-                PatientModel patient;
-                if (relativeMap.containsKey('Patient')) {
-                  final pData = Map<String, dynamic>.from(
-                    relativeMap['Patient'] as Map,
-                  );
-                  patient = PatientModel(
-                    patientId: pData['patientId'] ?? '',
-                    patientphoto: pData['patientphoto'] ?? '',
-                    firstname: pData['firstname'] ?? '',
-                    lastname: pData['lastname'] ?? '',
-                    phonenumber: pData['phonenumber'] ?? '',
-                    gender: pData['gender'] ?? '',
-                    birthdate: pData['birthdate'] != null
-                        ? DateTime.tryParse(pData['birthdate'].toString())
-                        : null,
-                    disease: pData['disease'] ?? '',
-                    mobility: pData['mobility'] ?? '',
-                  );
-                } else {
-                  patient = PatientModel(
-                    patientId: '',
-                    patientphoto: '',
-                    firstname: '',
-                    lastname: '',
-                    phonenumber: '',
-                    gender: '',
-                  );
-                }
-
-                if (context.mounted) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => EditRelativeInfoPage(
-                        currentPatient: patient,
-                        currentRelative: relative,
-                        loggedUid: uid!,
-                      ),
-                    ),
-                  );
-                }
-              } else {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('ไม่พบข้อมูลประวัติในระบบ')),
-                  );
-                }
-              }
-            } catch (e) {
-              if (context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('เกิดข้อผิดพลาด: $e'),
-                    backgroundColor: Colors.red,
+              },
+            ),
+            _buildBottomNavItem(
+              Icons.support_agent,
+              'รายการคำขอ',
+              false,
+              onTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        ListRequestPage(loggedUid: widget.loggedUid),
                   ),
                 );
-              }
-            }
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'บ้าน'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.support_agent),
-            label: 'ขอใช้บริการ',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: 'แจ้งเตือน',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: 'ญาติ',
-          ),
-        ],
+              },
+            ),
+            _buildBottomNavItem(
+              Icons.person_outline,
+              'ญาติ',
+              false,
+              onTap: () async {
+                String currentUid =
+                    widget.loggedUid ??
+                    FirebaseAuth.instance.currentUser?.uid ??
+                    '';
+                if (currentUid.isEmpty) {
+                  _showLoginRequiredDialog();
+                  return;
+                }
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) =>
+                      const Center(child: CircularProgressIndicator()),
+                );
+                try {
+                  final snapshot = await FirebaseDatabase.instance
+                      .ref('Login')
+                      .get();
+                  if (context.mounted) Navigator.pop(context);
+
+                  String targetRelativeId = '';
+                  Map<String, dynamic> targetUserData = {};
+                  bool isFound = false;
+
+                  if (snapshot.exists && snapshot.value is Map) {
+                    final allUsers = Map<String, dynamic>.from(
+                      snapshot.value as Map,
+                    );
+                    for (var key in allUsers.keys) {
+                      if (key == currentUid) {
+                        targetRelativeId = key;
+                        targetUserData = Map<String, dynamic>.from(
+                          allUsers[key] as Map,
+                        );
+                        isFound = true;
+                        break;
+                      }
+                      var childData = allUsers[key];
+                      if (childData is Map) {
+                        var relNode = childData['Relative'];
+                        if (childData['uid'] == currentUid ||
+                            (relNode is Map &&
+                                relNode['relativeId'] == currentUid)) {
+                          targetRelativeId = key;
+                          targetUserData = Map<String, dynamic>.from(childData);
+                          isFound = true;
+                          break;
+                        }
+                      }
+                    }
+                  }
+
+                  if (isFound && targetRelativeId.isNotEmpty) {
+                    RelativeModel relative;
+                    Map<String, dynamic> relativeMap = {};
+                    if (targetUserData.containsKey('Relative')) {
+                      relativeMap = Map<String, dynamic>.from(
+                        targetUserData['Relative'] as Map,
+                      );
+                      relative = RelativeModel(
+                        relativeId:
+                            relativeMap['relativeId'] ?? targetRelativeId,
+                        firstname: relativeMap['firstname'] ?? '',
+                        lastname: relativeMap['lastname'] ?? '',
+                        phonenumber: relativeMap['phonenumber'] ?? '',
+                        relationship: relativeMap['relationship'] ?? '',
+                        email: relativeMap['email'] ?? '',
+                      );
+                    } else {
+                      relative = RelativeModel(
+                        relativeId: targetRelativeId,
+                        firstname: '',
+                        lastname: '',
+                        phonenumber: '',
+                        relationship: '',
+                        email: '',
+                      );
+                    }
+
+                    PatientModel patient;
+                    if (relativeMap.containsKey('Patient')) {
+                      final pData = Map<String, dynamic>.from(
+                        relativeMap['Patient'] as Map,
+                      );
+                      patient = PatientModel(
+                        patientId: pData['patientId'] ?? '',
+                        patientphoto: pData['patientphoto'] ?? '',
+                        firstname: pData['firstname'] ?? '',
+                        lastname: pData['lastname'] ?? '',
+                        phonenumber: pData['phonenumber'] ?? '',
+                        gender: pData['gender'] ?? '',
+                        birthdate: pData['birthdate'] != null
+                            ? DateTime.tryParse(pData['birthdate'].toString())
+                            : null,
+                        disease: pData['disease'] ?? '',
+                        mobility: pData['mobility'] ?? '',
+                      );
+                    } else {
+                      patient = PatientModel(
+                        patientId: '',
+                        patientphoto: '',
+                        firstname: '',
+                        lastname: '',
+                        phonenumber: '',
+                        gender: '',
+                      );
+                    }
+
+                    if (context.mounted) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => EditRelativeInfoPage(
+                            currentPatient: patient,
+                            currentRelative: relative,
+                            loggedUid: targetRelativeId,
+                          ),
+                        ),
+                      );
+                    }
+                  } else {
+                    if (context.mounted)
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'ไม่พบข้อมูลประวัติ (กรุณาลองเข้าสู่ระบบใหม่อีกครั้ง)',
+                          ),
+                        ),
+                      );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('เกิดข้อผิดพลาด: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -450,7 +503,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: const Color(0xFF8763E6),
+                        color: const Color(0xFF9B59B6),
                         width: 2,
                       ),
                     ),
@@ -513,7 +566,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 17,
-                        color: Color(0xFF8763E6),
+                        color: Color(0xFF9B59B6),
                       ),
                       maxLines: 1,
                       softWrap: false,
@@ -591,7 +644,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
               builder: (context) => ServiceRequestPage(
                 caretakerData: caretakerData!,
                 caretakerId: widget.caretakerId,
-                loggedUid: uid,
+                loggedUid: uid!,
                 initialSelectedDate: widget.selectedDate,
               ),
             ),
@@ -640,7 +693,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
-                  color: Color(0xFF8763E6),
+                  color: Color(0xFF9B59B6),
                 ),
               ),
             ],
@@ -705,7 +758,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
-                  color: Color(0xFF8763E6),
+                  color: Color(0xFF9B59B6),
                 ),
               ),
             ],
@@ -764,7 +817,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
-              color: Color(0xFF8763E6),
+              color: Color(0xFF9B59B6),
             ),
           ),
           const SizedBox(height: 12),
@@ -920,6 +973,34 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
         ],
       ),
       child: child,
+    );
+  }
+
+  // 🌟 ฟังก์ชันสร้างปุ่มเมนูด้านล่างให้เหมือนหน้า Home
+  Widget _buildBottomNavItem(
+    IconData icon,
+    String label,
+    bool isActive, {
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: isActive ? Colors.white : Colors.white70, size: 24),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              color: isActive ? Colors.white : Colors.white70,
+              fontSize: 11,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

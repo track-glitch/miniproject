@@ -64,7 +64,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
   DateTime _currentTime = DateTime.now();
 
   // ── 🎨 ชุดสีหลักควบคุมธีม ─────────────────────────────────────────
-  final Color primaryPurple = const Color(0xFF8763E6);
+  final Color primaryPurple = const Color(0xFF9B59B6);
   final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
   final Color lightPurple = const Color(0xFFECE2FE);
   final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
@@ -1020,7 +1020,6 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: primaryPurple.withOpacity(0.1),
@@ -1035,6 +1034,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
             flex: 1,
             child: OutlinedButton(
               style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.red,
                 side: const BorderSide(color: Colors.red, width: 1.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(26),
@@ -1042,10 +1042,10 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               onPressed: _isLoading ? null : _showEmergencyCancelDialog,
-              child: const Text(
+              child: Text(
                 'ยกเลิกบริการ',
                 style: TextStyle(
-                  color: Colors.red,
+                  color: Colors.white,
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),

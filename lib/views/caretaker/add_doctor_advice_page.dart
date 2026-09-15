@@ -29,11 +29,11 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
   final CaretakerService _service = CaretakerService();
 
   // ── 🎨 ชุดสีหลักควบคุมธีม ─────────────────────────────────────────
-  final Color primaryPurple = const Color(0xFF8763E6);
-  final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
+  final Color primaryPurple = const Color(0xFF7D3C98);
+  final Color darkPurple = const Color(0xFF7D3C98);
   final Color lightPurple = const Color(0xFFECE2FE);
   final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
-  final Color borderColor = const Color(0xFFD3C2F0);
+  final Color borderColor = const Color(0xFF7D3C98);
   final Color sectionBgColor = const Color(0xFFF8F5FF);
 
   // Controllers
@@ -90,9 +90,9 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
       initialTime: TimeOfDay.now(),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(primary: primaryPurple),
-          ),
+          data: Theme.of(
+            context,
+          ).copyWith(colorScheme: ColorScheme.light(primary: primaryPurple)),
           child: child!,
         );
       },
@@ -209,7 +209,10 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                   children: [
                     Text(
                       "ติ๊กถูกหากมีการนัดหมายในครั้งถัดไป",
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
                     ),
                     Visibility(
                       visible: _hasNextAppointment,
@@ -247,16 +250,25 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: borderColor, width: 1.2),
+                          borderSide: BorderSide(
+                            color: borderColor,
+                            width: 1.2,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: primaryPurple, width: 1.5),
+                          borderSide: BorderSide(
+                            color: primaryPurple,
+                            width: 1.5,
+                          ),
                         ),
                         filled: true,
                         fillColor: sectionBgColor,
                         hintText: "พิมพ์คำแนะนำหรือรายละเอียดเพิ่มเติม...",
-                        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                        hintStyle: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -335,8 +347,9 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                             }
                           }
 
-                          String finalDateToSave = '';
-                          String finalTimeToSave = '';
+                          // 🌟 เปลี่ยนจาก String เป็น String? (อนุญาตให้เป็น null ได้)
+                          String? finalDateToSave;
+                          String? finalTimeToSave;
 
                           if (_hasNextAppointment) {
                             DateTime parsedDate = DateFormat(
@@ -347,8 +360,9 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                               'yyyy-MM-dd',
                             ).format(parsedDate);
 
+                            // 🌟 ปรับ Format ให้เป็น ISO 8601 (มีตัว T คั่น) เพื่อให้ DateTime.parse ของ Dart อ่านได้ชัวร์ 100%
                             finalTimeToSave =
-                                "$finalDateToSave ${_timeController.text}:00";
+                                "${finalDateToSave}T${_timeController.text}:00";
                           }
 
                           setState(() => _isLoading = true);
@@ -368,6 +382,7 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                               departmentname: _hasNextAppointment
                                   ? _deptController.text
                                   : '',
+                              // 🌟 ส่งค่า finalDateToSave และ finalTimeToSave ที่เป็น null ไปแทนค่าว่าง
                               appointmentdate: finalDateToSave,
                               appointmenttime: finalTimeToSave,
                             );
@@ -476,12 +491,19 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
       children: [
         SizedBox(
           width: 70,
-          child: Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+          child: Text(
+            label,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+          ),
         ),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF241C2B), fontSize: 14),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF241C2B),
+              fontSize: 14,
+            ),
           ),
         ),
       ],
@@ -497,9 +519,18 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
         labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
         filled: true,
         fillColor: sectionBgColor,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor, width: 1.2)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryPurple, width: 1.5)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: borderColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: borderColor, width: 1.2),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: primaryPurple, width: 1.5),
+        ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 12,
@@ -523,14 +554,19 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
         labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
         filled: true,
         fillColor: sectionBgColor,
-        suffixIcon: Icon(
-          Icons.calendar_today,
-          color: primaryPurple,
-          size: 20,
+        suffixIcon: Icon(Icons.calendar_today, color: primaryPurple, size: 20),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: borderColor),
         ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor, width: 1.2)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryPurple, width: 1.5)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: borderColor, width: 1.2),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: primaryPurple, width: 1.5),
+        ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 12,
@@ -554,14 +590,19 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
         labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
         filled: true,
         fillColor: sectionBgColor,
-        suffixIcon: Icon(
-          Icons.access_time,
-          color: primaryPurple,
-          size: 20,
+        suffixIcon: Icon(Icons.access_time, color: primaryPurple, size: 20),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: borderColor),
         ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor, width: 1.2)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryPurple, width: 1.5)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: borderColor, width: 1.2),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: primaryPurple, width: 1.5),
+        ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 12,

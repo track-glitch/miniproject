@@ -20,13 +20,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final CaretakerService _service = CaretakerService();
   bool _isLoading = true;
 
-  final Color primaryColor = const Color(0xFF7C5CFC);
-  final Color darkPurple = const Color(0xFF6E5ABF);
+  final Color primaryColor = const Color(0xFF9B59B6);
+  final Color darkPurple = const Color(0xFF9B59B6);
   final Color lightPurple = const Color(0xFFF3E5F5);
-  final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
-  final Color greyBorder = const Color(0xFFB9A4F2);
-  final Color headerGradientStart = const Color(0xFF8E6FF0);
-  final Color headerGradientEnd = const Color(0xFF7C5CFC);
+  final Color bgColor = const Color(0xFF9B59B6);
+  final Color greyBorder = const Color(0xFF9B59B6);
+  final Color headerGradientStart = const Color(0xFF9B59B6);
+  final Color headerGradientEnd = const Color(0xFF9B59B6);
   final Color bgGradientTop = const Color.fromARGB(255, 225, 202, 255);
   final Color bgGradientBottom = const Color.fromARGB(255, 225, 202, 255);
   final Color cardColor = Colors.white;
@@ -439,7 +439,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   onTap: _selectBirthDate,
                                   suffixIcon: const Icon(
                                     Icons.calendar_month,
-                                    color: Color(0xFF7C5CFC),
+                                    color: Color(0xFF9B59B6),
                                     size: 20,
                                   ),
                                 ),
@@ -868,7 +868,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
-                  color: darkPurple,
+                  color: primaryColor,
                 ),
               ),
             ],
@@ -911,7 +911,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         decoration: InputDecoration(
           labelText: label,
           suffixIcon: suffixIcon,
-          labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF8D7AE6)),
+          labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF9B59B6)),
           filled: true,
           fillColor: !isEnabled
               ? Colors.grey.shade200
@@ -950,7 +950,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         icon: Icon(Icons.arrow_drop_down, color: greyBorder),
         decoration: InputDecoration(
           labelText: 'เพศ',
-          labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF8D7AE6)),
+          labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF9B59B6)),
           filled: true,
           fillColor: const Color(0xFFFAF8FF),
           contentPadding: const EdgeInsets.symmetric(

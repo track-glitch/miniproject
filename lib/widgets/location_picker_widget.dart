@@ -18,7 +18,8 @@ class LocationPickerWidget extends StatefulWidget {
     required this.initialLocation,
     required this.initialAddress,
     required this.onLocationChanged,
-    this.showAddressTextField = true, // 🌟 ตั้งค่าเริ่มต้นเป็น true เพื่อไม่กระทบหน้าอื่นที่ใช้อยู่
+    this.showAddressTextField =
+        true, // 🌟 ตั้งค่าเริ่มต้นเป็น true เพื่อไม่กระทบหน้าอื่นที่ใช้อยู่
   });
 
   @override
@@ -50,7 +51,8 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
   @override
   void didUpdateWidget(covariant LocationPickerWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialAddress != oldWidget.initialAddress && widget.initialAddress.isNotEmpty) {
+    if (widget.initialAddress != oldWidget.initialAddress &&
+        widget.initialAddress.isNotEmpty) {
       _addressController.text = widget.initialAddress;
     }
   }
@@ -194,7 +196,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                         right: 20,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFA052BE),
+                            backgroundColor: const Color(0xFF7D3C98),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -413,7 +415,7 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
               child: FloatingActionButton.small(
                 backgroundColor: Colors.white,
                 onPressed: _jumpToCurrentLocation,
-                child: const Icon(Icons.my_location, color: Color(0xFFA052BE)),
+                child: const Icon(Icons.my_location, color: Color(0xFF7D3C98)),
               ),
             ),
             Positioned(

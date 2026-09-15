@@ -22,7 +22,7 @@ class _CustomCalendarWidgetState extends State<CaretakerCarlendar> {
   bool _isLoading = true;
 
   // สีที่ใช้ในหน้าปฏิทิน
-  final Color primaryColor = const Color(0xFFA052BE);
+  final Color primaryColor = const Color(0xFF7D3C98);
   final Color availableBg = const Color(0xFFF0FAF3);
   final Color availableText = const Color(0xFF1B8749);
   final Color fullBg = const Color(0xFFFFF0F0);

@@ -191,10 +191,29 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   void _navigateToDoctorAdvicePage() {
     if (doctorAdviceData == null) return;
 
+    // 🌟 ดึงข้อมูลจาก State ปัจจุบันมาใช้
+    var req = widget.requestModel;
+
+    // คำนวณชื่อผู้ป่วยอีกครั้งเพื่อให้ใช้ในฟังก์ชันนี้ได้
+    String patientFullName = formatFullNameWithTitle(
+      gender: patientData?['gender']?.toString(),
+      firstname: patientData?['firstname']?.toString(),
+      lastname: patientData?['lastname']?.toString(),
+    );
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ViewDoctorAdvicePage(loggedUid: widget.loggedUid),
+        builder: (context) => ViewDoctorAdvicePage(
+          loggedUid: widget.loggedUid,
+          doctorAdviceData: doctorAdviceData,
+          // 🌟 แนบข้อมูลบริการปัจจุบันมาให้หน้านี้ใช้
+          patientName: patientFullName,
+          dateTime:
+              '${_formatThaiDateFull(req.appointmentdate)} ${_formatTime(req.appointmenttime)}',
+          hospital: req.hospitalname,
+          department: req.departmentname,
+        ),
       ),
     );
   }
@@ -788,7 +807,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       statusBgColor = const Color(0xFFEBF5FB);
     } else if (currentStatus == RequestStatus.cancelled) {
       // 🌟 เปลี่ยนคำว่า ยกเลิกบริการ เป็น ยกเลิก/ปฏิเสธ
-      statusText = 'ยกเลิก/ปฏิเสธ';
+      statusText = 'ยกเลิก';
       statusColor = const Color(0xFFE74C3C);
       statusBgColor = const Color(0xFFFDEDEC);
     }

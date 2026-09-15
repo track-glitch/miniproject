@@ -515,7 +515,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                     onTap: _selectBirthDate,
                                     suffixIcon: const Icon(
                                       Icons.calendar_month,
-                                      color: Color(0xFF7C5CFC),
+                                      color: Color(0xFF9B59B6),
                                       size: 20,
                                     ),
                                   ),
@@ -921,7 +921,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           hintText: hint,
           suffixIcon: suffixIcon,
           hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-          labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF8D7AE6)),
+          labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF9B59B6)),
           filled: true,
           fillColor: const Color(0xFFFAF8FF),
           contentPadding: const EdgeInsets.symmetric(

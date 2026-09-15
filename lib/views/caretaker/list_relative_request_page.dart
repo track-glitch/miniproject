@@ -27,7 +27,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
 
   final Color bgColor = const Color(0xFFF5F5F5);
   final Color primaryPurple = const Color(0xFF9B59B6);
-  final Color darkPurple = const Color(0xFF7D3C98);
+  final Color darkPurple = const Color(0xFF9B59B6);
 
   // 🌟 เก็บข้อมูลทั้งหมดไว้หลังบ้าน
   List<RequestCard> _requestsPendingAll = [];
@@ -37,7 +37,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
 
   // 🌟 ระบบ Pagination
   final ScrollController _scrollController = ScrollController();
-  final int _perPage = 20;
+  final int _perPage = 10;
   int _pendingPage = 1;
   int _acceptedPage = 1;
   int _completedPage = 1;
@@ -387,7 +387,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                 tabs: [
                   _buildTabItem(
                     Icons.access_time_rounded,
-                    'รอตอบรับ',
+                    'คำขอใช้บริการ',
                     _requestsPendingAll.length,
                     showBadge: unreadPending > 0,
                   ),
@@ -399,12 +399,12 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                   ),
                   _buildTabItem(
                     Icons.star_border_rounded,
-                    'สิ้นสุด',
+                    'เสร็จสิ้น',
                     _requestsCompletedAll.length,
                   ),
                   _buildTabItem(
                     Icons.cancel_outlined,
-                    'ยกเลิก',
+                    'ยกเลิก/ปฏิเสธ',
                     _requestsCancelledAll.length,
                   ),
                 ],
@@ -530,7 +530,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
       case 'completed':
         statusColor = const Color(0xFF3498DB);
         statusBgColor = const Color(0xFFEBF5FB);
-        statusText = 'สิ้นสุด';
+        statusText = 'เสร็จสิ้น';
         statusIcon = Icons.star_border_rounded;
         break;
       case 'cancelled':
@@ -573,22 +573,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(statusIcon, color: primaryPurple, size: 26),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: statusBgColor,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  statusText,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
               ),
             ],
           ),
@@ -674,7 +658,28 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 4),
+                // 🌟 ย้ายกรอบบอกสถานะมาไว้ใต้ วันนัดบริการ
+                Row(
+                  children: [
+                    const Text(
+                      'สถานะ: ',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      statusText,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,

@@ -495,8 +495,8 @@ class CaretakerService {
     required String doctorname,
     required String hospitalname,
     required String departmentname,
-    required String appointmentdate,
-    required String appointmenttime,
+    required String? appointmentdate,
+    required String? appointmenttime,
   }) async {
     try {
       // 🌟 นำข้อมูลมาจัดรูปแบบให้ตรงกับ DoctorAdviceModel

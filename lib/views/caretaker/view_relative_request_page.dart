@@ -42,7 +42,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
 
   // ── 🎨 ชุดสีหลักควบคุมธีม ─────────────────────────────────────────
   final Color primaryPurple = const Color(0xFF9B59B6);
-  final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
+  final Color darkPurple = const Color(0xFF9B59B6);
   final Color lightPurple = const Color(0xFFECE2FE);
   final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
   final Color borderColor = const Color(0xFFD3C2F0);
@@ -378,22 +378,8 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
 
                           setState(() {
                             if (isAccept) {
-                              bool isTimeArrived = false;
-                              final appt = widget
-                                  .requestData
-                                  .requestModel
-                                  .appointmentdate;
-                              if (appt != null) {
-                                if (DateTime.now().isAfter(appt) ||
-                                    DateTime.now().isAtSameMomentAs(appt)) {
-                                  isTimeArrived = true;
-                                }
-                              }
-
-                              currentStatus =
-                                  isTimeArrived || widget.requestData.hasAlert
-                                  ? RequestStatus.acceptedReady
-                                  : RequestStatus.acceptedEarly;
+                              // 🌟 ให้สถานะเป็น acceptedReady เสมอเมื่อกดยอมรับงาน
+                              currentStatus = RequestStatus.acceptedReady;
                             } else {
                               currentStatus = RequestStatus.cancelled;
                             }
@@ -601,7 +587,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
       case RequestStatus.completed:
         statusColor = const Color(0xFF3498DB);
         statusBgColor = const Color(0xFFEBF5FB);
-        statusText = 'สิ้นสุดบริการ';
+        statusText = 'เสร็จสิ้น';
         break;
       case RequestStatus.cancelled:
         statusColor = const Color(0xFFE74C3C);
@@ -1266,7 +1252,7 @@ class FullScreenMapPage extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: const Color(0xFF8763E6),
+        backgroundColor: const Color(0xFF9B59B6),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Stack(
@@ -1334,14 +1320,14 @@ class FullScreenMapPage extends StatelessWidget {
                   children: [
                     const Icon(
                       Icons.directions_car,
-                      color: Color(0xFF8763E6),
+                      color: Color(0xFF9B59B6),
                       size: 20,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       distanceText,
                       style: const TextStyle(
-                        color: Color(0xFF8763E6),
+                        color: Color(0xFF9B59B6),
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),

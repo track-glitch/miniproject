@@ -40,7 +40,7 @@ class _ListRequestPageState extends State<ListRequestPage> {
 
   // 🌟 ระบบ Pagination
   final ScrollController _scrollController = ScrollController();
-  final int _perPage = 20;
+  final int _perPage = 10;
   int _pendingPage = 1;
   int _acceptedPage = 1;
   int _completedPage = 1;
@@ -778,21 +778,12 @@ class _ListRequestPageState extends State<ListRequestPage> {
       case 'completed':
         statusColor = const Color(0xFF3498DB);
         statusBgColor = const Color(0xFFEBF5FB);
-        // 🌟 เปลี่ยนคำว่า สิ้นสุด เป็น เสร็จสิ้น
         statusText = 'เสร็จสิ้น';
         statusIcon = Icons.star_border_rounded;
-        break;
-      case 'rejected':
-        statusColor = const Color(0xFFE74C3C);
-        statusBgColor = const Color(0xFFFDEDEC);
-        // 🌟 เปลี่ยนคำว่า ยกเลิก เป็น ยกเลิก/ปฏิเสธ
-        statusText = 'ปฏิเสธ';
-        statusIcon = Icons.cancel_outlined;
         break;
       case 'cancelled':
         statusColor = const Color(0xFFE74C3C);
         statusBgColor = const Color(0xFFFDEDEC);
-        // 🌟 เปลี่ยนคำว่า ยกเลิก เป็น ยกเลิก/ปฏิเสธ
         statusText = 'ยกเลิก';
         statusIcon = Icons.cancel_outlined;
         break;
@@ -833,7 +824,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 ),
                 child: Icon(statusIcon, color: primaryPurple, size: 26),
               ),
-              // 🌟 เอากรอบสถานะตรงนี้ออก ย้ายไปไว้ใต้ วันนัดบริการ แทน!
             ],
           ),
           const SizedBox(width: 14),
@@ -875,101 +865,12 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 ),
                 const SizedBox(height: 6),
 
-                // 🌟 ปรับแต่งปุ่มรีวิวและป้ายสถานะรีวิวให้เป็นทรงวงรี ชิดติดชื่อผู้ให้บริการ
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'ผู้ให้บริการ: ${request.caregiverName}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                    ),
-                    if (request.statusType == 'completed') ...[
-                      const SizedBox(width: 6),
-                      if (request.isReviewed)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade50,
-                            border: Border.all(color: Colors.orange.shade200),
-                            borderRadius: BorderRadius.circular(
-                              20,
-                            ), // 🌟 ปรับเป็นทรงวงรี
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Icon(Icons.star, size: 11, color: Colors.orange),
-                              SizedBox(width: 3),
-                              Text(
-                                'รีวิวแล้ว',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.orange,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      else
-                        InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ReviewCaretakerPage(
-                                  requestId: request.id,
-                                  relativeUid:
-                                      widget.loggedUid ??
-                                      FirebaseAuth.instance.currentUser!.uid,
-                                  caretakerUid:
-                                      request.requestModel.caretakerId ?? '',
-                                  caretakerName: request.caregiverName,
-                                  hospitalName: request.serviceName,
-                                  appointmentDateStr: request.date,
-                                  caretakerImage: request.caretakerImage,
-                                ),
-                              ),
-                            ).then((value) {
-                              if (value == true) {
-                                _fetchMyRequests();
-                              }
-                            });
-                          },
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.orange,
-                              borderRadius: BorderRadius.circular(
-                                20,
-                              ), // 🌟 ปรับเป็นทรงวงรี
-                            ),
-                            child: const Text(
-                              'ให้รีวิว',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ],
+                // 🌟 แก้ไขให้ชื่อผู้ให้บริการกลับมาเป็น Text ธรรมดา เพราะย้ายปุ่มรีวิวออกไปแล้ว
+                Text(
+                  'ผู้ให้บริการ: ${request.caregiverName}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                 ),
                 const SizedBox(height: 4),
 
@@ -989,7 +890,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 ),
                 const SizedBox(height: 6),
 
-                // 🌟 ย้ายกรอบบอกสถานะมาไว้ใต้ วันนัดบริการ
                 Row(
                   children: [
                     const Text(
@@ -1087,6 +987,85 @@ class _ListRequestPageState extends State<ListRequestPage> {
                           ),
                         ),
                       ),
+
+                    // 🌟 ย้ายปุ่มรีวิวและป้ายรีวิวแล้ว มาวางไว้ตรงนี้
+                    if (request.statusType == 'completed') ...[
+                      if (request.isReviewed)
+                        Container(
+                          height: 30, // ปรับความสูงให้เท่ากับปุ่มรายละเอียด
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            border: Border.all(color: Colors.orange.shade200),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.star, size: 14, color: Colors.orange),
+                              SizedBox(width: 4),
+                              Text(
+                                'รีวิวแล้ว',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.orange,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Container(
+                          height: 30,
+                          margin: const EdgeInsets.only(right: 8),
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                              ),
+                              elevation: 0,
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ReviewCaretakerPage(
+                                    requestId: request.id,
+                                    relativeUid:
+                                        widget.loggedUid ??
+                                        FirebaseAuth.instance.currentUser!.uid,
+                                    caretakerUid:
+                                        request.requestModel.caretakerId ?? '',
+                                    caretakerName: request.caregiverName,
+                                    hospitalName: request.serviceName,
+                                    appointmentDateStr: request.date,
+                                    caretakerImage: request.caretakerImage,
+                                  ),
+                                ),
+                              ).then((value) {
+                                if (value == true) {
+                                  _fetchMyRequests();
+                                }
+                              });
+                            },
+                            child: const Text(
+                              'ให้รีวิว',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+
                     SizedBox(
                       height: 30,
                       child: ElevatedButton(

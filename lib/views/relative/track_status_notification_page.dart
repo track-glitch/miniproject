@@ -33,7 +33,7 @@ class _TrackStatusNotificationPageState
   List<_NotificationItem> _items = [];
   bool _isLoading = true;
 
-  static const Color primaryPurple = Color(0xFF9B59B6);
+  static const Color primaryPurple = Color(0xFF7D3C98);
   static const Color darkPurple = Color(0xFF7D3C98);
   static const Color lightPurpleBg = Color(0xFFF4EDFB);
   // 🌟 สี Highlight สำหรับสถานะล่าสุด
@@ -177,7 +177,7 @@ class _TrackStatusNotificationPageState
               const Text(
                 'ข้อมูลบริการปัจจุบัน',
                 style: TextStyle(
-                  color: Color(0xFF8763E6),
+                  color: Color(0xFF7D3C98),
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),

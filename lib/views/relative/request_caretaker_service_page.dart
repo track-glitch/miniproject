@@ -25,8 +25,8 @@ class ServiceRequestPage extends StatefulWidget {
 }
 
 class _ServiceRequestPageState extends State<ServiceRequestPage> {
-  final Color primaryColor = const Color(0xFF8763E6);
-  final Color darkPurple = const Color.fromARGB(255, 153, 116, 255);
+  final Color primaryColor = const Color(0xFF7D3C98);
+  final Color darkPurple = const Color(0xFF7D3C98);
   final Color lightPurple = const Color(0xFFECE2FE);
   final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
   final Color cardColor = Colors.white;
@@ -858,7 +858,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
               hasPinned: _pickupHasPinned,
               isExpanded: _pickupMapExpanded,
               showAddressField: true,
-              pinButtonText: 'กดเพื่อปักหมุดจุดรับส่ง',
+              pinButtonText: 'ระบุพิกัดจุดรับส่ง',
               onToggleMap: () =>
                   setState(() => _pickupMapExpanded = !_pickupMapExpanded),
               onLocationChanged: (loc, addr) {

@@ -19,8 +19,8 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
   final CaretakerService _service = CaretakerService();
   bool _isLoading = true;
 
-  final Color primaryColor = const Color(0xFF8763E6);
-  final Color darkPurple = const Color(0xFF6E5ABF);
+  final Color primaryColor = const Color(0xFF9B59B6);
+  final Color darkPurple = const Color(0xFF9B59B6);
   final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
   final Color cardColor = Colors.white;
 
@@ -152,88 +152,6 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
             ? Center(child: CircularProgressIndicator(color: primaryColor))
             : Column(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 15,
-                    ),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.topCenter,
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.only(top: 45),
-                          padding: const EdgeInsets.only(
-                            top: 55,
-                            bottom: 20,
-                            left: 16,
-                            right: 16,
-                          ),
-                          decoration: BoxDecoration(
-                            color: cardColor,
-                            borderRadius: BorderRadius.circular(18),
-                            boxShadow: [
-                              BoxShadow(
-                                color: primaryColor.withOpacity(0.15),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                caretakerName,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: darkPurple,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                caretakerCitizenId,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Positioned(
-                          top: 0,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 4),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: primaryColor.withOpacity(0.3),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: CircleAvatar(
-                              radius: 42,
-                              backgroundColor: const Color(0xFFE8D5FF),
-                              backgroundImage: caretakerImageProvider,
-                              child: caretakerImageProvider == null
-                                  ? const Icon(
-                                      Icons.person,
-                                      color: Colors.black87,
-                                      size: 40,
-                                    )
-                                  : null,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
                   Expanded(
                     child: Container(
                       width: double.infinity,
@@ -286,12 +204,12 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: isSelected
-                                        ? const Color(0xFF1C1B1F)
+                                        ? const Color(0xFF9B59B6)
                                         : const Color(0xFFF2F2F2),
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
                                       color: isSelected
-                                          ? const Color(0xFF1C1B1F)
+                                          ? const Color(0xFF9B59B6)
                                           : Colors.grey.shade300,
                                     ),
                                   ),

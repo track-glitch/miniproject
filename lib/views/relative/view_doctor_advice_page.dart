@@ -2,21 +2,29 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:firebase_database/firebase_database.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-
-// --- เปลี่ยน Path ให้ตรงกับโฟลเดอร์ในโปรเจกต์ของคุณ ---
-import 'package:miniproject/models/patient_model.dart';
-import 'package:miniproject/models/relative_model.dart';
-import 'package:miniproject/views/relative/edit_relative_info_page.dart';
 import 'package:miniproject/views/login_page.dart';
 import 'package:miniproject/views/relative/track_status_notification_page.dart';
 
 /// หน้าวันนัดหมายและคำแนะนำ (View Doctor Advice Page)
 class ViewDoctorAdvicePage extends StatefulWidget {
   final String? loggedUid;
+  final Map<dynamic, dynamic>? doctorAdviceData;
 
-  const ViewDoctorAdvicePage({super.key, this.loggedUid});
+  // 🌟 เพิ่มตัวแปรสำหรับรับข้อมูล "บริการปัจจุบัน" มาโชว์ด้านบนสุด
+  final String? patientName;
+  final String? dateTime;
+  final String? hospital;
+  final String? department;
+
+  const ViewDoctorAdvicePage({
+    super.key,
+    this.loggedUid,
+    this.doctorAdviceData,
+    this.patientName,
+    this.dateTime,
+    this.hospital,
+    this.department,
+  });
 
   @override
   State<ViewDoctorAdvicePage> createState() => _ViewDoctorAdvicePageState();
@@ -31,7 +39,7 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
   static const Color borderColor = Color(0xFFD3C2F0);
 
   final Color bottomNavPurple = const Color.fromARGB(255, 153, 116, 255);
-  final Color searchPrimaryColor = const Color(0xFF8763E6);
+  final Color searchPrimaryColor = const Color(0xFF9B59B6);
 
   void _showLoginRequiredDialog() {
     showDialog(
@@ -111,6 +119,12 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
 
   @override
   Widget build(BuildContext context) {
+    final advice = widget.doctorAdviceData ?? {};
+
+    // ตรวจสอบว่ามีการนัดหมายครั้งถัดไปหรือไม่
+    String apptDate = advice['appointmentdate']?.toString() ?? '';
+    bool hasNextAppt = apptDate.isNotEmpty && apptDate != 'null';
+
     return Scaffold(
       backgroundColor: bgGray,
       body: SafeArea(
@@ -123,13 +137,21 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // 🌟 ข้อมูลบริการปัจจุบัน กลับมาเป็น 4 บรรทัดเหมือนเดิมแล้วครับ
                     _buildCurrentServiceCard(),
                     const SizedBox(height: 16),
 
-                    _buildNextAppointmentCard(),
-                    const SizedBox(height: 16),
+                    // 🌟 ถ้ามีวันนัดหมายครั้งถัดไป ค่อยแสดงการ์ดนี้
+                    if (hasNextAppt) ...[
+                      _buildNextAppointmentCard(advice),
+                      const SizedBox(height: 16),
+                    ],
 
-                    _buildAdditionalNoteCard(),
+                    // 🌟 แสดงคำแนะนำ (ถ้าไม่มีรูป รูปจะถูกซ่อนอัตโนมัติ)
+                    _buildAdditionalNoteCard(
+                      advice['advicedetail']?.toString(),
+                      advice['medicalphoto']?.toString(),
+                    ),
                     const SizedBox(height: 24),
 
                     _buildConfirmButton(),
@@ -140,7 +162,6 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
@@ -219,6 +240,7 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
     );
   }
 
+  // 🌟 นำ Layout 4 บรรทัดกลับมา และใส่ข้อมูลจริง
   Widget _buildCurrentServiceCard() {
     return Container(
       width: double.infinity,
@@ -230,13 +252,13 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
             Icons.medical_information_outlined,
             'ข้อมูลบริการปัจจุบัน',
           ),
-          _buildInfoRow('ผู้ป่วย', 'นาย ใจงาม จิตดี'),
+          _buildInfoRow('ผู้ป่วย', widget.patientName ?? '-'),
           const Divider(height: 20, color: lightPink),
-          _buildInfoRow('วัน/เวลา', '22 ก.พ. 2569 10:30 น.'),
+          _buildInfoRow('วัน/เวลา', widget.dateTime ?? '-'),
           const Divider(height: 20, color: lightPink),
-          _buildInfoRow('สถานที่', 'โรงพยาบาลแม่โจ้'),
+          _buildInfoRow('สถานที่', widget.hospital ?? '-'),
           const Divider(height: 20, color: lightPink),
-          _buildInfoRow('แผนก', 'ตรวจสุขภาพ'),
+          _buildInfoRow('แผนก', widget.department ?? '-'),
         ],
       ),
     );
@@ -268,7 +290,27 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
     );
   }
 
-  Widget _buildNextAppointmentCard() {
+  // 🌟 ฟังก์ชันสร้างการ์ดนัดหมาย โดยดึงข้อมูลมาจาก Firebase
+  Widget _buildNextAppointmentCard(Map<dynamic, dynamic> advice) {
+    String rawTime = advice['appointmenttime']?.toString() ?? '-';
+    if (rawTime.contains('T')) {
+      rawTime = '${rawTime.split('T').last.substring(0, 5)} น.';
+    } else if (rawTime.length > 5 && rawTime.contains(':')) {
+      rawTime = '${rawTime.substring(0, 5)} น.';
+    }
+
+    String rawDate = advice['appointmentdate']?.toString() ?? '-';
+    if (rawDate.contains('-')) {
+      final parts = rawDate.split('-');
+      if (parts.length == 3) {
+        rawDate = '${parts[2]}/${parts[1]}/${parts[0]}';
+      }
+    }
+
+    String doctor = advice['doctorname']?.toString() ?? '-';
+    String hospital = advice['hospitalname']?.toString() ?? '-';
+    String dept = advice['departmentname']?.toString() ?? '-';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -280,19 +322,19 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
             Icons.calendar_month_outlined,
             'การนัดหมายครั้งต่อไป',
           ),
-          _buildLabeledField('แพทย์ผู้นัด', 'นาย ประกอบ จันทร์รักษา'),
+          _buildLabeledField('แพทย์ผู้นัด', doctor.isEmpty ? '-' : doctor),
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: _buildLabeledField('วันที่', '13/03/2569')),
+              Expanded(child: _buildLabeledField('วันที่', rawDate)),
               const SizedBox(width: 12),
-              Expanded(child: _buildLabeledField('เวลา', '8:00 น.')),
+              Expanded(child: _buildLabeledField('เวลา', rawTime)),
             ],
           ),
           const SizedBox(height: 16),
-          _buildLabeledField('สถานที่', 'โรงพยาบาลแม่โจ้'),
+          _buildLabeledField('สถานที่', hospital.isEmpty ? '-' : hospital),
           const SizedBox(height: 16),
-          _buildLabeledField('แผนก', 'ตรวจสุขภาพ'),
+          _buildLabeledField('แผนก', dept.isEmpty ? '-' : dept),
         ],
       ),
     );
@@ -332,7 +374,8 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
     );
   }
 
-  Widget _buildAdditionalNoteCard({String? base64String}) {
+  // 🌟 ฟังก์ชันสร้างการ์ดคำแนะนำ และเช็กว่ามีรูปภาพหรือไม่
+  Widget _buildAdditionalNoteCard(String? adviceText, String? base64String) {
     Uint8List? imageBytes;
 
     if (base64String != null && base64String.isNotEmpty) {
@@ -374,20 +417,25 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: borderColor, width: 1.2),
             ),
-            child: const Text(
-              'ร่างกายไม่ค่อยมีแรง พยายามเดินออกกำลังกายเบาๆ รับประทานอาหารให้ครบ 5 หมู่ และพักผ่อนให้เพียงพอ',
+            child: Text(
+              (adviceText == null || adviceText.trim().isEmpty)
+                  ? 'ไม่มีคำแนะนำเพิ่มเติม'
+                  : adviceText,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.black87,
+                color: (adviceText == null || adviceText.trim().isEmpty)
+                    ? Colors.grey
+                    : Colors.black87,
                 height: 1.6,
               ),
             ),
           ),
 
+          // 🌟 ถ้ามีรูปภาพแนบมา ค่อยโชว์ส่วนนี้
           if (imageBytes != null) ...[
             const SizedBox(height: 20),
             const Text(
-              'รูปภาพ / เอกสารแนบ',
+              'ใบนัดแพทย์',
               style: TextStyle(
                 fontSize: 13,
                 color: Colors.black54,
@@ -402,23 +450,49 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
                   builder: (_) => Dialog(
                     backgroundColor: Colors.transparent,
                     insetPadding: const EdgeInsets.all(10),
-                    child: InteractiveViewer(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.memory(imageBytes!),
-                      ),
+                    child: Stack(
+                      alignment: Alignment.topRight,
+                      children: [
+                        InteractiveViewer(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.memory(imageBytes!),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.cancel,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
                     ),
                   ),
                 );
               },
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.memory(
-                  imageBytes,
-                  width: double.infinity,
-                  height: 160,
-                  fit: BoxFit.cover,
-                ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.memory(
+                      imageBytes,
+                      width: double.infinity,
+                      height: 180,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.zoom_out_map, color: Colors.white),
+                  ),
+                ],
               ),
             ),
           ],
@@ -454,109 +528,4 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
       ),
     );
   }
-
-  // ---------------- Bottom Navigation ----------------
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      height: 65,
-      decoration: BoxDecoration(
-        color: bottomNavPurple,
-        boxShadow: [
-          BoxShadow(
-            color: bottomNavPurple.withOpacity(0.27),
-            blurRadius: 12,
-            offset: const Offset(0, -3),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildBottomNavItem(
-            Icons.home_outlined,
-            'บ้าน',
-            false,
-            onTap: () => Navigator.popUntil(context, (route) => route.isFirst),
-          ),
-          _buildBottomNavItem(
-            Icons.support_agent,
-            'ขอใช้บริการ',
-            false,
-            onTap: () => Navigator.popUntil(context, (route) => route.isFirst),
-          ),
-          _buildBottomNavItem(
-            Icons.notifications_none,
-            'แจ้งเตือน',
-            false,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      TrackStatusNotificationPage(loggedUid: widget.loggedUid),
-                ),
-              );
-            },
-          ),
-          _buildBottomNavItem(
-            Icons.person_outline,
-            'ญาติ',
-            false,
-            onTap: () {
-              // ลอจิกเดิม...
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNavItem(
-    IconData icon,
-    String label,
-    bool isActive, {
-    VoidCallback? onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: isActive ? Colors.white : Colors.white70, size: 24),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              color: isActive ? Colors.white : Colors.white70,
-              fontSize: 11,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DocumentPlaceholderPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final linePaint = Paint()
-      ..color = Colors.grey.withOpacity(0.3)
-      ..strokeWidth = 2;
-
-    double y = 25;
-    while (y < size.height - 15) {
-      canvas.drawLine(
-        Offset(size.width * 0.15, y),
-        Offset(size.width * 0.85, y),
-        linePaint,
-      );
-      y += 20;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

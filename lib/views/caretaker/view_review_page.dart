@@ -15,10 +15,10 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
   final CaretakerService _service = CaretakerService();
   bool _isLoading = true;
 
-  final Color primaryColor = const Color(0xFF7C5CFC);
-  final Color darkPurple = const Color(0xFF6E5ABF);
-  final Color headerGradientStart = const Color(0xFF8E6FF0);
-  final Color headerGradientEnd = const Color(0xFF7C5CFC);
+  final Color primaryColor = const Color(0xFF9B59B6);
+  final Color darkPurple = const Color(0xFF9B59B6);
+  final Color headerGradientStart = const Color(0xFF9B59B6);
+  final Color headerGradientEnd = const Color(0xFF9B59B6);
   final Color bgGradientTop = const Color.fromARGB(255, 225, 202, 255);
   final Color bgGradientBottom = const Color.fromARGB(255, 225, 202, 255);
   final Color cardColor = Colors.white;

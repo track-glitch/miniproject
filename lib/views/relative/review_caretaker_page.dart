@@ -178,7 +178,7 @@ class _ReviewCaretakerPageState extends State<ReviewCaretakerPage> {
                           border: Border.all(color: Color(0xFF00B0FF)),
                         ),
                         child: const Text(
-                          'สิ้นสุดบริการ',
+                          'เสร็จสิ้น',
                           style: TextStyle(
                             color: Color(0xFF00B0FF),
                             fontWeight: FontWeight.bold,
@@ -249,7 +249,7 @@ class _ReviewCaretakerPageState extends State<ReviewCaretakerPage> {
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            color: Color(0xFF9B59B6),
                           ),
                         ),
                       ),
