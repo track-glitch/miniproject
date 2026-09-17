@@ -41,6 +41,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   final Color dangerColor = const Color(0xFFB91C1C);
 
   String _userName = '';
+  String _userProfilePhoto = '';
   DateTime? _selectedFilterDate;
   bool _isLocating = false; // 🌟 เพิ่มตัวแปรเช็กสถานะกำลังค้นหาตำแหน่ง
   List<dynamic> provinceData = [];
@@ -145,6 +146,17 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   firstname: relNode['firstname']?.toString(),
                   lastname: relNode['lastname']?.toString(),
                 );
+
+                String rawPhoto = relNode['profilephoto']?.toString() ?? 
+                                  relNode['Patient']?['patientphoto']?.toString() ?? '';
+                _userProfilePhoto = rawPhoto
+                    .replaceAll('\n', '')
+                    .replaceAll('\r', '')
+                    .replaceAll(' ', '')
+                    .trim();
+                int pad = _userProfilePhoto.length % 4;
+                if (pad > 0) _userProfilePhoto += '=' * (4 - pad);
+                
               });
 
               _myBookedDates.clear();
@@ -724,8 +736,17 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.person, color: Colors.white, size: 14),
-                      const SizedBox(width: 4),
+                      CircleAvatar(
+                        radius: 11,
+                        backgroundColor: Colors.white.withOpacity(0.3),
+                        backgroundImage: _userProfilePhoto.isNotEmpty
+                            ? MemoryImage(base64Decode(_userProfilePhoto))
+                            : null,
+                        child: _userProfilePhoto.isEmpty
+                            ? const Icon(Icons.person, color: Colors.white, size: 14)
+                            : null,
+                      ),
+                      const SizedBox(width: 6),
                       Text(
                         _userName,
                         style: const TextStyle(
