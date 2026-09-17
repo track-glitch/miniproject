@@ -80,6 +80,11 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   final TextEditingController _relLineIdController = TextEditingController();
   final TextEditingController _relRelationController = TextEditingController();
 
+  // 🌟 เก็บค่าตั้งต้นของเบอร์โทรและอีเมล เพื่อข้ามการตรวจถ้าไม่ได้เปลี่ยน
+  String _initialRelEmail = '';
+  String _initialRelPhone = '';
+  String _initialPatPhone = '';
+
   @override
   void initState() {
     super.initState();
@@ -167,6 +172,11 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     _relLineIdController.text = widget.currentRelative.lineId ?? '';
     _relRelationController.text = widget.currentRelative.relationship ?? '';
     _profilePhotoBase64 = widget.currentPatient.patientphoto;
+
+    // 🌟 จำค่าเดิมไว้
+    _initialRelEmail = (widget.currentRelative.email ?? '').trim().toLowerCase();
+    _initialRelPhone = (widget.currentRelative.phonenumber ?? '').trim();
+    _initialPatPhone = (widget.currentPatient.phonenumber ?? '').trim();
   }
 
   Future<void> _fetchAndForceShowData() async {
@@ -186,6 +196,10 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         _relLineIdController.text =
             relData['lineId'] ?? _relLineIdController.text;
         _relEmailController.text = relData['email'] ?? _relEmailController.text;
+        _relPhoneController.text = relData['phonenumber'] ?? _relPhoneController.text;
+
+        _initialRelEmail = _relEmailController.text.trim().toLowerCase();
+        _initialRelPhone = _relPhoneController.text.trim();
       }
 
       final patSnapshot = await FirebaseDatabase.instance
@@ -198,7 +212,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         final data = Map<String, dynamic>.from(patSnapshot.value as Map);
 
         setState(() {
-          // 🌟 แก้ไขจุดนี้: บังคับดึงจากก้อน Location ก่อนเป็นอันดับแรก
           if (data['Location'] != null && data['Location'] is Map) {
             final loc = Map<String, dynamic>.from(data['Location'] as Map);
             _patAddressController.text = loc['address']?.toString() ?? '';
@@ -212,7 +225,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
               _hasPinned = true;
             }
           }
-          // ถ้าไม่มีก้อน Location ค่อยมาเช็คฟิลด์ address นอกสุด (เผื่อมีข้อมูล)
           else if (data['address'] != null &&
               data['address'].toString().isNotEmpty) {
             _patAddressController.text = data['address'].toString();
@@ -228,6 +240,9 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
           _patDiseaseController.text =
               data['disease'] ?? _patDiseaseController.text;
+          _patPhoneController.text =
+              data['phonenumber'] ?? _patPhoneController.text;
+          _initialPatPhone = _patPhoneController.text.trim();
 
           if (data['mobility'] != null &&
               _mobilityOptions.contains(data['mobility'])) {
@@ -332,16 +347,172 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   void _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final String relEmail = _relEmailController.text.trim().toLowerCase();
+    final String relPhone = _relPhoneController.text.trim();
+    final String patPhone = _patPhoneController.text.trim();
+
+    // 🌟 ตรวจสอบรูปแบบเบอร์โทรศัพท์
+    if (relPhone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(relPhone)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('กรุณากรอกเบอร์โทรศัพท์ญาติให้ถูกต้อง (ตัวเลข 10 หลัก)'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (patPhone.isNotEmpty &&
+        (patPhone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(patPhone))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('กรุณากรอกเบอร์โทรศัพท์ผู้ป่วยให้ถูกต้อง (ตัวเลข 10 หลัก)'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // 🌟 ตรวจสอบรูปแบบอีเมล
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(relEmail)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('รูปแบบอีเมลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
+
     try {
       String uid = widget.loggedUid;
+
+      // 🌟 ตรวจสอบว่า เบอร์ หรือ อีเมล ซ้ำกับในระบบหรือไม่ (เฉพาะเมื่อมีการแก้ไข)
+      bool needCheckRelEmail = relEmail != _initialRelEmail;
+      bool needCheckRelPhone = relPhone != _initialRelPhone;
+      bool needCheckPatPhone = patPhone.isNotEmpty && patPhone != _initialPatPhone;
+
+      if (needCheckRelEmail || needCheckRelPhone || needCheckPatPhone) {
+        final snapshot = await FirebaseDatabase.instance.ref('Login').get();
+        if (snapshot.exists && snapshot.value is Map) {
+          final allUsers = Map<String, dynamic>.from(snapshot.value as Map);
+
+          for (var entry in allUsers.entries) {
+            String userKey = entry.key;
+            var userData = entry.value;
+
+            if (userKey == uid) continue; // ข้ามบัญชีปัจจุบัน
+
+            if (userData is Map) {
+              // 1. ตรวจสอบในโหนด Caretaker
+              if (userData['Caretaker'] is Map) {
+                var cData = userData['Caretaker'];
+                String cPhone = (cData['phonenumber'] ?? '').toString().trim();
+                String cEmail = (cData['email'] ?? '').toString().trim().toLowerCase();
+
+                if (needCheckRelEmail && cEmail.isNotEmpty && cEmail == relEmail) {
+                  setState(() => _isLoading = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('อีเมลนี้ถูกใช้งานแล้วในระบบ กรุณาใช้อีเมลอื่น'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                if (needCheckRelPhone && cPhone.isNotEmpty && cPhone == relPhone) {
+                  setState(() => _isLoading = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('เบอร์โทรศัพท์ญาตินี้ถูกใช้งานแล้วในระบบ'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                if (needCheckPatPhone && cPhone.isNotEmpty && cPhone == patPhone) {
+                  setState(() => _isLoading = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('เบอร์โทรศัพท์ผู้ป่วยนี้ถูกใช้งานแล้วในระบบ'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+              }
+
+              // 2. ตรวจสอบในโหนด Relative
+              if (userData['Relative'] is Map) {
+                var rData = userData['Relative'];
+                String rPhone = (rData['phonenumber'] ?? '').toString().trim();
+                String rEmail = (rData['email'] ?? '').toString().trim().toLowerCase();
+
+                if (needCheckRelEmail && rEmail.isNotEmpty && rEmail == relEmail) {
+                  setState(() => _isLoading = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('อีเมลนี้ถูกใช้งานแล้วในระบบ กรุณาใช้อีเมลอื่น'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                if (needCheckRelPhone && rPhone.isNotEmpty && rPhone == relPhone) {
+                  setState(() => _isLoading = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('เบอร์โทรศัพท์ญาตินี้ถูกใช้งานแล้วในระบบ'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                if (needCheckPatPhone && rPhone.isNotEmpty && rPhone == patPhone) {
+                  setState(() => _isLoading = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('เบอร์โทรศัพท์ผู้ป่วยนี้ตรงกับเบอร์ญาติคนอื่นในระบบ'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                // ตรวจสอบเบอร์ผู้ป่วยของผู้อื่นด้วย
+                if (rData['Patient'] is Map) {
+                  var pData = rData['Patient'];
+                  String pPhone = (pData['phonenumber'] ?? '').toString().trim();
+                  if (needCheckPatPhone && pPhone.isNotEmpty && pPhone == patPhone) {
+                    setState(() => _isLoading = false);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('เบอร์โทรศัพท์ผู้ป่วยนี้ถูกใช้งานแล้วในระบบ'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
 
       if (uid.isNotEmpty) {
         await FirebaseDatabase.instance.ref('Login/$uid/Relative').update({
           'firstname': _relFirstNameController.text.trim(),
           'lastname': _relLastNameController.text.trim(),
-          'email': _relEmailController.text.trim(),
-          'phonenumber': _relPhoneController.text.trim(),
+          'email': relEmail,
+          'phonenumber': relPhone,
           'lineId': _relLineIdController.text.trim(),
           'relationship': _relRelationController.text.trim(),
         });
@@ -352,7 +523,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
               'patientId': _patIdCardController.text.trim(),
               'firstname': _patFirstNameController.text.trim(),
               'lastname': _patLastNameController.text.trim(),
-              'phonenumber': _patPhoneController.text.trim(),
+              'phonenumber': patPhone,
               'gender': _patGenderController.text.trim(),
               'birthdate': _patBirthDateController.text.trim(),
               'disease': _patDiseaseController.text.trim(),
@@ -367,6 +538,10 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                 'longitude': _hasPinned ? _selectedLocation.longitude : 0.0,
               },
             });
+
+        _initialRelEmail = relEmail;
+        _initialRelPhone = relPhone;
+        _initialPatPhone = patPhone;
       }
 
       if (mounted) {
@@ -497,6 +672,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                               hint: 'เบอร์โทรศัพท์ผู้ป่วย',
                               controller: _patPhoneController,
                               keyboardType: TextInputType.phone,
+                              maxLength: 10,
                             ),
                             _buildInputField(
                               hint: 'เพศ',
@@ -542,7 +718,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                           ],
                         ),
 
-                        // 🌟 ส่วนข้อมูลที่อยู่ผู้ป่วย (ใส่ Key เพื่อบังคับให้แสดงข้อความที่ดึงมาจาก Firebase)
+                        // 🌟 ส่วนข้อมูลที่อยู่ผู้ป่วย
                         _buildSectionContainer(
                           title: 'ข้อมูลที่อยู่ผู้ป่วย',
                           children: [
@@ -595,6 +771,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                     hint: 'เบอร์โทรศัพท์ญาติ',
                                     controller: _relPhoneController,
                                     keyboardType: TextInputType.phone,
+                                    maxLength: 10,
                                   ),
                                 ),
                                 const SizedBox(width: 10),
@@ -892,6 +1069,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     required String hint,
     required TextEditingController controller,
     int maxLines = 1,
+    int? maxLength,
     TextInputType keyboardType = TextInputType.text,
     bool readOnly = false,
     bool enabled = true,
@@ -903,6 +1081,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
       child: TextFormField(
         controller: controller,
         maxLines: maxLines,
+        maxLength: maxLength,
         keyboardType: keyboardType,
         readOnly: readOnly,
         enabled: enabled,
@@ -928,6 +1107,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
             horizontal: 14,
             vertical: 12,
           ),
+          counterStyle: const TextStyle(fontSize: 11, color: Colors.grey),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: greyBorder, width: 2.3),

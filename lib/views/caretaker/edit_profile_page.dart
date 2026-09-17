@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:miniproject/views/caretaker/view_review_page.dart';
 
 import '../../services/caretaker_service.dart';
@@ -58,6 +59,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
   // 🌟 เพิ่ม Controller สำหรับวันเกิดและอายุให้เหมือนฝั่งญาติ
   TextEditingController birthDateController = TextEditingController();
   TextEditingController ageController = TextEditingController();
+
+  // 🌟 ตัวแปรสำหรับเก็บเบอร์โทรศัพท์เดิมเพื่อใช้ตรวจสอบกรณีมีการแก้ไข
+  String _initialPhoneNumber = '';
 
   @override
   void initState() {
@@ -145,7 +149,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     if (picked != null) {
       setState(() {
-        // 🌟 อัปเดต Text ในช่องพร้อมคำนวณอายุทันที
         birthDateController.text =
             "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year + 543}";
         _calculateAge(birthDateController.text);
@@ -216,6 +219,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         fnameController.text = data['firstname'] ?? '';
         lnameController.text = data['lastname'] ?? '';
         phoneController.text = data['phonenumber'] ?? '';
+        _initialPhoneNumber = (data['phonenumber'] ?? '').toString().trim();
 
         experienceController.text = data['experience'] ?? '';
         servicedescController.text = data['servicedesc'] ?? '';
@@ -283,6 +287,83 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   void _saveProfile() async {
+    String newPhone = phoneController.text.trim();
+
+    // 🌟 ตรวจสอบเบอร์โทรศัพท์
+    if (newPhone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('กรุณากรอกเบอร์โทรศัพท์')),
+      );
+      return;
+    }
+
+    if (newPhone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(newPhone)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง (ตัวเลข 10 หลัก)')),
+      );
+      return;
+    }
+
+    // 🌟 ตรวจสอบว่าเบอร์ซ้ำในระบบหรือไม่
+    if (newPhone != _initialPhoneNumber) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      try {
+        final snapshot = await FirebaseDatabase.instance.ref('Login').get();
+        if (snapshot.exists && snapshot.value is Map) {
+          final allUsers = Map<String, dynamic>.from(snapshot.value as Map);
+
+          for (var entry in allUsers.entries) {
+            String userKey = entry.key;
+            var userData = entry.value;
+
+            if (userKey == widget.uid) continue;
+
+            if (userData is Map) {
+              if (userData['Caretaker'] is Map) {
+                String cPhone = (userData['Caretaker']['phonenumber'] ?? '').toString().trim();
+                if (cPhone == newPhone) {
+                  if (mounted) Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('เบอร์โทรศัพท์นี้ถูกใช้งานในระบบแล้ว กรุณาใช้เบอร์อื่น'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+              }
+
+              if (userData['Relative'] is Map) {
+                String rPhone = (userData['Relative']['phonenumber'] ?? '').toString().trim();
+                if (rPhone == newPhone) {
+                  if (mounted) Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('เบอร์โทรศัพท์นี้ถูกใช้งานในระบบแล้ว กรุณาใช้เบอร์อื่น'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+              }
+            }
+          }
+        }
+        if (mounted) Navigator.pop(context);
+      } catch (e) {
+        if (mounted) Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('เกิดข้อผิดพลาดในการตรวจสอบเบอร์: $e')),
+        );
+        return;
+      }
+    }
+
     // 🌟 แปลงสตริงจากช่องกรอกกลับเป็น DateTime มาตรฐาน (ISO 8601) ก่อนส่งลงฐานข้อมูล
     DateTime? savedBirthDate;
     if (birthDateController.text.isNotEmpty) {
@@ -301,7 +382,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     Map<String, dynamic> updateData = {
       'firstname': fnameController.text,
       'lastname': lnameController.text,
-      'phonenumber': phoneController.text,
+      'phonenumber': newPhone,
       'experience': experienceController.text,
       'servicedesc': servicedescController.text,
       'gender': selectedGender,
@@ -314,13 +395,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
     };
     try {
       await _service.updateCaretakerProfile(widget.uid, updateData);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('บันทึกข้อมูลสำเร็จ!')));
+      _initialPhoneNumber = newPhone;
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('บันทึกข้อมูลสำเร็จ!')));
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึก')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึก')),
+        );
+      }
     }
   }
 
@@ -373,7 +459,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            // 🌟 ให้ทำงานเหมือนกดแท็บผู้ดูแล (สลับกลับไปหน้ารายการคำขอ)
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ListRelativeRequestPage(uid: widget.uid),
+              ),
+            );
+          },
         ),
       ),
       body: Container(
@@ -414,6 +508,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 child: _buildInputField(
                                   'ชื่อจริง',
                                   controller: fnameController,
+                                  isReadOnly: true,
+                                  isEnabled: false,
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -421,12 +517,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 child: _buildInputField(
                                   'นามสกุล',
                                   controller: lnameController,
+                                  isReadOnly: true,
+                                  isEnabled: false,
                                 ),
                               ),
                             ],
                           ),
-                          _buildGenderDropdown(),
-                          // 🌟 แสดงผล วันเกิดและอายุ คู่กัน
+                          // 🌟 เพศ ล็อกห้ามแก้ไข
+                          _buildInputField(
+                            'เพศ',
+                            initialValue: selectedGender ?? 'ไม่ระบุ',
+                            isReadOnly: true,
+                            isEnabled: false,
+                          ),
+                          // 🌟 วันเกิด และ อายุ ล็อกห้ามแก้ไข
                           Row(
                             children: [
                               Expanded(
@@ -435,11 +539,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   'วันเกิด [DD/MM/YYYY]',
                                   controller: birthDateController,
                                   isReadOnly: true,
-                                  isEnabled: true,
-                                  onTap: _selectBirthDate,
+                                  isEnabled: false,
+                                  onTap: null,
                                   suffixIcon: const Icon(
                                     Icons.calendar_month,
-                                    color: Color(0xFF9B59B6),
+                                    color: Colors.grey,
                                     size: 20,
                                   ),
                                 ),
@@ -451,15 +555,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   'อายุ',
                                   controller: ageController,
                                   isReadOnly: true,
-                                  isEnabled: false, // ปิดการพิมพ์โดยสมบูรณ์
+                                  isEnabled: false,
                                 ),
                               ),
                             ],
                           ),
+                          // 🌟 เบอร์โทรศัพท์ยังคงพิมพ์แก้ไขได้
                           _buildInputField(
                             'เบอร์โทรศัพท์',
                             controller: phoneController,
                             keyboardType: TextInputType.phone,
+                            maxLength: 10,
                           ),
                           _buildInputField(
                             'ประสบการณ์การทำงาน (ถ้ามี)',

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -44,6 +46,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
   int _cancelledPage = 1;
 
   String _userName = '';
+  String _userProfilePhoto = '';
 
   void _onBottomNavTapped(int index) {
     setState(() {
@@ -130,6 +133,16 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
         setState(() {
           _userName = "${data['firstname'] ?? ''} ${data['lastname'] ?? ''}"
               .trim();
+        
+        String rawPhoto = data['profilephoto']?.toString() ?? '';
+          _userProfilePhoto = rawPhoto
+              .replaceAll('\n', '')
+              .replaceAll('\r', '')
+              .replaceAll(' ', '')
+              .trim();
+          int pad = _userProfilePhoto.length % 4;
+          if (pad > 0) _userProfilePhoto += '=' * (4 - pad);
+
         });
       }
     } catch (e) {
@@ -309,7 +322,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
-                    vertical: 3,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.18),
@@ -322,13 +335,22 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.person, color: Colors.white, size: 12),
-                      const SizedBox(width: 4),
+                      CircleAvatar(
+                        radius: 10,
+                        backgroundColor: Colors.white.withOpacity(0.3),
+                        backgroundImage: _userProfilePhoto.isNotEmpty
+                            ? MemoryImage(base64Decode(_userProfilePhoto))
+                            : null,
+                        child: _userProfilePhoto.isEmpty
+                            ? const Icon(Icons.person, color: Colors.white, size: 11)
+                            : null,
+                      ),
+                      const SizedBox(width: 8),
                       Text(
                         _userName.isNotEmpty ? _userName : 'ผู้ดูแล',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 11,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
