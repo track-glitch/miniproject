@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:miniproject/services/auto_cancel_service.dart';
 import 'package:miniproject/views/caretaker/add_doctor_advice_page.dart';
 import 'package:miniproject/views/caretaker/test_add_relative.dart';
+import 'package:miniproject/views/relative/relative_home_page.dart';
 import 'views/login_page.dart';
 import 'views/admin/list_caretaker_page.dart';
 
@@ -37,7 +38,7 @@ class MyApp extends StatelessWidget {
         fontFamily: 'Kanit',
       ),
       //  แก้ไขจาก relative/search_caretaker_profile_page() เป็นชื่อคลาส Widget จริง
-      home: const LoginPage(),
+      home: const RelativeHomePage(),
     );
   }
 }

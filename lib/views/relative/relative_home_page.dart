@@ -187,31 +187,12 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
     DateTime now = DateTime.now();
     DateTime today = DateTime(now.year, now.month, now.day);
 
-    DateTime validInitialDate = today;
-    while (true) {
-      String checkFormat =
-          "${validInitialDate.year}-${validInitialDate.month.toString().padLeft(2, '0')}-${validInitialDate.day.toString().padLeft(2, '0')}";
-
-      if (!_myBookedDates.contains(checkFormat)) {
-        break;
-      }
-      validInitialDate = validInitialDate.add(const Duration(days: 1));
-    }
-
     DateTime? selectedDate = await showDatePicker(
       context: context,
-      initialDate: validInitialDate,
+      initialDate: today,
       firstDate: today,
       lastDate: DateTime(now.year + 2, 12, 31),
-      selectableDayPredicate: (DateTime day) {
-        String formattedDay =
-            "${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}";
-
-        if (_myBookedDates.contains(formattedDay)) {
-          return false;
-        }
-        return true;
-      },
+      // 🌟 เอา selectableDayPredicate ที่คอยล็อควันที่ออกไปทั้งหมดเลยครับ
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -229,7 +210,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
     if (selectedDate != null) {
       setState(() {
         _selectedFilterDate = selectedDate;
-        // 🌟 ลบ _searchController.text = ""; ออกแล้ว ทำให้พิมพ์อะไรไว้ก็ไม่หาย
         _currentPage = 1;
       });
     }
@@ -759,60 +739,75 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                 ),
               ),
             ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Colors.white),
-            tooltip: 'ออกจากระบบ',
-            onPressed: () async {
-              bool? confirmLogout = await showDialog<bool>(
-                context: context,
-                builder: (context) {
-                  return AlertDialog(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    title: const Text(
-                      'ออกจากระบบ',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    content: const Text('คุณต้องการออกจากระบบใช่หรือไม่?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text(
-                          'ยกเลิก',
-                          style: TextStyle(color: Colors.grey, fontSize: 16),
-                        ),
+
+          // 🌟 เช็กว่าเข้าสู่ระบบหรือยัง เพื่อสลับปุ่ม Login / Logout
+          if ((widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '')
+              .isEmpty)
+            IconButton(
+              icon: const Icon(Icons.login_rounded, color: Colors.white),
+              tooltip: 'เข้าสู่ระบบ',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                );
+              },
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.logout_rounded, color: Colors.white),
+              tooltip: 'ออกจากระบบ',
+              onPressed: () async {
+                bool? confirmLogout = await showDialog<bool>(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
                       ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: const Text(
-                          'ตกลง',
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                      title: const Text(
+                        'ออกจากระบบ',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      content: const Text('คุณต้องการออกจากระบบใช่หรือไม่?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text(
+                            'ยกเลิก',
+                            style: TextStyle(color: Colors.grey, fontSize: 16),
                           ),
                         ),
-                      ),
-                    ],
-                  );
-                },
-              );
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text(
+                            'ตกลง',
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                );
 
-              if (confirmLogout == true) {
-                await FirebaseAuth.instance.signOut();
-                if (context.mounted) {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const RelativeHomePage(),
-                    ),
-                    (route) => false,
-                  );
+                if (confirmLogout == true) {
+                  await FirebaseAuth.instance.signOut();
+                  if (context.mounted) {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const RelativeHomePage(),
+                      ),
+                      (route) => false,
+                    );
+                  }
                 }
-              }
-            },
-          ),
+              },
+            ),
           const SizedBox(width: 4),
         ],
       ),
@@ -1478,6 +1473,16 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
               'รายการคำขอ',
               false,
               onTap: () {
+                // 🌟 เพิ่มการเช็กการเข้าสู่ระบบก่อนกดไปหน้ารายการคำขอ
+                String currentUid =
+                    widget.loggedUid ??
+                    FirebaseAuth.instance.currentUser?.uid ??
+                    '';
+                if (currentUid.isEmpty) {
+                  _showLoginRequiredDialog();
+                  return;
+                }
+
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
