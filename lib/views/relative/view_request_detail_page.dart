@@ -106,7 +106,8 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
         currentStatus = RequestStatus.pending;
         break;
       case 'accepted':
-        currentStatus = RequestStatus.acceptedEarly;
+      case 'pending_advice': // 🌟 เพิ่มบรรทัดนี้เข้ามา เพื่อให้รองรับสถานะ pending_advice ด้วย
+        currentStatus = RequestStatus.acceptedEarly; 
         break;
       case 'completed':
         currentStatus = RequestStatus.completed;
@@ -806,8 +807,8 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       statusColor = const Color(0xFF3498DB);
       statusBgColor = const Color(0xFFEBF5FB);
     } else if (currentStatus == RequestStatus.cancelled) {
-      // 🌟 เปลี่ยนคำว่า ยกเลิกบริการ เป็น ยกเลิก/ปฏิเสธ
-      statusText = 'ยกเลิก';
+      // 🌟 เปลี่ยนคำว่า ยกเลิก เป็น ยกเลิก/ปฏิเสธ
+      statusText = 'ยกเลิก/ปฏิเสธ'; // แก้ไขตรงนี้ครับ
       statusColor = const Color(0xFFE74C3C);
       statusBgColor = const Color(0xFFFDEDEC);
     }

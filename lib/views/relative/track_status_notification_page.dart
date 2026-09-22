@@ -35,7 +35,7 @@ class _TrackStatusNotificationPageState
 
   static const Color primaryPurple = Color(0xFF7D3C98);
   static const Color darkPurple = Color(0xFF7D3C98);
-  static const Color lightPurpleBg = Color(0xFFF4EDFB);
+  static const Color lightPurpleBg = const Color.fromARGB(255, 225, 202, 255);
   // 🌟 สี Highlight สำหรับสถานะล่าสุด
   static const Color highlightColor = Color(0xFF00B0FF);
 
@@ -362,45 +362,57 @@ class _TrackStatusNotificationPageState
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: primaryPurple))
-          : ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              children: [
-                _buildServiceInfoCard(),
+          : RefreshIndicator(
+              color: primaryPurple,
+              onRefresh: () async {
+                // เมื่อดึงหน้าจอลง ให้เรียกฟังก์ชันโหลดข้อมูลใหม่
+                await _fetchNotifications();
+              },
+              child: ListView(
+                // 🌟 บังคับให้ดึงหน้าจอเพื่อรีเฟรชได้เสมอ แม้ข้อมูลจะน้อยหรือไม่มีเลย
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 20,
+                ),
+                children: [
+                  _buildServiceInfoCard(),
 
-                if (_items.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 40),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.notifications_off_outlined,
-                          size: 80,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'ยังไม่มีการแจ้งเตือนสถานะ',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey.shade600,
+                  if (_items.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 40),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.notifications_off_outlined,
+                            size: 80,
+                            color: Colors.grey.shade400,
                           ),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  ..._items.asMap().entries.map((entry) {
-                    var item = entry.value;
-                    return Column(
-                      children: [
-                        if (item.isLatest) _buildLatestDivider(),
-                        _NotificationCard(item: item),
-                        const SizedBox(height: 16),
-                      ],
-                    );
-                  }).toList(),
-              ],
+                          const SizedBox(height: 16),
+                          Text(
+                            'ยังไม่มีการแจ้งเตือนสถานะ',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    ..._items.asMap().entries.map((entry) {
+                      var item = entry.value;
+                      return Column(
+                        children: [
+                          if (item.isLatest) _buildLatestDivider(),
+                          _NotificationCard(item: item),
+                          const SizedBox(height: 16),
+                        ],
+                      );
+                    }).toList(),
+                ],
+              ),
             ),
       bottomNavigationBar: Container(
         height: 65,
