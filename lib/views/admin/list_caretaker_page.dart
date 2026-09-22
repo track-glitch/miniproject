@@ -28,6 +28,8 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
   List<CaretakerModel> _approvedList = [];
   List<CaretakerModel> _suspendedList = [];
   Map<String, int> _reportCounts = {};
+  Map<String, int> _reviewCounts = {};
+  Map<String, double> _ratingSums = {};
 
   // 🌟 ระบบ Pagination (Lazy Loading)
   final ScrollController _scrollController = ScrollController();
@@ -59,6 +61,8 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
     _scrollController.dispose();
     super.dispose();
   }
+
+  
 
   void _loadMoreCurrentTab() {
     setState(() {
@@ -105,16 +109,61 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
       var approved = await _adminService.getCaretakersByStatus('Approved');
       var suspended = await _adminService.getCaretakersByStatus('Suspended');
 
-      for (var caretaker in approved) {
-        if (caretaker.caretakerId != null) {
-          var reports = await _fetchReportsForCaretaker(caretaker.caretakerId);
-          _reportCounts[caretaker.caretakerId!] = reports.length;
-        }
+      // 🌟 เคลียร์ค่าเก่าก่อน เพื่อไม่ให้สะสมเวลารีเฟรช
+      _reportCounts.clear();
+      _reviewCounts.clear();
+      _ratingSums.clear();
+
+      // 🌟 ดึงข้อมูลทั้งหมดจาก Login
+      final snapshot = await FirebaseDatabase.instance.ref('Login').get();
+      if (snapshot.exists && snapshot.value is Map) {
+        final users = snapshot.value as Map<dynamic, dynamic>;
+
+        users.forEach((userKey, userValue) {
+          // 🌟 เช็ก is Map ทุกจุดแบบเดียวกับหน้า relative_home_page เป๊ะๆ ป้องกัน Error คืนค่า 0
+          if (userValue is Map && userValue['Relative'] != null) {
+            var relativeNode = userValue['Relative'];
+            if (relativeNode is Map && relativeNode['Request'] != null) {
+              var requests = relativeNode['Request'];
+              if (requests is Map) {
+                requests.forEach((reqId, reqData) {
+                  if (reqData is Map && reqData['caretakerId'] != null) {
+                    // 🌟 ใช้ .trim() ตัดช่องว่างทิ้ง ป้องกัน Key ไม่ตรงกัน
+                    String cId = reqData['caretakerId'].toString().trim();
+
+                    // 1. นับจำนวน Report
+                    if (reqData['Report'] != null ||
+                        reqData['report'] != null) {
+                      _reportCounts[cId] = (_reportCounts[cId] ?? 0) + 1;
+                    }
+
+                    // 2. ดึงข้อมูลคะแนนรีวิว
+                    var reviewData = reqData['Review'] ?? reqData['review'];
+                    if (reviewData != null && reviewData is Map) {
+                      double ratingScore = 0.0;
+                      var rawRating =
+                          reviewData['rating'] ?? reviewData['ratingscore'];
+                      if (rawRating != null) {
+                        ratingScore =
+                            double.tryParse(rawRating.toString()) ?? 0.0;
+                      }
+
+                      _reviewCounts[cId] = (_reviewCounts[cId] ?? 0) + 1;
+                      _ratingSums[cId] =
+                          (_ratingSums[cId] ?? 0.0) + ratingScore;
+                    }
+                  }
+                });
+              }
+            }
+          }
+        });
       }
 
+      // เรียงลำดับคนที่มีรีพอร์ตเยอะขึ้นก่อน
       approved.sort((a, b) {
-        int aReports = _reportCounts[a.caretakerId] ?? 0;
-        int bReports = _reportCounts[b.caretakerId] ?? 0;
+        int aReports = _reportCounts[a.caretakerId?.trim()] ?? 0;
+        int bReports = _reportCounts[b.caretakerId?.trim()] ?? 0;
         return bReports.compareTo(aReports);
       });
 
@@ -308,6 +357,20 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
     final String address = caretaker.location?.address ?? 'ไม่ระบุที่อยู่';
     final int reportCount = _reportCounts[caretaker.caretakerId] ?? 0;
 
+    // 🌟 ดึงค่าโดยใช้ .trim() ตัดปัญหาเว้นวรรคหลอกตา
+    String cId = caretaker.caretakerId?.trim() ?? '';
+    int reviewCount = _reviewCounts[cId] ?? 0;
+    double totalRating = _ratingSums[cId] ?? 0.0;
+    double averageRating = reviewCount > 0 ? totalRating / reviewCount : 0.0;
+
+    // 🌟 1. เช็กเพศเพื่อกำหนดคำนำหน้า
+    String prefix = '';
+    if (caretaker.gender == 'ชาย') {
+      prefix = 'นาย ';
+    } else if (caretaker.gender == 'หญิง') {
+      prefix = 'นาง ';
+    }
+
     Color statusColor;
     String statusText;
     if (status == 'Pending') {
@@ -361,7 +424,8 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                       children: [
                         Expanded(
                           child: Text(
-                            'นาย ${caretaker.firstname} ${caretaker.lastname}',
+                            // 🌟 2. นำ prefix มาแสดงแทนคำว่า 'นาย ' ที่ถูกฮาร์ดโค้ดไว้
+                            '$prefix${caretaker.firstname} ${caretaker.lastname}',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -444,38 +508,35 @@ class _ListCaretakerPageState extends State<ListCaretakerPage> {
                         padding: const EdgeInsets.only(top: 8),
                         child: Row(
                           children: [
-                            const Text(
-                              '5.0 ',
-                              style: TextStyle(
+                            Text(
+                              '${averageRating.toStringAsFixed(1)} ', // 🌟 แสดงตัวเลขจริง
+                              style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black87,
                               ),
                             ),
-                            const Icon(
-                              Icons.star_rounded,
-                              color: Colors.amber,
-                              size: 18,
+                            // 🌟 คำนวณดาวให้เต็ม/ครึ่ง/ว่าง แบบอัตโนมัติ
+                            ...List.generate(
+                              5,
+                              (i) => Icon(
+                                i < averageRating.floor()
+                                    ? Icons.star_rounded
+                                    : (i < averageRating
+                                          ? Icons.star_half_rounded
+                                          : Icons.star_border_rounded),
+                                color: Colors.amber,
+                                size: 18,
+                              ),
                             ),
-                            const Icon(
-                              Icons.star_rounded,
-                              color: Colors.amber,
-                              size: 18,
-                            ),
-                            const Icon(
-                              Icons.star_rounded,
-                              color: Colors.amber,
-                              size: 18,
-                            ),
-                            const Icon(
-                              Icons.star_rounded,
-                              color: Colors.amber,
-                              size: 18,
-                            ),
-                            const Icon(
-                              Icons.star_rounded,
-                              color: Colors.amber,
-                              size: 18,
+                            const SizedBox(width: 8),
+                            Text(
+                              '($reviewCount รีวิว)', // 🌟 แสดงจำนวนรีวิว
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade600,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Container(

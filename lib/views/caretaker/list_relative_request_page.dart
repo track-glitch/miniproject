@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -30,6 +31,8 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
   final Color bgColor = const Color(0xFFF5F5F5);
   final Color primaryPurple = const Color(0xFF9B59B6);
   final Color darkPurple = const Color(0xFF9B59B6);
+  // 🌟 ประกาศตัวแปรสำหรับหยุดการดักฟังตอนปิดหน้าจอ
+  StreamSubscription<DatabaseEvent>? _statusSubscription;
 
   // 🌟 เก็บข้อมูลทั้งหมดไว้หลังบ้าน
   List<RequestCard> _requestsPendingAll = [];
@@ -67,7 +70,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
     super.initState();
     _fetchUserData();
     _fetchRequests();
-
+    _listenToAccountStatus(); // เรียกใช้ตอนเปิดหน้า
     // 🌟 ดักจับการเลื่อนจอ
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
@@ -79,8 +82,61 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
 
   @override
   void dispose() {
+    _statusSubscription?.cancel();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _listenToAccountStatus() {
+    String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (uid.isEmpty) return;
+
+    // 🌟 ดักฟังการเปลี่ยนแปลงที่โหนด accountstatus ของผู้ใช้คนนี้
+    _statusSubscription = FirebaseDatabase.instance
+        .ref('Login/$uid/accountstatus')
+        .onValue
+        .listen((DatabaseEvent event) async {
+          if (event.snapshot.exists) {
+            String status = event.snapshot.value.toString();
+
+            // 🌟 ถ้าสถานะเปลี่ยนเป็น Suspended ให้บังคับเตะออกทันที
+            if (status == 'Suspended') {
+              await FirebaseAuth.instance.signOut(); // ล็อกเอาท์ฝั่งเครื่อง
+
+              if (mounted) {
+                // โชว์แจ้งเตือนให้รู้ตัว
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => AlertDialog(
+                    title: const Text(
+                      'บัญชีถูกระงับ',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    content: const Text(
+                      'บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          // ปิด Popup และส่งกลับไปหน้าล็อกอิน ล้างประวัติหน้าต่างทั้งหมด
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LoginPage(),
+                            ), // เปลี่ยนเป็นหน้า Login ของเฮีย
+                            (route) => false,
+                          );
+                        },
+                        child: const Text('ตกลง'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            }
+          }
+        });
   }
 
   void _loadMoreCurrentTab() {
@@ -133,8 +189,8 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
         setState(() {
           _userName = "${data['firstname'] ?? ''} ${data['lastname'] ?? ''}"
               .trim();
-        
-        String rawPhoto = data['profilephoto']?.toString() ?? '';
+
+          String rawPhoto = data['profilephoto']?.toString() ?? '';
           _userProfilePhoto = rawPhoto
               .replaceAll('\n', '')
               .replaceAll('\r', '')
@@ -142,7 +198,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
               .trim();
           int pad = _userProfilePhoto.length % 4;
           if (pad > 0) _userProfilePhoto += '=' * (4 - pad);
-
         });
       }
     } catch (e) {
@@ -342,7 +397,11 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
                             ? MemoryImage(base64Decode(_userProfilePhoto))
                             : null,
                         child: _userProfilePhoto.isEmpty
-                            ? const Icon(Icons.person, color: Colors.white, size: 11)
+                            ? const Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 11,
+                              )
                             : null,
                       ),
                       const SizedBox(width: 8),
@@ -436,43 +495,59 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
           Container(height: 6, color: bgColor),
 
           Expanded(
-            child: displayList.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.inbox_rounded,
-                          size: 80,
-                          color: Colors.grey.shade400,
+            child: RefreshIndicator(
+              color: primaryPurple, // สีของวงล้อโหลด
+              onRefresh: () async {
+                // เมื่อดึงหน้าจอลง จะเรียกฟังก์ชันดึงข้อมูลใหม่
+                await _fetchRequests();
+              },
+              child: displayList.isEmpty
+                  // กรณีไม่มีข้อมูล ต้องครอบ SingleChildScrollView เพื่อให้ดึงหน้าจอลงได้
+                  ? SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Container(
+                        height: MediaQuery.of(context).size.height * 0.5,
+                        alignment: Alignment.center,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.inbox_rounded,
+                              size: 80,
+                              color: Colors.grey.shade400,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'ไม่มีคำขอในสถานะนี้',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'ไม่มีคำขอในสถานะนี้',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
+                      ),
+                    )
+                  // กรณีมีข้อมูล
+                  : ListView.builder(
+                      // เพิ่ม Physics เพื่อบังคับให้ดึงรีเฟรชได้เสมอแม้ยาวไม่เต็มจอ
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount:
+                          displayList.length + (_hasMoreInCurrentTab() ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == displayList.length) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+                        return _buildRequestCard(displayList[index]);
+                      },
                     ),
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount:
-                        displayList.length + (_hasMoreInCurrentTab() ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == displayList.length) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(child: CircularProgressIndicator()),
-                        );
-                      }
-                      return _buildRequestCard(displayList[index]);
-                    },
-                  ),
+            ),
           ),
         ],
       ),

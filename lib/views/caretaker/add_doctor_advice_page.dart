@@ -143,303 +143,280 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              '⚠️ ต้องเพิ่มข้อมูลคำแนะนำของแพทย์ให้เสร็จก่อนกลับหน้าแรกค่ะ',
-            ),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      },
-      child: Scaffold(
-        backgroundColor: bgColor,
-        appBar: const CustomHeader(
-          title: 'เพิ่มวันนัดและคำแนะนำ',
-          showBackButton: false,
-        ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              // 1. ส่วน ข้อมูลบริการปัจจุบัน
-              _buildSectionCard(
-                title: "ข้อมูลบริการปัจจุบัน",
-                icon: Icons.medical_information_outlined,
-                child: Column(
-                  children: [
-                    _infoRow(
-                      "ผู้ป่วย:",
-                      widget.requestInfo['patientName'] ?? '-',
-                    ),
-                    _infoRow(
-                      "วัน/เวลา:",
-                      widget.requestInfo['dateTime'] ?? '-',
-                    ),
-                    _infoRow("สถานที่:", widget.requestInfo['hospital'] ?? '-'),
-                    _infoRow("แผนก:", widget.requestInfo['department'] ?? '-'),
-                  ],
-                ),
-              ),
-
-              // 2. ส่วน การนัดหมายครั้งต่อไป
-              _buildSectionCard(
-                title: "การนัดหมายครั้งต่อไป",
-                icon: Icons.calendar_month_outlined,
-                trailing: Checkbox(
-                  value: _hasNextAppointment,
-                  activeColor: primaryPurple,
-                  onChanged: (bool? value) {
-                    setState(() {
-                      _hasNextAppointment = value ?? false;
-                      if (!_hasNextAppointment) {
-                        _doctorController.clear();
-                        _dateController.clear();
-                        _timeController.clear();
-                      }
-                    });
-                  },
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "ติ๊กถูกหากมีการนัดหมายในครั้งถัดไป",
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 12,
-                      ),
-                    ),
-                    Visibility(
-                      visible: _hasNextAppointment,
-                      child: Column(
-                        children: [
-                          const SizedBox(height: 12),
-                          _textField(
-                            "แพทย์ผู้นัด (ไม่บังคับ)",
-                            _doctorController,
-                          ),
-                          _datePickerField("วันที่", _dateController, context),
-                          _timePickerField("เวลา", _timeController, context),
-                          _textField("สถานที่", _hospitalController),
-                          _textField("แผนก", _deptController),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // 3. ส่วน รายละเอียด/คำแนะนำ
-              _buildSectionCard(
-                title: "รายละเอียด/คำแนะนำเพิ่มเติม",
-                icon: Icons.speaker_notes_outlined,
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: _adviceController,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: borderColor),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: borderColor,
-                            width: 1.2,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: primaryPurple,
-                            width: 1.5,
-                          ),
-                        ),
-                        filled: true,
-                        fillColor: sectionBgColor,
-                        hintText: "พิมพ์คำแนะนำหรือรายละเอียดเพิ่มเติม...",
-                        hintStyle: TextStyle(
-                          color: Colors.grey.shade400,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    GestureDetector(
-                      onTap: _pickImage,
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        decoration: BoxDecoration(
-                          color: sectionBgColor,
-                          border: Border.all(
-                            color: primaryPurple,
-                            style: BorderStyle.solid,
-                            width: 1.2,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: _imageFile == null
-                            ? Center(
-                                child: Text(
-                                  "📎 เพิ่มรูปถ่ายใบนัดหมาย (ถ้ามี)",
-                                  style: TextStyle(
-                                    color: primaryPurple,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              )
-                            : Image.file(_imageFile!, height: 120),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryPurple,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(26),
-                    ),
-                    elevation: 4,
-                    shadowColor: primaryPurple.withOpacity(0.4),
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: const CustomHeader(
+        title: 'เพิ่มวันนัดและคำแนะนำ',
+        showBackButton: false,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            // 1. ส่วน ข้อมูลบริการปัจจุบัน
+            _buildSectionCard(
+              title: "ข้อมูลบริการปัจจุบัน",
+              icon: Icons.medical_information_outlined,
+              child: Column(
+                children: [
+                  _infoRow(
+                    "ผู้ป่วย:",
+                    widget.requestInfo['patientName'] ?? '-',
                   ),
-                  onPressed: _isLoading
-                      ? null
-                      : () async {
-                          if (_adviceController.text.trim().isEmpty &&
-                              _base64Image == null) {
+                  _infoRow("วัน/เวลา:", widget.requestInfo['dateTime'] ?? '-'),
+                  _infoRow("สถานที่:", widget.requestInfo['hospital'] ?? '-'),
+                  _infoRow("แผนก:", widget.requestInfo['department'] ?? '-'),
+                ],
+              ),
+            ),
+
+            // 2. ส่วน การนัดหมายครั้งต่อไป
+            _buildSectionCard(
+              title: "การนัดหมายครั้งต่อไป",
+              icon: Icons.calendar_month_outlined,
+              trailing: Checkbox(
+                value: _hasNextAppointment,
+                activeColor: primaryPurple,
+                onChanged: (bool? value) {
+                  setState(() {
+                    _hasNextAppointment = value ?? false;
+                    if (!_hasNextAppointment) {
+                      _doctorController.clear();
+                      _dateController.clear();
+                      _timeController.clear();
+                    }
+                  });
+                },
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "ติ๊กถูกหากมีการนัดหมายในครั้งถัดไป",
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                  Visibility(
+                    visible: _hasNextAppointment,
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 12),
+                        _textField(
+                          "แพทย์ผู้นัด (ไม่บังคับ)",
+                          _doctorController,
+                        ),
+                        _datePickerField("วันที่", _dateController, context),
+                        _timePickerField("เวลา", _timeController, context),
+                        _textField("สถานที่", _hospitalController),
+                        _textField("แผนก", _deptController),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 3. ส่วน รายละเอียด/คำแนะนำ
+            _buildSectionCard(
+              title: "รายละเอียด/คำแนะนำเพิ่มเติม",
+              icon: Icons.speaker_notes_outlined,
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _adviceController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: borderColor, width: 1.2),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: primaryPurple,
+                          width: 1.5,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: sectionBgColor,
+                      hintText: "พิมพ์คำแนะนำหรือรายละเอียดเพิ่มเติม...",
+                      hintStyle: TextStyle(
+                        color: Colors.grey.shade400,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      decoration: BoxDecoration(
+                        color: sectionBgColor,
+                        border: Border.all(
+                          color: primaryPurple,
+                          style: BorderStyle.solid,
+                          width: 1.2,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: _imageFile == null
+                          ? Center(
+                              child: Text(
+                                "📎 เพิ่มรูปถ่ายใบนัดหมาย (ถ้ามี)",
+                                style: TextStyle(
+                                  color: primaryPurple,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            )
+                          : Image.file(_imageFile!, height: 120),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryPurple,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(26),
+                  ),
+                  elevation: 4,
+                  shadowColor: primaryPurple.withOpacity(0.4),
+                ),
+                onPressed: _isLoading
+                    ? null
+                    : () async {
+                        if (_adviceController.text.trim().isEmpty &&
+                            _base64Image == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                '❌ กรุณากรอกรายละเอียด หรือ ถ่ายรูปใบนัดอย่างน้อยหนึ่งอย่างค่ะ',
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
+
+                        if (_hasNextAppointment) {
+                          if (_dateController.text.isEmpty ||
+                              _timeController.text.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(
-                                  '❌ กรุณากรอกรายละเอียด หรือ ถ่ายรูปใบนัดอย่างน้อยหนึ่งอย่างค่ะ',
+                                  '❌ กรุณาเลือกวันที่และเวลาสำหรับการนัดหมายครั้งถัดไปค่ะ',
                                 ),
                                 backgroundColor: Colors.red,
                               ),
                             );
                             return;
                           }
+                        }
 
-                          if (_hasNextAppointment) {
-                            if (_dateController.text.isEmpty ||
-                                _timeController.text.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    '❌ กรุณาเลือกวันที่และเวลาสำหรับการนัดหมายครั้งถัดไปค่ะ',
-                                  ),
-                                  backgroundColor: Colors.red,
+                        // 🌟 เปลี่ยนจาก String เป็น String? (อนุญาตให้เป็น null ได้)
+                        String? finalDateToSave;
+                        String? finalTimeToSave;
+
+                        if (_hasNextAppointment) {
+                          DateTime parsedDate = DateFormat(
+                            'dd/MM/yyyy',
+                          ).parse(_dateController.text);
+
+                          finalDateToSave = DateFormat(
+                            'yyyy-MM-dd',
+                          ).format(parsedDate);
+
+                          // 🌟 ปรับ Format ให้เป็น ISO 8601 (มีตัว T คั่น) เพื่อให้ DateTime.parse ของ Dart อ่านได้ชัวร์ 100%
+                          finalTimeToSave =
+                              "${finalDateToSave}T${_timeController.text}:00";
+                        }
+
+                        setState(() => _isLoading = true);
+
+                        try {
+                          await _service.saveDoctorAdvice(
+                            relativeUid: widget.relativeUid,
+                            requestId: widget.requestId,
+                            advicedetail: _adviceController.text,
+                            medicalphoto: _base64Image ?? '',
+                            doctorname: _hasNextAppointment
+                                ? _doctorController.text
+                                : '',
+                            hospitalname: _hasNextAppointment
+                                ? _hospitalController.text
+                                : '',
+                            departmentname: _hasNextAppointment
+                                ? _deptController.text
+                                : '',
+                            // 🌟 ส่งค่า finalDateToSave และ finalTimeToSave ที่เป็น null ไปแทนค่าว่าง
+                            appointmentdate: finalDateToSave,
+                            appointmenttime: finalTimeToSave,
+                          );
+
+                          await _service.updateRequestStatus(
+                            widget.relativeUid,
+                            widget.requestId,
+                            'completed',
+                          );
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'บันทึกข้อมูลเสร็จสิ้น ขอบคุณที่ให้บริการค่ะ!',
                                 ),
-                              );
-                              return;
-                            }
-                          }
-
-                          // 🌟 เปลี่ยนจาก String เป็น String? (อนุญาตให้เป็น null ได้)
-                          String? finalDateToSave;
-                          String? finalTimeToSave;
-
-                          if (_hasNextAppointment) {
-                            DateTime parsedDate = DateFormat(
-                              'dd/MM/yyyy',
-                            ).parse(_dateController.text);
-
-                            finalDateToSave = DateFormat(
-                              'yyyy-MM-dd',
-                            ).format(parsedDate);
-
-                            // 🌟 ปรับ Format ให้เป็น ISO 8601 (มีตัว T คั่น) เพื่อให้ DateTime.parse ของ Dart อ่านได้ชัวร์ 100%
-                            finalTimeToSave =
-                                "${finalDateToSave}T${_timeController.text}:00";
-                          }
-
-                          setState(() => _isLoading = true);
-
-                          try {
-                            await _service.saveDoctorAdvice(
-                              relativeUid: widget.relativeUid,
-                              requestId: widget.requestId,
-                              advicedetail: _adviceController.text,
-                              medicalphoto: _base64Image ?? '',
-                              doctorname: _hasNextAppointment
-                                  ? _doctorController.text
-                                  : '',
-                              hospitalname: _hasNextAppointment
-                                  ? _hospitalController.text
-                                  : '',
-                              departmentname: _hasNextAppointment
-                                  ? _deptController.text
-                                  : '',
-                              // 🌟 ส่งค่า finalDateToSave และ finalTimeToSave ที่เป็น null ไปแทนค่าว่าง
-                              appointmentdate: finalDateToSave,
-                              appointmenttime: finalTimeToSave,
+                                backgroundColor: Colors.green,
+                              ),
                             );
 
-                            await _service.updateRequestStatus(
-                              widget.relativeUid,
-                              widget.requestId,
-                              'completed',
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ListRelativeRequestPage(
+                                  uid: FirebaseAuth.instance.currentUser!.uid,
+                                ),
+                              ),
+                              (route) => false,
                             );
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'บันทึกข้อมูลเสร็จสิ้น ขอบคุณที่ให้บริการค่ะ!',
-                                  ),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ListRelativeRequestPage(
-                                    uid: FirebaseAuth.instance.currentUser!.uid,
-                                  ),
-                                ),
-                                (route) => false,
-                              );
-                            }
-                          } catch (e) {
-                            print("Error saving doctor advice: $e");
-                          } finally {
-                            if (mounted) setState(() => _isLoading = false);
                           }
-                        },
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text(
-                          "บันทึกและจบงาน",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        } catch (e) {
+                          print("Error saving doctor advice: $e");
+                        } finally {
+                          if (mounted) setState(() => _isLoading = false);
+                        }
+                      },
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
                         ),
-                ),
+                      )
+                    : const Text(
+                        "บันทึกและจบงาน",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
-              const SizedBox(height: 30),
-            ],
-          ),
+            ),
+            const SizedBox(height: 30),
+          ],
         ),
       ),
     );

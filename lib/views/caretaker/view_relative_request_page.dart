@@ -129,6 +129,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
         currentStatus = RequestStatus.pending;
         break;
       case 'accepted':
+      case 'pending_advice': // 🌟 เพิ่มบรรทัดนี้เข้ามา
         currentStatus = widget.requestData.hasAlert
             ? RequestStatus.acceptedReady
             : RequestStatus.acceptedEarly;

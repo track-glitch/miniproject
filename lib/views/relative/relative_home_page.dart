@@ -57,6 +57,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   int _currentPage = 1;
   int _currentFilteredLength = 0;
 
+  late Stream<DatabaseEvent> _loginStream;
+
   // 🌟 ฟังก์ชันแปลงเพศเป็นคำนำหน้าชื่อ นาย / นาง
   String getPrefix(String? gender) {
     if (gender == null) return '';
@@ -88,6 +90,10 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   @override
   void initState() {
     super.initState();
+
+    // 🌟 ดึงข้อมูลจาก Firebase มารอไว้แค่ครั้งเดียวตอนเปิดหน้า
+    _loginStream = FirebaseDatabase.instance.ref('Login').onValue;
+
     _searchController.addListener(() {
       setState(() {
         _currentPage = 1; // 🌟 รีเซ็ตกลับไปหน้าแรกเสมอเมื่อพิมพ์ค้นหา
@@ -141,16 +147,33 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                 childData['Relative'] as Map,
               );
               setState(() {
-                _userName = formatFullNameWithTitle(
-                  gender: relNode['gender']?.toString(),
-                  firstname: relNode['firstname']?.toString(),
-                  lastname: relNode['lastname']?.toString(),
-                );
+                // ── 🌟 1. ดึงข้อมูลโหนด Patient มาใช้เป็นหลัก ──
+                var patientNode = relNode['Patient'];
+                if (patientNode != null && patientNode is Map) {
+                  // ถ้ามีข้อมูลผู้ป่วย -> ให้แสดงชื่อผู้ป่วย
+                  _userName = formatFullNameWithTitle(
+                    gender: patientNode['gender']?.toString(),
+                    firstname: patientNode['firstname']?.toString(),
+                    lastname: patientNode['lastname']?.toString(),
+                  );
+                } else {
+                  // ถ้ายังไม่มีข้อมูลผู้ป่วย -> สำรองใช้ชื่อญาติ
+                  _userName = formatFullNameWithTitle(
+                    gender: relNode['gender']?.toString(),
+                    firstname: relNode['firstname']?.toString(),
+                    lastname: relNode['lastname']?.toString(),
+                  );
+                }
 
-                String rawPhoto =
-                    relNode['profilephoto']?.toString() ??
-                    relNode['Patient']?['patientphoto']?.toString() ??
-                    '';
+                // ── 🌟 2. ดึงรูปโปรไฟล์ของผู้ป่วยก่อน ถ้าไม่มีถึงจะใช้รูปญาติ ──
+                String rawPhoto = '';
+                if (patientNode != null &&
+                    patientNode['patientphoto'] != null) {
+                  rawPhoto = patientNode['patientphoto'].toString();
+                } else {
+                  rawPhoto = relNode['profilephoto']?.toString() ?? '';
+                }
+
                 _userProfilePhoto = rawPhoto
                     .replaceAll('\n', '')
                     .replaceAll('\r', '')
@@ -720,120 +743,174 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
         elevation: 0,
         centerTitle: false,
         actions: [
-          if (_userName.isNotEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.only(right: 4.0),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white38, width: 1),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircleAvatar(
-                        radius: 11,
-                        backgroundColor: Colors.white.withOpacity(0.3),
-                        backgroundImage: _userProfilePhoto.isNotEmpty
-                            ? MemoryImage(base64Decode(_userProfilePhoto))
-                            : null,
-                        child: _userProfilePhoto.isEmpty
-                            ? const Icon(
-                                Icons.person,
-                                color: Colors.white,
-                                size: 14,
-                              )
-                            : null,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        _userName,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          StreamBuilder<User?>(
+            stream: FirebaseAuth.instance.authStateChanges(),
+            builder: (context, authSnapshot) {
+              final User? currentUser = authSnapshot.data;
+              final String effectiveUid =
+                  widget.loggedUid ?? currentUser?.uid ?? '';
+              final bool isLoggedIn = effectiveUid.isNotEmpty;
 
-          // 🌟 เช็กว่าเข้าสู่ระบบหรือยัง เพื่อสลับปุ่ม Login / Logout
-          if ((widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '')
-              .isEmpty)
-            IconButton(
-              icon: const Icon(Icons.login_rounded, color: Colors.white),
-              tooltip: 'เข้าสู่ระบบ',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginPage()),
-                );
-              },
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.logout_rounded, color: Colors.white),
-              tooltip: 'ออกจากระบบ',
-              onPressed: () async {
-                bool? confirmLogout = await showDialog<bool>(
-                  context: context,
-                  builder: (context) {
-                    return AlertDialog(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      title: const Text(
-                        'ออกจากระบบ',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      content: const Text('คุณต้องการออกจากระบบใช่หรือไม่?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text(
-                            'ยกเลิก',
-                            style: TextStyle(color: Colors.grey, fontSize: 16),
+              // ── ถ้ายังไม่ล็อกอิน: แสดงเป็นปุ่มรูปคน + ข้อความ "เข้าสู่ระบบ" ──
+              if (!isLoggedIn) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 14.0),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LoginPage(),
                           ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
                         ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text(
-                            'ตกลง',
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white38, width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(
+                              Icons.account_circle,
+                              color: Colors.white,
+                              size: 16,
                             ),
-                          ),
+                            SizedBox(width: 6),
+                            Text(
+                              'เข้าสู่ระบบ',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    );
-                  },
-                );
-
-                if (confirmLogout == true) {
-                  await FirebaseAuth.instance.signOut();
-                  if (context.mounted) {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const RelativeHomePage(),
                       ),
-                      (route) => false,
-                    );
-                  }
-                }
-              },
-            ),
+                    ),
+                  ),
+                );
+              }
+
+              // ── ถ้าล็อกอินแล้ว: แสดงรูปโปรไฟล์ + ไอคอนออกจากระบบ (เหมือนเดิม) ──
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_userName.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4.0),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white38, width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircleAvatar(
+                              radius: 11,
+                              backgroundColor: Colors.white.withOpacity(0.3),
+                              backgroundImage: _userProfilePhoto.isNotEmpty
+                                  ? MemoryImage(base64Decode(_userProfilePhoto))
+                                  : null,
+                              child: _userProfilePhoto.isEmpty
+                                  ? const Icon(
+                                      Icons.person,
+                                      color: Colors.white,
+                                      size: 14,
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              _userName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.logout_rounded, color: Colors.white),
+                    tooltip: 'ออกจากระบบ',
+                    onPressed: () async {
+                      bool? confirmLogout = await showDialog<bool>(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            title: const Text(
+                              'ออกจากระบบ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            content: const Text(
+                              'คุณต้องการออกจากระบบใช่หรือไม่?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text(
+                                  'ยกเลิก',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text(
+                                  'ตกลง',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+
+                      if (confirmLogout == true) {
+                        await FirebaseAuth.instance.signOut();
+                        if (context.mounted) {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RelativeHomePage(),
+                            ),
+                            (route) => false,
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
           const SizedBox(width: 4),
         ],
       ),
@@ -1185,21 +1262,27 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
             Expanded(
               child: StreamBuilder<DatabaseEvent>(
-                stream: FirebaseDatabase.instance.ref('Login').onValue,
+                // 🌟 เปลี่ยนมาใช้ตัวแปร _loginStream
+                stream: _loginStream,
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting)
+                  // 🌟 เพิ่มเงื่อนไข && !snapshot.hasData เพื่อให้หมุนแค่ตอนโหลดครั้งแรกสุดเท่านั้น
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      !snapshot.hasData) {
                     return Center(
                       child: CircularProgressIndicator(color: primaryColor),
                     );
-                  if (snapshot.hasError)
+                  }
+                  if (snapshot.hasError) {
                     return const Center(
                       child: Text('เกิดข้อผิดพลาดในการดึงข้อมูล'),
                     );
+                  }
                   if (!snapshot.hasData ||
-                      snapshot.data!.snapshot.value == null)
+                      snapshot.data!.snapshot.value == null) {
                     return const Center(
                       child: Text('ไม่พบข้อมูลผู้ดูแลในระบบ'),
                     );
+                  }
 
                   final dynamic rootValue = snapshot.data!.snapshot.value;
                   List<Map<String, dynamic>> caretakersList = [];

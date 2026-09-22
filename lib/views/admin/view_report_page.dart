@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import '../../models/caretaker_model.dart';
 import '../../models/report_model.dart';
@@ -23,10 +24,13 @@ class ViewCaretakerReportPage extends StatefulWidget {
 class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
   final Color primaryColor = const Color(0xFFA052BE);
   final Color backgroundColor = const Color(0xFFF4EDFB);
-
+  // 🌟 1. เพิ่ม 2 ตัวแปรนี้สำหรับเก็บคะแนนรีวิว
+  double _averageRating = 0.0;
+  int _reviewCount = 0;
   List<ReportModel> _sortedReports = [];
   bool _showAllReports = false; // 🌟 สถานะเปิด-ปิด แสดงรายการรีพอร์ตทั้งหมด
-  final Map<int, bool> _expandedDetails = {}; // 🌟 สถานะขยายข้อความยาวในแต่ละการ์ด
+  final Map<int, bool> _expandedDetails =
+      {}; // 🌟 สถานะขยายข้อความยาวในแต่ละการ์ด
 
   Map<String, int> _reportSummary = {
     'พฤติกรรมเข้าข่ายความรุนแรง': 0,
@@ -41,6 +45,61 @@ class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
   void initState() {
     super.initState();
     _prepareReportData();
+    _fetchCaretakerReviews();
+  }
+
+  // 🌟 2. ฟังก์ชันไปดึงคะแนนรีวิวจากฐานข้อมูล (อิงจาก caretakerId)
+  Future<void> _fetchCaretakerReviews() async {
+    String? caretakerId = widget.caretaker.caretakerId;
+    if (caretakerId == null) return;
+
+    int count = 0;
+    double sum = 0.0;
+
+    try {
+      final snapshot = await FirebaseDatabase.instance.ref('Login').get();
+      if (snapshot.exists && snapshot.value is Map) {
+        final users = snapshot.value as Map<dynamic, dynamic>;
+
+        users.forEach((uid, userData) {
+          if (userData is Map && userData['Relative'] != null) {
+            var relativeNode = userData['Relative'];
+            if (relativeNode is Map && relativeNode['Request'] != null) {
+              var requests = relativeNode['Request'];
+              if (requests is Map) {
+                requests.forEach((reqId, reqData) {
+                  if (reqData is Map &&
+                      reqData['caretakerId']?.toString().trim() ==
+                          caretakerId.trim()) {
+                    var reviewData = reqData['Review'] ?? reqData['review'];
+                    if (reviewData != null && reviewData is Map) {
+                      double ratingScore = 0.0;
+                      var rawRating =
+                          reviewData['rating'] ?? reviewData['ratingscore'];
+                      if (rawRating != null) {
+                        ratingScore =
+                            double.tryParse(rawRating.toString()) ?? 0.0;
+                      }
+                      count++;
+                      sum += ratingScore;
+                    }
+                  }
+                });
+              }
+            }
+          }
+        });
+      }
+
+      if (mounted) {
+        setState(() {
+          _reviewCount = count;
+          _averageRating = count > 0 ? sum / count : 0.0;
+        });
+      }
+    } catch (e) {
+      print('Error fetching reviews: $e');
+    }
   }
 
   void _prepareReportData() {
@@ -161,18 +220,62 @@ class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
                           }
                           setDialogState(() => isSubmitting = true);
 
-                          await Future.delayed(const Duration(seconds: 1));
+                          try {
+                            String adminReason = commentController.text.trim();
+                            DatabaseReference dbRef = FirebaseDatabase.instance
+                                .ref('Login');
 
-                          if (context.mounted) {
-                            Navigator.pop(context);
-                            Navigator.pop(context);
-                            widget.onSuspend();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('ระงับบัญชีสำเร็จ'),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
+                            // 🌟 1. ค้นหา UID จากเลขบัตรประชาชน (caretakerId)
+                            final query = await dbRef
+                                .orderByChild('Caretaker/caretakerId')
+                                .equalTo(widget.caretaker.caretakerId)
+                                .once();
+
+                            if (query.snapshot.exists) {
+                              final users =
+                                  query.snapshot.value as Map<dynamic, dynamic>;
+                              final targetUid = users.keys.first.toString();
+
+                              // 🌟 2. อัปเดตข้อมูลลงโหนดของ Caretaker
+                              await dbRef
+                                  .child(targetUid)
+                                  .child('Caretaker')
+                                  .update({
+                                    'accountstatus': 'Suspended',
+                                    'admincomment': adminReason,
+                                  });
+
+                              // อัปเดต accountstatus ชั้นนอกสุดด้วย (เพื่อให้ครอบคลุมโครงสร้าง Login)
+                              await dbRef.child(targetUid).update({
+                                'accountstatus': 'Suspended',
+                              });
+                            }
+
+                            if (context.mounted) {
+                              Navigator.pop(context); // ปิด Dialog
+                              Navigator.pop(context); // ปิดหน้ารายละเอียด
+                              widget
+                                  .onSuspend(); // เรียก Callback เพื่อรีเฟรชหน้าหลักแอดมิน
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('ระงับบัญชีผู้ดูแลสำเร็จ'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('เกิดข้อผิดพลาด: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (mounted) {
+                              setDialogState(() => isSubmitting = false);
+                            }
                           }
                         },
                   child: isSubmitting
@@ -294,24 +397,35 @@ class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Text(
-                              '4.9 ',
-                              style: TextStyle(
+                            Text(
+                              '${_averageRating.toStringAsFixed(1)} ',
+                              style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const Icon(
-                              Icons.star,
-                              color: Colors.orange,
-                              size: 14,
+                            // 🌟 วนลูปสร้างดาว 5 ดวงแบบคำนวณทศนิยม
+                            ...List.generate(
+                              5,
+                              (i) => Icon(
+                                i < _averageRating.floor()
+                                    ? Icons.star_rounded
+                                    : (i < _averageRating
+                                          ? Icons.star_half_rounded
+                                          : Icons.star_border_rounded),
+                                color: Colors.orange,
+                                size: 14,
+                              ),
                             ),
-                            const Icon(
-                              Icons.star,
-                              color: Colors.orange,
-                              size: 14,
+                            const SizedBox(width: 8),
+                            Text(
+                              '($_reviewCount รีวิว)',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade600,
+                              ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 12),
                             Text(
                               '${_sortedReports.length} รีพอร์ต',
                               style: const TextStyle(
@@ -373,7 +487,9 @@ class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  ..._reportSummary.entries.toList().asMap().entries.map((entry) {
+                  ..._reportSummary.entries.toList().asMap().entries.map((
+                    entry,
+                  ) {
                     int index = entry.key + 1;
                     String type = entry.value.key;
                     int count = entry.value.value;
@@ -542,7 +658,8 @@ class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
                             typeColor = const Color(0xFFFBC02D);
                           }
 
-                          bool isExpanded = _expandedDetails[itemIndex] ?? false;
+                          bool isExpanded =
+                              _expandedDetails[itemIndex] ?? false;
                           String detailText = report.reportdetail ?? '-';
                           bool isTextLong = detailText.length > 90;
 
@@ -679,7 +796,9 @@ class _ViewCaretakerReportPageState extends State<ViewCaretakerReportPage> {
                                     horizontal: 16,
                                     vertical: 8,
                                   ),
-                                  backgroundColor: primaryColor.withOpacity(0.08),
+                                  backgroundColor: primaryColor.withOpacity(
+                                    0.08,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(20),
                                   ),
