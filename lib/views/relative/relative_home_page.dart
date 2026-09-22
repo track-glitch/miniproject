@@ -53,9 +53,11 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
   // 🌟 ระบบ Pagination
   final ScrollController _scrollController = ScrollController();
-  final int _perPage = 10;
+  final int _perPage = 5;
   int _currentPage = 1;
   int _currentFilteredLength = 0;
+
+  late Stream<DatabaseEvent> _loginStream;
 
   // 🌟 ฟังก์ชันแปลงเพศเป็นคำนำหน้าชื่อ นาย / นาง
   String getPrefix(String? gender) {
@@ -88,6 +90,10 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   @override
   void initState() {
     super.initState();
+    
+    // 🌟 ดึงข้อมูลจาก Firebase มารอไว้แค่ครั้งเดียวตอนเปิดหน้า
+    _loginStream = FirebaseDatabase.instance.ref('Login').onValue;
+    
     _searchController.addListener(() {
       setState(() {
         _currentPage = 1; // 🌟 รีเซ็ตกลับไปหน้าแรกเสมอเมื่อพิมพ์ค้นหา
@@ -141,23 +147,40 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                 childData['Relative'] as Map,
               );
               setState(() {
-                _userName = formatFullNameWithTitle(
-                  gender: relNode['gender']?.toString(),
-                  firstname: relNode['firstname']?.toString(),
-                  lastname: relNode['lastname']?.toString(),
-                );
+                  // ── 🌟 1. ดึงข้อมูลโหนด Patient มาใช้เป็นหลัก ──
+                  var patientNode = relNode['Patient'];
+                  if (patientNode != null && patientNode is Map) {
+                    // ถ้ามีข้อมูลผู้ป่วย -> ให้แสดงชื่อผู้ป่วย
+                    _userName = formatFullNameWithTitle(
+                      gender: patientNode['gender']?.toString(),
+                      firstname: patientNode['firstname']?.toString(),
+                      lastname: patientNode['lastname']?.toString(),
+                    );
+                  } else {
+                    // ถ้ายังไม่มีข้อมูลผู้ป่วย -> สำรองใช้ชื่อญาติ
+                    _userName = formatFullNameWithTitle(
+                      gender: relNode['gender']?.toString(),
+                      firstname: relNode['firstname']?.toString(),
+                      lastname: relNode['lastname']?.toString(),
+                    );
+                  }
 
-                String rawPhoto = relNode['profilephoto']?.toString() ?? 
-                                  relNode['Patient']?['patientphoto']?.toString() ?? '';
-                _userProfilePhoto = rawPhoto
-                    .replaceAll('\n', '')
-                    .replaceAll('\r', '')
-                    .replaceAll(' ', '')
-                    .trim();
-                int pad = _userProfilePhoto.length % 4;
-                if (pad > 0) _userProfilePhoto += '=' * (4 - pad);
-                
-              });
+                  // ── 🌟 2. ดึงรูปโปรไฟล์ของผู้ป่วยก่อน ถ้าไม่มีถึงจะใช้รูปญาติ ──
+                  String rawPhoto = '';
+                  if (patientNode != null && patientNode['patientphoto'] != null) {
+                    rawPhoto = patientNode['patientphoto'].toString();
+                  } else {
+                    rawPhoto = relNode['profilephoto']?.toString() ?? '';
+                  }
+
+                  _userProfilePhoto = rawPhoto
+                      .replaceAll('\n', '')
+                      .replaceAll('\r', '')
+                      .replaceAll(' ', '')
+                      .trim();
+                  int pad = _userProfilePhoto.length % 4;
+                  if (pad > 0) _userProfilePhoto += '=' * (4 - pad);
+                });
 
               _myBookedDates.clear();
               if (relNode.containsKey('Request')) {
@@ -1233,21 +1256,25 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
             Expanded(
               child: StreamBuilder<DatabaseEvent>(
-                stream: FirebaseDatabase.instance.ref('Login').onValue,
+                // 🌟 เปลี่ยนมาใช้ตัวแปร _loginStream
+                stream: _loginStream,
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting)
+                  // 🌟 เพิ่มเงื่อนไข && !snapshot.hasData เพื่อให้หมุนแค่ตอนโหลดครั้งแรกสุดเท่านั้น
+                  if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                     return Center(
                       child: CircularProgressIndicator(color: primaryColor),
                     );
-                  if (snapshot.hasError)
+                  }
+                  if (snapshot.hasError) {
                     return const Center(
                       child: Text('เกิดข้อผิดพลาดในการดึงข้อมูล'),
                     );
-                  if (!snapshot.hasData ||
-                      snapshot.data!.snapshot.value == null)
+                  }
+                  if (!snapshot.hasData || snapshot.data!.snapshot.value == null) {
                     return const Center(
                       child: Text('ไม่พบข้อมูลผู้ดูแลในระบบ'),
                     );
+                  }
 
                   final dynamic rootValue = snapshot.data!.snapshot.value;
                   List<Map<String, dynamic>> caretakersList = [];
