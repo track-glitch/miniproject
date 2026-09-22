@@ -31,8 +31,6 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
   final Color bgColor = const Color(0xFFF5F5F5);
   final Color primaryPurple = const Color(0xFF9B59B6);
   final Color darkPurple = const Color(0xFF9B59B6);
-  // 🌟 ประกาศตัวแปรสำหรับหยุดการดักฟังตอนปิดหน้าจอ
-  StreamSubscription<DatabaseEvent>? _statusSubscription;
 
   // 🌟 เก็บข้อมูลทั้งหมดไว้หลังบ้าน
   List<RequestCard> _requestsPendingAll = [];
@@ -69,8 +67,7 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
   void initState() {
     super.initState();
     _fetchUserData();
-    _fetchRequests();
-    _listenToAccountStatus(); // เรียกใช้ตอนเปิดหน้า
+    _fetchRequests(); // เรียกใช้ตอนเปิดหน้า
     // 🌟 ดักจับการเลื่อนจอ
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
@@ -82,61 +79,8 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
 
   @override
   void dispose() {
-    _statusSubscription?.cancel();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _listenToAccountStatus() {
-    String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
-    if (uid.isEmpty) return;
-
-    // 🌟 ดักฟังการเปลี่ยนแปลงที่โหนด accountstatus ของผู้ใช้คนนี้
-    _statusSubscription = FirebaseDatabase.instance
-        .ref('Login/$uid/accountstatus')
-        .onValue
-        .listen((DatabaseEvent event) async {
-          if (event.snapshot.exists) {
-            String status = event.snapshot.value.toString();
-
-            // 🌟 ถ้าสถานะเปลี่ยนเป็น Suspended ให้บังคับเตะออกทันที
-            if (status == 'Suspended') {
-              await FirebaseAuth.instance.signOut(); // ล็อกเอาท์ฝั่งเครื่อง
-
-              if (mounted) {
-                // โชว์แจ้งเตือนให้รู้ตัว
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (context) => AlertDialog(
-                    title: const Text(
-                      'บัญชีถูกระงับ',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                    content: const Text(
-                      'บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          // ปิด Popup และส่งกลับไปหน้าล็อกอิน ล้างประวัติหน้าต่างทั้งหมด
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const LoginPage(),
-                            ), // เปลี่ยนเป็นหน้า Login ของเฮีย
-                            (route) => false,
-                          );
-                        },
-                        child: const Text('ตกลง'),
-                      ),
-                    ],
-                  ),
-                );
-              }
-            }
-          }
-        });
   }
 
   void _loadMoreCurrentTab() {
