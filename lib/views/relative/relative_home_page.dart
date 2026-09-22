@@ -53,7 +53,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
   // 🌟 ระบบ Pagination
   final ScrollController _scrollController = ScrollController();
-  final int _perPage = 10;
+  final int _perPage = 5;
   int _currentPage = 1;
   int _currentFilteredLength = 0;
 
@@ -147,8 +147,10 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   lastname: relNode['lastname']?.toString(),
                 );
 
-                String rawPhoto = relNode['profilephoto']?.toString() ?? 
-                                  relNode['Patient']?['patientphoto']?.toString() ?? '';
+                String rawPhoto =
+                    relNode['profilephoto']?.toString() ??
+                    relNode['Patient']?['patientphoto']?.toString() ??
+                    '';
                 _userProfilePhoto = rawPhoto
                     .replaceAll('\n', '')
                     .replaceAll('\r', '')
@@ -156,7 +158,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                     .trim();
                 int pad = _userProfilePhoto.length % 4;
                 if (pad > 0) _userProfilePhoto += '=' * (4 - pad);
-                
               });
 
               _myBookedDates.clear();
@@ -743,7 +744,11 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                             ? MemoryImage(base64Decode(_userProfilePhoto))
                             : null,
                         child: _userProfilePhoto.isEmpty
-                            ? const Icon(Icons.person, color: Colors.white, size: 14)
+                            ? const Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 14,
+                              )
                             : null,
                       ),
                       const SizedBox(width: 6),

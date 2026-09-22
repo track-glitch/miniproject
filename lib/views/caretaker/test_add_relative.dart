@@ -7,20 +7,12 @@ class TestAddRelative extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     AdminService adminService = AdminService();
-    void addRequest() {
-      adminService.addMockupRequestForRelative();
-    }
-
-    void addRequestWithReviewAndDoctorAdvice() {
-      adminService.addMockupCompletedRequestForRelative();
-    }
-
-    void addRelativePending() {
-      adminService.addMockupPendingRequestForRelative();
+    void addCaretaker() {
+      adminService.seed10CaretakersCorrectPath();
     }
 
     void addRelative() {
-      adminService.addMockRelative();
+      adminService.seed4RelativesCorrectPath();
     }
 
     return Scaffold(
@@ -35,26 +27,18 @@ class TestAddRelative extends StatelessWidget {
             children: [
               Expanded(
                 child: TextButton(
+                  onPressed: addCaretaker,
+                  child: Text('AddCaretaker'),
+                ),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
                   onPressed: addRelative,
                   child: Text('AddRelative'),
-                ),
-              ),
-              Expanded(
-                child: TextButton(
-                  onPressed: addRequest,
-                  child: Text('AddRequest'),
-                ),
-              ),
-              Expanded(
-                child: TextButton(
-                  onPressed: addRequestWithReviewAndDoctorAdvice,
-                  child: Text('AddRequestWithRevAndDoc'),
-                ),
-              ),
-              Expanded(
-                child: TextButton(
-                  onPressed: addRelativePending,
-                  child: Text('AddRequestPending'),
                 ),
               ),
             ],
