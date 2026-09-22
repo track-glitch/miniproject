@@ -207,12 +207,98 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
+  // 🌟 เพิ่มฟังก์ชันใหม่สำหรับดึงรีวิวโดยตรงจากฐานข้อมูล (อ่านคีย์ได้ครบถ้วน)
+  Future<void> _fetchRecentReviewsDirectly() async {
+    try {
+      final snapshot = await FirebaseDatabase.instance.ref('Login').get();
+      if (!snapshot.exists || snapshot.value == null) return;
+
+      final allUsers = Map<dynamic, dynamic>.from(snapshot.value as Map);
+      List<Map<String, dynamic>> tempReviews = [];
+
+      allUsers.forEach((userKey, userValue) {
+        if (userValue is Map && userValue.containsKey('Relative')) {
+          var relNode = userValue['Relative'];
+          if (relNode is Map && relNode.containsKey('Request')) {
+            var requests = relNode['Request'];
+            if (requests is Map) {
+              requests.forEach((reqId, reqData) {
+                if (reqData is Map && reqData['caretakerId'] != null) {
+                  // เช็คว่าบริการนี้เป็นของอาสาคนนี้หรือไม่ (ใช้ citizenId หรือ UID)
+                  String cId = reqData['caretakerId'].toString();
+                  if (cId == citizenId || cId == widget.uid) {
+                    var reviewData = reqData['Review'] ?? reqData['review'];
+                    if (reviewData != null && reviewData is Map) {
+                      
+                      // ค้นหาคีย์คะแนน (ทดสอบหาหลายแบบเผื่อไว้)
+                      double ratingScore = 0.0;
+                      var rawRating = reviewData['ratingscore'] ?? reviewData['rating'];
+                      if (rawRating != null) {
+                        ratingScore = double.tryParse(rawRating.toString()) ?? 5.0;
+                      }
+
+                      String commentStr = reviewData['comment']?.toString() ?? '';
+                      String reviewDateStr = reviewData['reviewdate']?.toString() ?? DateTime.now().toIso8601String();
+
+                      // เตรียมชื่อญาติคนรีวิว
+                      String rFirstname = (relNode['firstname'] ?? '').toString();
+                      String rLastname = (relNode['lastname'] ?? '').toString();
+                      String reviewerName = "$rFirstname $rLastname".trim();
+                      if (reviewerName.isEmpty) reviewerName = 'ผู้ใช้บริการ';
+
+                      String reviewerImage = relNode['profilephoto']?.toString() ?? 
+                                           relNode['Patient']?['patientphoto']?.toString() ?? '';
+
+                      tempReviews.add({
+                        'ratingscore': ratingScore,
+                        'comment': commentStr,
+                        'reviewdate': reviewDateStr,
+                        'reviewerName': reviewerName,
+                        'reviewerImage': reviewerImage,
+                      });
+                    }
+                  }
+                }
+              });
+            }
+          }
+        }
+      });
+
+      // เรียงลำดับจากใหม่สุดไปเก่าสุด
+      tempReviews.sort((a, b) => b['reviewdate'].compareTo(a['reviewdate']));
+
+      // จัดรูปแบบเวลาให้สวยงามก่อนแสดงผล และเอามาแค่ 2 อันล่าสุด
+      List<Map<String, dynamic>> finalReviewsList = tempReviews.take(2).map((item) {
+        String formattedDate = '';
+        try {
+          DateTime dt = DateTime.parse(item['reviewdate']);
+          formattedDate = "${dt.day}/${dt.month}/${dt.year + 543}";
+        } catch (_) {}
+
+        return {
+          'rating': item['ratingscore'],
+          'comment': item['comment'],
+          'timeAgo': formattedDate,
+          'reviewerName': item['reviewerName'],
+          'reviewerImage': item['reviewerImage'],
+        };
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          recentReviews = finalReviewsList;
+        });
+      }
+    } catch (e) {
+      print('Error directly fetching reviews: $e');
+    }
+  }
+
   Future<void> _loadProfileData() async {
     final data = await _service.getCaretakerProfile(widget.uid);
-    final reviewsData = await _service.getRecentReviews(widget.uid, limit: 2);
     if (data != null) {
       setState(() {
-        recentReviews = reviewsData;
         isServiceOn =
             (data['servicestatus'] == 'ON' ||
             data['servicestatus'] == 'online');
@@ -281,8 +367,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
             'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&w=500',
           ];
         }
-        _isLoading = false;
+        
       });
+      
+      // 🌟 หลังจากดึงข้อมูลโปรไฟล์ได้ citizenId แล้ว ให้ไปดึงรีวิวด้วยตัวเองเลย
+      await _fetchRecentReviewsDirectly();
+      
+      if(mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } else {
+      if(mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -1179,7 +1276,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 children: [
                   _buildReviewItem(
                     name: review['reviewerName'] ?? 'ไม่ระบุชื่อ',
-                    rating: (review['rating'] ?? 5).toDouble(),
+                    rating: review['rating'] ?? 5.0, 
                     comment: review['comment'] ?? 'ไม่มีข้อความ',
                     timeAgo: review['timeAgo'] ?? '',
                     imageUrl: review['reviewerImage'] ?? '',
@@ -1280,8 +1377,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     children: List.generate(5, (index) {
                       return Icon(
                         index < rating.floor()
-                            ? Icons.star_rounded
-                            : Icons.star_border_rounded,
+                            ? Icons.star 
+                            : Icons.star_border, 
                         color: const Color(0xFFFFC107),
                         size: 18,
                       );

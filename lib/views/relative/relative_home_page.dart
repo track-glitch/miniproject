@@ -1393,6 +1393,15 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                     rootValue.forEach((userUidKey, userNodeValue) {
                       if (userNodeValue is Map &&
                           userNodeValue.containsKey('Caretaker')) {
+
+                        // 🌟 ดึงค่าจากคีย์ 'accountstatus' ที่อยู่ภายใต้ 'Caretaker' ตามรูปในฐานข้อมูล
+                        String accountStatus = (userNodeValue['Caretaker']['accountstatus']?.toString() ?? '').trim().toLowerCase();
+                        
+                        // 🌟 ถ้าสถานะเป็น suspended ให้ return เพื่อข้ามคนนี้ไปเลย ไม่ต้องเอาไปแสดงผล
+                        if (accountStatus == 'suspended') {
+                          return; 
+                        }
+
                         final caretakerRawData = userNodeValue['Caretaker'];
                         if (caretakerRawData != null) {
                           final data = Map<String, dynamic>.from(

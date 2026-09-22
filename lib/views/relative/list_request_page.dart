@@ -531,47 +531,72 @@ class _ListRequestPageState extends State<ListRequestPage> {
           ),
           Container(height: 6, color: bgColor),
           Expanded(
-            child: displayList.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+            child: RefreshIndicator(
+              color: primaryPurple,
+              // ทำงานเมื่อมีการดึงหน้าจอลง
+              onRefresh: () async {
+                // 🌟 รีเซ็ตจำนวนหน้าที่โหลดกลับเป็นค่าเริ่มต้นก่อนดึงข้อมูลใหม่
+                setState(() {
+                  _pendingPage = 1;
+                  _acceptedPage = 1;
+                  _completedPage = 1;
+                  _cancelledPage = 1;
+                });
+                await _fetchMyRequests(); // เรียกฟังก์ชันโหลดข้อมูลใหม่
+              },
+              child: displayList.isEmpty
+                  ? ListView(
+                      // บังคับให้สามารถเลื่อนหน้าจอได้แม้ไม่มีข้อมูล เพื่อให้ดึงรีเฟรชได้
+                      physics: const AlwaysScrollableScrollPhysics(),
                       children: [
-                        Icon(
-                          Icons.inbox_rounded,
-                          size: 80,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'ไม่มีคำขอในสถานะนี้',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade600,
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.5,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.inbox_rounded,
+                                  size: 80,
+                                  color: Colors.grey.shade400,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'ไม่มีคำขอในสถานะนี้',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
-                    ),
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount:
-                        displayList.length + (_hasMoreInCurrentTab() ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == displayList.length) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: primaryPurple,
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      // บังคับให้เลื่อนเพื่อรีเฟรชได้เสมอแม้ข้อมูลจะมีไม่เต็มหน้าจอ
+                      physics: const AlwaysScrollableScrollPhysics(), 
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount:
+                          displayList.length + (_hasMoreInCurrentTab() ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == displayList.length) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: primaryPurple,
+                              ),
                             ),
-                          ),
-                        );
-                      }
-                      return _buildRequestCard(displayList[index]);
-                    },
-                  ),
+                          );
+                        }
+                        return _buildRequestCard(displayList[index]);
+                      },
+                    ),
+            ),
           ),
         ],
       ),

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart';
 import '../../services/caretaker_service.dart';
-// import '../../widgets/custom_bottom_nav.dart'; // 🌟 อย่าลืมเอาคอมเมนต์ออกถ้าใช้
 
 class ViewReviewPage extends StatefulWidget {
   final String caretakerId;
@@ -23,7 +23,7 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
   final Color bgGradientBottom = const Color.fromARGB(255, 225, 202, 255);
   final Color cardColor = Colors.white;
 
-  String _selectedFilter = 'ทั้งหมด'; // 🌟 เก็บสถานะว่าเลือกดาวไหนอยู่
+  String _selectedFilter = 'ทั้งหมด';
 
   String caretakerName = '';
   String caretakerCitizenId = '';
@@ -40,22 +40,93 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
   }
 
   Future<void> _fetchData() async {
+    // 🌟 1. ดึงโปรไฟล์มาก่อน เพื่อเอาเลขบัตรประชาชนมาใช้เทียบ
     final profile = await _service.getCaretakerProfile(widget.caretakerId);
-    final reviews = await _service.getAllReviews(widget.caretakerId);
-    reviewCount = reviews.length;
+    String citizenId = '';
 
-    setState(() {
-      if (profile != null) {
-        caretakerName =
-            "${profile['firstname'] ?? ''} ${profile['lastname'] ?? ''}".trim();
-        caretakerCitizenId = profile['caretakerId'] ?? '';
-        caretakerImage = profile['profilephoto'] ?? '';
+    if (profile != null) {
+      caretakerName = "${profile['firstname'] ?? ''} ${profile['lastname'] ?? ''}".trim();
+      caretakerCitizenId = profile['caretakerId']?.toString() ?? '';
+      citizenId = caretakerCitizenId; // เก็บไว้เทียบคีย์
+      caretakerImage = profile['profilephoto']?.toString() ?? '';
+    }
+
+    List<Map<String, dynamic>> fetchedReviews = [];
+    try {
+      final snapshot = await FirebaseDatabase.instance.ref('Login').get();
+      if (snapshot.exists && snapshot.value != null) {
+        final allUsers = Map<dynamic, dynamic>.from(snapshot.value as Map);
+        
+        allUsers.forEach((userKey, userValue) {
+          if (userValue is Map && userValue.containsKey('Relative')) {
+            var relNode = userValue['Relative'];
+            if (relNode is Map && relNode.containsKey('Request')) {
+              var requests = relNode['Request'];
+              if (requests is Map) {
+                requests.forEach((reqId, reqData) {
+                  if (reqData is Map && reqData['caretakerId'] != null) {
+                    String cId = reqData['caretakerId'].toString();
+                    
+                    // 🌟 2. เช็คเทียบทั้ง UID (widget.caretakerId) และ Citizen ID 
+                    if (cId == widget.caretakerId || (citizenId.isNotEmpty && cId == citizenId)) {
+                      var reviewData = reqData['Review'] ?? reqData['review'];
+                      if (reviewData != null && reviewData is Map) {
+                        
+                        // 🌟 3. อ่านค่าดาวด้วยโค้ดเดียวกับหน้า Home เป๊ะๆ เพื่อกันพลาด
+                        double ratingScore = 0.0;
+                        var rawRating = reviewData['rating'] ?? reviewData['ratingscore'];
+                        if (rawRating != null) {
+                          ratingScore = double.tryParse(rawRating.toString()) ?? 0.0;
+                        }
+
+                        String commentStr = reviewData['comment']?.toString() ?? '';
+                        String reviewDateStr = reviewData['reviewdate']?.toString() ?? DateTime.now().toIso8601String();
+
+                        String rFirstname = (relNode['firstname'] ?? '').toString();
+                        String rLastname = (relNode['lastname'] ?? '').toString();
+                        String reviewerName = "$rFirstname $rLastname".trim();
+                        if (reviewerName.isEmpty) reviewerName = 'ผู้ใช้บริการ';
+
+                        String reviewerImage = relNode['profilephoto']?.toString() ?? 
+                                             relNode['Patient']?['patientphoto']?.toString() ?? '';
+
+                        String formattedDate = '';
+                        try {
+                          DateTime dt = DateTime.parse(reviewDateStr);
+                          formattedDate = "${dt.day}/${dt.month}/${dt.year + 543}";
+                        } catch (_) {}
+
+                        fetchedReviews.add({
+                          'rating': ratingScore,
+                          'comment': commentStr,
+                          'timeAgo': formattedDate,
+                          'reviewerName': reviewerName,
+                          'reviewerImage': reviewerImage,
+                          'rawDate': reviewDateStr, 
+                        });
+                      }
+                    }
+                  }
+                });
+              }
+            }
+          }
+        });
+        
+        fetchedReviews.sort((a, b) => b['rawDate'].compareTo(a['rawDate']));
       }
+    } catch (e) {
+      print("Error fetching reviews directly: $e");
+    }
 
-      allReviews = reviews;
-      filteredReviews = reviews;
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        reviewCount = fetchedReviews.length;
+        allReviews = fetchedReviews;
+        filteredReviews = fetchedReviews;
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -137,7 +208,6 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 🌟 ส่วนหัวข้อ
                             Text(
                               'รีวิวล่าสุด',
                               style: TextStyle(
@@ -148,7 +218,6 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
                             ),
                             const SizedBox(height: 12),
 
-                            // 🌟 แถบปุ่มกรองดาว (เลื่อนซ้ายขวาได้)
                             SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
                               physics: const BouncingScrollPhysics(),
@@ -165,7 +234,6 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
                             ),
                             const SizedBox(height: 16),
 
-                            // 🌟 ส่วนรายการรีวิว
                             Expanded(
                               child: filteredReviews.isEmpty
                                   ? Center(
@@ -225,14 +293,10 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
     );
   }
 
-  // ==========================================
-  // 🌟 ฟังก์ชันสร้างปุ่มกรองดาว (ทรงแคปซูล)
-  // ==========================================
   Widget _buildStarFilterChip(String label) {
     bool isSelected = _selectedFilter == label;
     int count = 0;
 
-    // คำนวณจำนวนรีวิวของแต่ละประเภทดาวเพื่อนำไปแสดงในวงเล็บ
     if (label == 'ทั้งหมด') {
       count = allReviews.length;
     } else {
@@ -247,7 +311,7 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
         setState(() {
           _selectedFilter = label;
           if (label == 'ทั้งหมด') {
-            filteredReviews = allReviews; // โชว์ทั้งหมด
+            filteredReviews = allReviews; 
           } else {
             double targetStar = double.parse(label);
             filteredReviews = allReviews.where((review) {
@@ -258,12 +322,12 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(right: 8), // ระยะห่างระหว่างปุ่ม
+        margin: const EdgeInsets.only(right: 8), 
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
               ? primaryColor
-              : Colors.grey.shade100, // สีม่วงเมื่อเลือก
+              : Colors.grey.shade100, 
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? primaryColor : Colors.grey.shade300,
@@ -273,16 +337,14 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // แสดงไอคอนดาวถ้าไม่ใช่ปุ่ม "ทั้งหมด"
             if (label != 'ทั้งหมด') ...[
               const Icon(
-                Icons.star_rounded,
+                Icons.star,
                 color: Color(0xFFFFC107),
                 size: 16,
               ),
               const SizedBox(width: 4),
             ],
-            // ข้อความบอกดาวและจำนวนรีวิว
             Text(
               label == 'ทั้งหมด' ? 'ทั้งหมด ($count)' : '$label ($count)',
               style: TextStyle(
@@ -297,9 +359,6 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
     );
   }
 
-  // ==========================================
-  // 🌟 ฟังก์ชันสร้าง Row รีวิว
-  // ==========================================
   Widget _buildReviewItem({
     required String name,
     required double rating,
@@ -376,8 +435,8 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
                     children: List.generate(5, (index) {
                       return Icon(
                         index < rating.floor()
-                            ? Icons.star_rounded
-                            : Icons.star_border_rounded,
+                            ? Icons.star
+                            : Icons.star_border,
                         color: const Color(0xFFFFC107),
                         size: 16,
                       );
