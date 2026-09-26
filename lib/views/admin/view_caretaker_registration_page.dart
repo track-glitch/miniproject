@@ -153,17 +153,51 @@ class _ViewCaretakerRegistrationPageState
   // Logic: ตรวจสอบและบันทึก
   // ---------------------------------------------------------
   void _handleSubmitReview() {
-    final docsCount = widget.caretaker.documents?.length ?? 0;
+    // 🌟 1. สร้างลิสต์เอกสารที่ต้องบังคับตรวจสอบ (ตัด Resume และ Certificate ออก)
+    final requiredDocs =
+        widget.caretaker.documents?.where((doc) {
+          String docId = doc.documentId ?? '';
+          String docType = doc.documenttype ?? '';
+          return !(docId == 'doc_resume' ||
+              docType == 'ประวัติการทำงาน (Resume)' ||
+              docType == 'resume' ||
+              docId.startsWith('doc_certificate') ||
+              docType.contains('ใบประกาศนียบัตร') ||
+              docType == 'first_aid_certificate');
+        }).toList() ??
+        [];
 
-    if (_documentStatuses.length < docsCount) {
+    int requiredDocsCount = requiredDocs.length;
+
+    // 🌟 2. นับว่ามีการกดผ่าน/ไม่ผ่านไปกี่อัน (นับเฉพาะเอกสารบังคับ)
+    int checkedCount = 0;
+    final docs = widget.caretaker.documents ?? [];
+    for (int i = 0; i < docs.length; i++) {
+      String docId = docs[i].documentId ?? '';
+      String docType = docs[i].documenttype ?? '';
+      bool isOptional =
+          (docId == 'doc_resume' ||
+          docType == 'ประวัติการทำงาน (Resume)' ||
+          docType == 'resume' ||
+          docId.startsWith('doc_certificate') ||
+          docType.contains('ใบประกาศนียบัตร') ||
+          docType == 'first_aid_certificate');
+
+      if (!isOptional && _documentStatuses.containsKey(i)) {
+        checkedCount++;
+      }
+    }
+
+    if (checkedCount < requiredDocsCount) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('กรุณาตรวจสอบและเลือกสถานะเอกสารให้ครบทุกรายการ'),
+          content: Text('กรุณาตรวจสอบและเลือกสถานะเอกสารสำคัญให้ครบทุกรายการ'),
         ),
       );
       return;
     }
 
+    // 🌟 3. เช็กว่ามีเอกสารอันไหนที่โดนกด 'ไม่ผ่าน' บ้าง
     bool hasRejectedDoc = _documentStatuses.values.contains(false);
 
     if (hasRejectedDoc) {
@@ -269,9 +303,7 @@ class _ViewCaretakerRegistrationPageState
               if (mounted) {
                 Navigator.pop(context);
                 Navigator.pop(context);
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(
+                ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text(
                       'ส่งข้อมูลกลับให้ผู้ใช้งานแก้ไขเรียบร้อยแล้ว',
@@ -544,28 +576,42 @@ class _ViewCaretakerRegistrationPageState
                       } else if (docId.startsWith('doc_certificate') ||
                           docType.contains('ใบประกาศนียบัตร') ||
                           docType == 'first_aid_certificate') {
-                        // รองรับทั้งใบประกาศนียบัตร 1, 2, ... และ doc_certificate
-                        title = docType.isNotEmpty ? docType : 'ใบประกาศนียบัตร (Certificate)';
+                        title = docType.isNotEmpty
+                            ? docType
+                            : 'ใบประกาศนียบัตร (Certificate)';
                         infoWidget = _buildCertificateInfo();
                       } else {
                         title = docType.isNotEmpty ? docType : docId;
                       }
 
+                      // 🌟 1. เช็กว่าเป็นเอกสารเสริม (ไม่ต้องมีปุ่มผ่าน/ไม่ผ่าน) หรือไม่
+                      bool isOptional =
+                          (docId == 'doc_resume' ||
+                          docType == 'ประวัติการทำงาน (Resume)' ||
+                          docType == 'resume' ||
+                          docId.startsWith('doc_certificate') ||
+                          docType.contains('ใบประกาศนียบัตร') ||
+                          docType == 'first_aid_certificate');
+
                       return Container(
                         margin: const EdgeInsets.only(bottom: 24),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: currentStatus == true
-                              ? Colors.green.shade50
-                              : currentStatus == false
-                              ? Colors.red.shade50
-                              : Colors.white,
+                          color: isOptional
+                              ? Colors.white
+                              : (currentStatus == true
+                                    ? Colors.green.shade50
+                                    : currentStatus == false
+                                    ? Colors.red.shade50
+                                    : Colors.white),
                           border: Border.all(
-                            color: currentStatus == true
-                                ? Colors.green.shade300
-                                : currentStatus == false
-                                ? Colors.red.shade300
-                                : Colors.grey.shade300,
+                            color: isOptional
+                                ? Colors.grey.shade300
+                                : (currentStatus == true
+                                      ? Colors.green.shade300
+                                      : currentStatus == false
+                                      ? Colors.red.shade300
+                                      : Colors.grey.shade300),
                             width: 2,
                           ),
                           borderRadius: BorderRadius.circular(12),
@@ -620,61 +666,77 @@ class _ViewCaretakerRegistrationPageState
                             ),
                             const SizedBox(height: 16),
 
-                            // ปุ่ม ผ่าน / ไม่ผ่าน
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () => setState(
-                                      () => _documentStatuses[index] = true,
-                                    ),
-                                    icon: const Icon(
-                                      Icons.check_circle,
-                                      size: 20,
-                                    ),
-                                    label: const Text(
-                                      'ผ่าน',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
+                            // 🌟 2. ถ้าไม่ใช่เอกสารเสริม ถึงจะแสดงปุ่ม ผ่าน / ไม่ผ่าน
+                            if (!isOptional)
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () => setState(
+                                        () => _documentStatuses[index] = true,
+                                      ),
+                                      icon: const Icon(
+                                        Icons.check_circle,
+                                        size: 20,
+                                      ),
+                                      label: const Text(
+                                        'ผ่าน',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: currentStatus == true
+                                            ? Colors.green
+                                            : Colors.grey.shade200,
+                                        foregroundColor: currentStatus == true
+                                            ? Colors.white
+                                            : Colors.grey.shade700,
+                                        elevation: currentStatus == true
+                                            ? 2
+                                            : 0,
                                       ),
                                     ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: currentStatus == true
-                                          ? Colors.green
-                                          : Colors.grey.shade200,
-                                      foregroundColor: currentStatus == true
-                                          ? Colors.white
-                                          : Colors.grey.shade700,
-                                      elevation: currentStatus == true ? 2 : 0,
-                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () => setState(
-                                      () => _documentStatuses[index] = false,
-                                    ),
-                                    icon: const Icon(Icons.cancel, size: 20),
-                                    label: const Text(
-                                      'ไม่ผ่าน',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () => setState(
+                                        () => _documentStatuses[index] = false,
+                                      ),
+                                      icon: const Icon(Icons.cancel, size: 20),
+                                      label: const Text(
+                                        'ไม่ผ่าน',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: currentStatus == false
+                                            ? Colors.red
+                                            : Colors.grey.shade200,
+                                        foregroundColor: currentStatus == false
+                                            ? Colors.white
+                                            : Colors.grey.shade700,
+                                        elevation: currentStatus == false
+                                            ? 2
+                                            : 0,
                                       ),
                                     ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: currentStatus == false
-                                          ? Colors.red
-                                          : Colors.grey.shade200,
-                                      foregroundColor: currentStatus == false
-                                          ? Colors.white
-                                          : Colors.grey.shade700,
-                                      elevation: currentStatus == false ? 2 : 0,
-                                    ),
+                                  ),
+                                ],
+                              )
+                            else
+                              const Center(
+                                child: Text(
+                                  '(เอกสารอ้างอิง ไม่จำเป็นต้องตรวจสอบสถานะ)',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 13,
+                                    fontStyle: FontStyle.italic,
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
                           ],
                         ),
                       );

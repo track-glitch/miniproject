@@ -1,6 +1,7 @@
 // ==========================================
 // File: lib/views/caretaker_register_page.dart
 // ==========================================
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
@@ -46,6 +47,11 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _birthDateController = TextEditingController();
   final TextEditingController _experienceController = TextEditingController();
+
+  // 🌟 เพิ่ม 3 ตัวแปรนี้สำหรับเก็บข้อความ Error ข้อมูลซ้ำ
+  String? _duplicateIdCardError;
+  String? _duplicateEmailError;
+  String? _duplicatePhoneError;
 
   String _selectedGender = "";
   DateTime? _birthDate;
@@ -217,7 +223,9 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         _profileImageFile != null ||
         _exteriorImageFile != null ||
         _docIdCardFile != null;
-  }
+  } // 🌟 ฟังก์ชันตรวจสอบข้อมูลซ้ำจาก Firebase Realtime Database
+
+  // 🌟 ฟังก์ชันตรวจสอบข้อมูลซ้ำจาก Firebase Realtime Database
 
   Future<bool> _onWillPop() async {
     if (!_hasAnyData) return true;
@@ -241,6 +249,78 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
       ),
     );
     return confirm ?? false;
+  }
+
+  Future<bool> _checkDuplicateData({
+    required String idCard,
+    required String email,
+    required String phone,
+  }) async {
+    bool isDuplicate = false;
+
+    // รีเซ็ต Error ก่อนเช็กใหม่
+    setState(() {
+      _duplicateIdCardError = null;
+      _duplicateEmailError = null;
+      _duplicatePhoneError = null;
+    });
+
+    try {
+      final dbRef = FirebaseDatabase.instance.ref('Login');
+      final snapshot = await dbRef.get();
+
+      if (snapshot.exists && snapshot.value is Map) {
+        final allUsers = Map<String, dynamic>.from(snapshot.value as Map);
+
+        for (var userEntry in allUsers.entries) {
+          var userData = userEntry.value;
+          if (userData is Map) {
+            for (String roleKey in ['Caretaker', 'Relative']) {
+              if (userData[roleKey] != null && userData[roleKey] is Map) {
+                var profile = Map<String, dynamic>.from(
+                  userData[roleKey] as Map,
+                );
+
+                String existingIdCard =
+                    profile['caretakerId']?.toString().trim() ??
+                    profile['relativeId']?.toString().trim() ??
+                    '';
+                String existingEmail =
+                    profile['email']?.toString().trim().toLowerCase() ?? '';
+                String existingPhone =
+                    profile['phonenumber']?.toString().trim() ?? '';
+
+                // ถ้าเจอข้อมูลซ้ำ ให้จับใส่ตัวแปร Error เฉพาะจุด
+                if (existingIdCard.isNotEmpty && existingIdCard == idCard) {
+                  setState(
+                    () => _duplicateIdCardError =
+                        'เลขบัตรประชาชนนี้ถูกใช้งานในระบบแล้ว',
+                  );
+                  isDuplicate = true;
+                }
+                if (existingEmail.isNotEmpty &&
+                    existingEmail == email.toLowerCase()) {
+                  setState(
+                    () => _duplicateEmailError = 'อีเมลนี้ถูกใช้งานในระบบแล้ว',
+                  );
+                  isDuplicate = true;
+                }
+                if (existingPhone.isNotEmpty && existingPhone == phone) {
+                  setState(
+                    () => _duplicatePhoneError =
+                        'เบอร์โทรศัพท์นี้ถูกใช้งานในระบบแล้ว',
+                  );
+                  isDuplicate = true;
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('Error checking duplicate: $e');
+    }
+    return isDuplicate; // true = ซ้ำ, false = ไม่ซ้ำ
   }
 
   int _calculateAge(DateTime birthDate) {
@@ -375,7 +455,7 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
     );
   }
 
-  void _nextStep() {
+  void _nextStep() async {
     if (_currentStep == 1) {
       if (!_isPolicyAccepted) {
         _showErrorSnackBar('กรุณายอมรับเงื่อนไขการให้บริการก่อนดำเนินการต่อ');
@@ -383,6 +463,13 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
       }
       setState(() => _currentStep = 2);
     } else if (_currentStep == 2) {
+      // รีเซ็ตตัวแปรสีแดงก่อนกดปุ่มถัดไป
+      setState(() {
+        _duplicateIdCardError = null;
+        _duplicateEmailError = null;
+        _duplicatePhoneError = null;
+      });
+
       if (_step2FormKey.currentState!.validate()) {
         if (_profilePhotoBase64 == null) {
           _showErrorSnackBar('กรุณาเลือกรูปโปรไฟล์ของคุณ');
@@ -392,7 +479,33 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
           _showErrorSnackBar('กรุณาเลือกเพศ');
           return;
         }
+
+        setState(() => _isLoading = true);
+
+        String idCard = _idCardController.text.trim();
+        String email = _emailController.text.trim();
+        String phone = _phoneController.text.trim();
+
+        // ไปเช็กข้อมูลซ้ำใน Database
+        bool hasDuplicate = await _checkDuplicateData(
+          idCard: idCard,
+          email: email,
+          phone: phone,
+        );
+
+        setState(() => _isLoading = false);
+
+        if (hasDuplicate) {
+          // 🌟 ทริค: สั่งให้ Form ตรวจสอบอีกรอบ เพื่อให้ตัวอักษรสีแดงโผล่ขึ้นมาใต้ช่องทันที
+          _step2FormKey.currentState!.validate();
+          _showErrorSnackBar('พบข้อมูลซ้ำในระบบ กรุณาตรวจสอบช่องที่มีสีแดง');
+          return;
+        }
+
         setState(() => _currentStep = 3);
+      } else {
+        // แจ้งเตือนกรณีปล่อยช่องว่างไว้
+        _showErrorSnackBar('กรุณากรอกข้อมูลให้ครบและถูกต้อง');
       }
     } else if (_currentStep == 3) {
       if (_step3FormKey.currentState!.validate()) {
@@ -707,6 +820,8 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                     return 'กรุณากรอกเลขบัตรประชาชน';
                   if (val.length != 13 || !RegExp(r'^[0-9]+$').hasMatch(val))
                     return 'ต้องเป็นตัวเลข 13 หลักเท่านั้น';
+                  if (_duplicateIdCardError != null)
+                    return _duplicateIdCardError; // 🌟 ดักโชว์ตัวแดง
                   return null;
                 },
               ),
@@ -729,14 +844,14 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                 hint: 'เช่น example@gmail.com',
                 keyboardType: TextInputType.emailAddress,
                 validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
+                  if (val == null || val.trim().isEmpty)
                     return 'กรุณากรอกอีเมล';
-                  }
                   if (!RegExp(
                     r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                  ).hasMatch(val.trim())) {
+                  ).hasMatch(val.trim()))
                     return 'รูปแบบอีเมลไม่ถูกต้อง';
-                  }
+                  if (_duplicateEmailError != null)
+                    return _duplicateEmailError; // 🌟 ดักโชว์ตัวแดง
                   return null;
                 },
               ),
@@ -792,13 +907,13 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                           keyboardType: TextInputType.phone,
                           maxLength: 10,
                           validator: (val) {
-                            if (val == null || val.trim().isEmpty) {
+                            if (val == null || val.trim().isEmpty)
                               return 'กรุณากรอกเบอร์โทรศัพท์';
-                            }
                             if (val.length != 10 ||
-                                !RegExp(r'^[0-9]+$').hasMatch(val)) {
+                                !RegExp(r'^[0-9]+$').hasMatch(val))
                               return 'ต้องเป็นตัวเลข 10 หลักเท่านั้น';
-                            }
+                            if (_duplicatePhoneError != null)
+                              return _duplicatePhoneError; // 🌟 ดักโชว์ตัวแดง
                             return null;
                           },
                         ),
