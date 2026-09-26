@@ -33,6 +33,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final Color cardColor = Colors.white;
 
   bool isServiceOn = false;
+  bool isSuspended = false;
   int _selectedIndex = 1;
 
   String profileImageUrl = '';
@@ -299,6 +300,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final data = await _service.getCaretakerProfile(widget.uid);
     if (data != null) {
       setState(() {
+
+        String accStatus = (data['accountstatus']?.toString() ?? '').trim().toLowerCase();
+        isSuspended = (accStatus == 'suspended');
+        
         isServiceOn =
             (data['servicestatus'] == 'ON' ||
             data['servicestatus'] == 'online');
@@ -972,8 +977,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   backgroundColor: Colors.white,
                   backgroundImage: profileImageUrl.isNotEmpty
                       ? (profileImageUrl.startsWith('http')
-                            ? NetworkImage(profileImageUrl)
-                            : _getSafeBase64Image(profileImageUrl))
+                          ? NetworkImage(profileImageUrl)
+                          : _getSafeBase64Image(profileImageUrl))
                       : null,
                   child: profileImageUrl.isEmpty
                       ? Icon(
@@ -990,7 +995,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
               height: 22,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isServiceOn ? Colors.green : Colors.grey.shade400,
+                // 🌟 แก้สีจุดวงกลม: ถ้าโดนระงับเป็นสีแดง ถ้าไม่ก็ใช้สีเขียว/เทาตามเดิม
+                color: isSuspended ? Colors.red : (isServiceOn ? Colors.green : Colors.grey.shade400),
                 border: Border.all(color: Colors.white, width: 3),
                 boxShadow: const [
                   BoxShadow(
@@ -1003,32 +1009,63 @@ class _EditProfilePageState extends State<EditProfilePage> {
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              isServiceOn ? 'เปิดบริการ' : 'ปิดบริการ',
-              style: TextStyle(
-                color: isServiceOn ? Colors.green : Colors.grey.shade700,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+        
+        // 🌟 เช็กเงื่อนไขถ้าถูกระงับการใช้งาน (ซ่อนสวิตช์ โชว์ข้อความสีแดง)
+        if (isSuspended) ...[
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.block, color: Colors.red, size: 20),
+              const SizedBox(width: 6),
+              const Text(
+                'บัญชีถูกระงับการใช้งาน',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'ไม่สามารถเปิดรับบริการได้ในขณะนี้',
+            style: TextStyle(
+              color: Colors.red.shade400,
+              fontSize: 13,
             ),
-            const SizedBox(width: 8),
-          ],
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Switch(
-              value: isServiceOn,
-              activeColor: Colors.green,
-              activeTrackColor: Colors.green.shade200,
-              onChanged: _toggleServiceStatus,
-            ),
-          ],
-        ),
+          ),
+        ] 
+        // 🌟 ถ้าบัญชีปกติ ไม่ถูกระงับ (แสดงสวิตช์ตามปกติ)
+        else ...[
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                isServiceOn ? 'เปิดบริการ' : 'ปิดบริการ',
+                style: TextStyle(
+                  color: isServiceOn ? Colors.green : Colors.grey.shade700,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Switch(
+                value: isServiceOn,
+                activeColor: Colors.green,
+                activeTrackColor: Colors.green.shade200,
+                onChanged: _toggleServiceStatus,
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }

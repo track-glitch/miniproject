@@ -1910,6 +1910,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   ),
                   const SizedBox(height: 5),
 
+                  // ── แถวคะแนนและดาว (ปรับเหลือแสดงจำนวนรีวิวปกติ ไม่ต้องกดเปิดรีวิวจากตรงนี้) ──
                   Row(
                     children: [
                       Text(
@@ -1920,6 +1921,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                           color: Color(0xFF555555),
                         ),
                       ),
+                      const SizedBox(width: 4),
                       Row(
                         children: List.generate(
                           5,
@@ -1931,37 +1933,13 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      GestureDetector(
-                        onTap: () {
-                          if (comments > 0) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ViewCaretakerReview(
-                                  caretakerId:
-                                      data['id'] ??
-                                      data['caretakerId']?.toString() ??
-                                      '',
-                                  reviews: reviewsList,
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                        child: Text(
-                          comments == 0
-                              ? 'ยังไม่มีรีวิว'
-                              : '($comments รีวิว) ดูเพิ่มเติม >',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: comments > 0
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            color: comments > 0 ? primaryColor : Colors.black45,
-                            decoration: comments > 0
-                                ? TextDecoration.underline
-                                : TextDecoration.none,
-                          ),
+                      Text(
+                        comments == 0
+                            ? 'ยังไม่มีรีวิว'
+                            : '($comments รีวิว)',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.black54,
                         ),
                       ),
                     ],
@@ -2087,6 +2065,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                     widget.loggedUid ??
                                     FirebaseAuth.instance.currentUser?.uid,
                                 selectedDate: _selectedFilterDate,
+                                reviews: reviewsList,
                               ),
                             ),
                           );

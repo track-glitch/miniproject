@@ -6,6 +6,7 @@ import 'package:miniproject/views/relative/edit_relative_info_page.dart';
 import 'package:miniproject/views/relative/request_caretaker_service_page.dart';
 import 'package:miniproject/views/relative/list_request_page.dart';
 import 'package:miniproject/views/relative/relative_home_page.dart';
+import 'package:miniproject/views/relative/view_caretaker_review.dart';
 import 'dart:convert';
 import 'package:firebase_database/firebase_database.dart';
 
@@ -13,12 +14,14 @@ class CaretakerProfilePage extends StatefulWidget {
   final String caretakerId;
   final String? loggedUid;
   final DateTime? selectedDate;
+  final List<Map<String, dynamic>>? reviews; // 🌟 รับรายการรีวิวเข้ามา
 
   const CaretakerProfilePage({
     super.key,
     required this.caretakerId,
     this.loggedUid,
     this.selectedDate,
+    this.reviews,
   });
 
   @override
@@ -31,6 +34,11 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   List<String> vehiclePhotos = [];
   bool isLoading = true;
   int _currentVehiclePhotoIndex = 0;
+
+  // 🌟 ตัวแปรรองรับข้อมูลรีวิว
+  List<Map<String, dynamic>> reviewsList = [];
+  double averageRating = 0.0;
+  int reviewCount = 0;
 
   final Color primaryColor = const Color(0xFF9B59B6);
   final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
@@ -65,9 +73,29 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     return '$prefixWithSpace$fName $lName'.trim();
   }
 
+  void _calculateReviewStats() {
+    if (reviewsList.isEmpty) {
+      averageRating = 0.0;
+      reviewCount = 0;
+    } else {
+      double sum = reviewsList.fold(
+        0.0,
+        (prev, item) =>
+            prev +
+            (double.tryParse(item['ratingscore']?.toString() ?? '0') ?? 0.0),
+      );
+      averageRating = sum / reviewsList.length;
+      reviewCount = reviewsList.length;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    if (widget.reviews != null) {
+      reviewsList = List<Map<String, dynamic>>.from(widget.reviews!);
+      _calculateReviewStats();
+    }
     loadCaretaker();
   }
 
@@ -145,10 +173,75 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
 
       if (snapshot.exists) {
         final data = Map<String, dynamic>.from(snapshot.value as Map);
+        final cData = Map<String, dynamic>.from(data['Caretaker'] ?? {});
+        final String cIdCard = cData['caretakerId']?.toString() ?? '';
+
+        // 🌟 กรณีเปิดหน้านี้มาโดยไม่ได้ส่ง reviews มาด้วย ให้ query จาก Firebase Login
+        if (reviewsList.isEmpty) {
+          final allLoginSnap =
+              await FirebaseDatabase.instance.ref('Login').get();
+          if (allLoginSnap.exists && allLoginSnap.value is Map) {
+            final allMap = Map<String, dynamic>.from(allLoginSnap.value as Map);
+            List<Map<String, dynamic>> fetchedReviews = [];
+
+            allMap.forEach((uKey, uVal) {
+              if (uVal is Map && uVal['Relative'] != null) {
+                var rel = uVal['Relative'];
+                if (rel is Map && rel['Request'] != null) {
+                  var reqs = rel['Request'];
+                  if (reqs is Map) {
+                    reqs.forEach((rId, rVal) {
+                      if (rVal is Map && rVal['caretakerId'] != null) {
+                        String reqCId = rVal['caretakerId'].toString();
+                        if (reqCId == cIdCard ||
+                            reqCId == widget.caretakerId) {
+                          var rev = rVal['Review'] ?? rVal['review'];
+                          if (rev != null && rev is Map) {
+                            double score = double.tryParse(
+                                  (rev['rating'] ??
+                                          rev['ratingscore'] ??
+                                          0)
+                                      .toString(),
+                                ) ??
+                                0.0;
+                            String rGender = (rel['Patient']?['gender'] ??
+                                    rel['gender'] ??
+                                    '')
+                                .toString();
+                            String rName = formatFullNameWithTitle(
+                              gender: rGender,
+                              firstname: (rel['firstname'] ?? '').toString(),
+                              lastname: (rel['lastname'] ?? '').toString(),
+                            );
+                            if (rName.isEmpty || rName == 'ไม่ระบุ') {
+                              rName = 'ผู้ใช้บริการ';
+                            }
+                            fetchedReviews.add({
+                              'ratingscore': score,
+                              'comment': rev['comment']?.toString() ?? '',
+                              'reviewdate': rev['reviewdate']?.toString() ?? '',
+                              'reviewerName': rName,
+                              'reviewerImage': (rel['profilephoto'] ??
+                                      rel['Patient']?['patientphoto'] ??
+                                      '')
+                                  .toString(),
+                            });
+                          }
+                        }
+                      }
+                    });
+                  }
+                }
+              }
+            });
+            reviewsList = fetchedReviews;
+            _calculateReviewStats();
+          }
+        }
 
         if (!mounted) return;
         setState(() {
-          caretakerData = Map<String, dynamic>.from(data['Caretaker'] ?? {});
+          caretakerData = cData;
 
           if (caretakerData!['Vehicle'] != null) {
             vehicleData = Map<String, dynamic>.from(caretakerData!['Vehicle']);
@@ -176,6 +269,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
       }
     } catch (e) {
       print('ERROR = $e');
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -226,16 +320,23 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                   ),
                   child: Column(
                     children: [
-                      // ส่วนรวมรูปโปรไฟล์และข้อมูลติดต่อ
+                      // 1. ข้อมูลโปรไฟล์และติดต่อ
                       _buildProfileHeader(),
                       const SizedBox(height: 12),
 
-                      // ส่วนประสบการณ์และบริการ
+                      // 2. ข้อมูลประสบการณ์และบริการ
                       _buildProfessionalInfo(),
                       const SizedBox(height: 12),
 
+                      // 3. ข้อมูลยานพาหนะ (รูปรถ)
                       _buildVehicleInfo(),
+                      const SizedBox(height: 12),
+
+                      // 🌟 4. รีวิวของผู้ดูแล (ย้ายมาไว้ต่อจากรูปรถตรงนี้)
+                      _buildReviewSection(),
                       const SizedBox(height: 24),
+
+                      // 5. ปุ่มส่งคำขอ
                       _buildMinimalRequestButton(),
                       const SizedBox(height: 30),
                     ],
@@ -246,7 +347,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
           );
         },
       ),
-      // 🌟 นำ Bottom Nav แบบ Home มาใช้
       bottomNavigationBar: Container(
         height: 65,
         decoration: BoxDecoration(
@@ -445,7 +545,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     );
   }
 
-  // 🌟 ส่วนรวมรูปโปรไฟล์ ชื่อ สถานะ และข้อมูลติดต่อ
+  // 🌟 ส่วนรวมรูปโปรไฟล์ ชื่อ สถานะ และคะแนนเฉลี่ย
   Widget _buildProfileHeader() {
     String rawStatus =
         (caretakerData?['servicestatus']?.toString() ?? 'ไม่พร้อมให้บริการ')
@@ -455,7 +555,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
         rawStatus.toLowerCase() == 'on' ||
         rawStatus == 'พร้อมให้บริการ';
 
-    // 🌟 จัดรูปแบบชื่อผู้ดูแลพร้อมคำนำหน้า นาย / นาง (เว้นวรรค)
     String displayFullName = formatFullNameWithTitle(
       gender: caretakerData?['gender']?.toString(),
       firstname: caretakerData?['firstname']?.toString(),
@@ -560,7 +659,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 4),
                     Text(
                       displayFullName,
                       style: const TextStyle(
@@ -571,6 +670,40 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
                       maxLines: 1,
                       softWrap: false,
                       overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 3),
+                    // 🌟 แสดงคะแนนเฉลี่ยใต้ชื่อ
+                    Row(
+                      children: [
+                        Text(
+                          '${averageRating.toStringAsFixed(1)} ',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF555555),
+                          ),
+                        ),
+                        Row(
+                          children: List.generate(
+                            5,
+                            (i) => Icon(
+                              i < averageRating.floor()
+                                  ? Icons.star
+                                  : Icons.star_border,
+                              color: const Color(0xFFFBBF24),
+                              size: 13,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          '($reviewCount รีวิว)',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -607,6 +740,282 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  // 🌟 การ์ดแสดงคะแนนและรีวิวจากผู้ใช้บริการ
+  // 🌟 การ์ดแสดงคะแนนและรีวิว (แสดงต่อจากยานพาหนะ คัดกรองที่มีข้อความก่อน สูงสุด 3 อัน)
+  Widget _buildReviewSection() {
+    // 1. เรียงลำดับ: คัดรีวิวที่มีข้อความคอมเมนต์ขึ้นมาก่อน
+    List<Map<String, dynamic>> sortedReviews = List.from(reviewsList);
+    sortedReviews.sort((a, b) {
+      final aHasComment =
+          (a['comment']?.toString().trim().isNotEmpty ?? false);
+      final bHasComment =
+          (b['comment']?.toString().trim().isNotEmpty ?? false);
+      if (aHasComment && !bHasComment) return -1;
+      if (!aHasComment && bHasComment) return 1;
+      return 0;
+    });
+
+    // 2. จำกัดแสดงผลสูงสุดแค่ 3 รายการ
+    final displayReviews = sortedReviews.take(3).toList();
+
+    return _buildCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.star_rounded,
+                    color: primaryColor,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'รีวิวและการให้คะแนน',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: primaryColor,
+                    ),
+                  ),
+                ],
+              ),
+              if (reviewCount > 0)
+                Text(
+                  '$reviewCount รีวิว',
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // แถบสรุปคะแนนเฉลี่ย
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9F5FF),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: borderColor),
+            ),
+            child: Row(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          averageRating.toStringAsFixed(1),
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          '/ 5.0',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.black45,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: List.generate(
+                        5,
+                        (index) => Icon(
+                          index < averageRating.floor()
+                              ? Icons.star
+                              : Icons.star_border,
+                          color: const Color(0xFFFBBF24),
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Text(
+                  reviewCount == 0
+                      ? 'ยังไม่มีการรีวิว'
+                      : 'ความพึงพอใจโดยรวม\nจากผู้รับบริการ',
+                  textAlign: TextAlign.end,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.black54,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          if (reviewsList.isEmpty) ...[
+            const SizedBox(height: 12),
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  'ยังไม่มีประวัติการรีวิวสำหรับผู้ดูแลท่านนี้',
+                  style: TextStyle(fontSize: 12.5, color: Colors.black45),
+                ),
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 12),
+            // แสดงสูงสุด 3 รีวิวที่คัดเลือกมาแล้ว
+            ...displayReviews.map((review) {
+              double score = double.tryParse(
+                    review['ratingscore']?.toString() ?? '0',
+                  ) ??
+                  0.0;
+              String comment = (review['comment']?.toString() ?? '').trim();
+              String reviewer =
+                  review['reviewerName']?.toString() ?? 'ผู้ใช้บริการ';
+              String rawImg = review['reviewerImage']?.toString() ?? '';
+              String dateStr = review['reviewdate']?.toString() ?? '';
+
+              ImageProvider? revImage;
+              if (rawImg.isNotEmpty) {
+                String cleanImg = rawImg.replaceAll(RegExp(r'\s+'), '');
+                int pad = cleanImg.length % 4;
+                if (pad > 0) cleanImg += '=' * (4 - pad);
+                try {
+                  revImage = MemoryImage(base64Decode(cleanImg));
+                } catch (_) {}
+              }
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 15,
+                          backgroundColor: const Color(0xFFE8D5FF),
+                          backgroundImage: revImage,
+                          child: revImage == null
+                              ? const Icon(
+                                  Icons.person,
+                                  size: 16,
+                                  color: Colors.black54,
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                reviewer,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12.5,
+                                  color: Colors.black87,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (dateStr.isNotEmpty)
+                                Text(
+                                  dateStr.split('T').first,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.black45,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        Row(
+                          children: List.generate(
+                            5,
+                            (idx) => Icon(
+                              idx < score.floor()
+                                  ? Icons.star
+                                  : Icons.star_border,
+                              color: const Color(0xFFFBBF24),
+                              size: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (comment.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        comment,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: Colors.black87,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }).toList(),
+
+            // 🌟 เงื่อนไข: ถ้ามีรีวิวทั้งหมดมากกว่า 3 รายการ ถึงจะแสดงปุ่มนี้ให้กดไปดูต่อ
+            if (reviewsList.length > 3) ...[
+              const SizedBox(height: 4),
+              SizedBox(
+                width: double.infinity,
+                height: 38,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: primaryColor,
+                    side: BorderSide(color: primaryColor, width: 1.2),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ViewCaretakerReview(
+                          caretakerId: widget.caretakerId,
+                          reviews: reviewsList,
+                          caretakerData: caretakerData,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'ดูรีวิวทั้งหมด (${reviewsList.length} รีวิว)',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
         ],
       ),
     );
@@ -673,49 +1082,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
       age--;
     }
     return '$age ปี';
-  }
-
-  Widget _buildContactInfo() {
-    return _buildCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Icon(
-                Icons.contact_phone_outlined,
-                size: 20,
-                color: Color(0xFF9B59B6),
-              ),
-              SizedBox(width: 8),
-              Text(
-                'ข้อมูลติดต่อ',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: Color(0xFF9B59B6),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildMiniInfoItem('เพศ', caretakerData?['gender'] ?? '-'),
-              _buildMiniInfoItem(
-                'อายุ',
-                calculateAge(caretakerData?['birthdate']),
-              ),
-              _buildMiniInfoItem(
-                'เบอร์โทร',
-                caretakerData?['phonenumber'] ?? '-',
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildMiniInfoItem(String label, String value) {
@@ -976,7 +1342,6 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
     );
   }
 
-  // 🌟 ฟังก์ชันสร้างปุ่มเมนูด้านล่างให้เหมือนหน้า Home
   Widget _buildBottomNavItem(
     IconData icon,
     String label,

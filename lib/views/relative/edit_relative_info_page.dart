@@ -64,14 +64,9 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   final TextEditingController _patDiseaseController = TextEditingController();
   final TextEditingController _patAddressController = TextEditingController();
 
-  // 🌟 Dropdown ความคล่องตัว
-  String? _selectedMobility;
-  final List<String> _mobilityOptions = [
-    'เดินได้ปกติ',
-    'เดินได้ไม่คล่อง',
-    'ต้องพยุง',
-    'ติดเตียง',
-  ];
+  // 🌟 ตัวแปรความคล่องตัว (เปลี่ยนจาก Dropdown เป็น Radio แบบพิมพ์ได้)
+  String _selectedPatMobility = "ปกติ";
+  final TextEditingController _patMobilityController = TextEditingController();
 
   final TextEditingController _relFirstNameController = TextEditingController();
   final TextEditingController _relLastNameController = TextEditingController();
@@ -140,9 +135,17 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     _patGenderController.text = widget.currentPatient.gender ?? '';
     _patDiseaseController.text = widget.currentPatient.disease ?? '';
 
-    if (widget.currentPatient.mobility != null &&
-        _mobilityOptions.contains(widget.currentPatient.mobility)) {
-      _selectedMobility = widget.currentPatient.mobility;
+    // 🌟 ตรวจสอบข้อมูลความคล่องตัวให้ตรงกับรูปแบบใหม่
+    String existingMobility = widget.currentPatient.mobility ?? 'ปกติ';
+    if (existingMobility.startsWith('ไม่ปกติ')) {
+      _selectedPatMobility = 'ไม่ปกติ';
+      if (existingMobility.contains(': ')) {
+        _patMobilityController.text = existingMobility.split(': ')[1];
+      } else {
+        _patMobilityController.text = existingMobility.replaceFirst('ไม่ปกติ', '').trim();
+      }
+    } else {
+      _selectedPatMobility = 'ปกติ';
     }
 
     _patAddressController.text = widget.currentPatient.location?.address ?? '';
@@ -244,9 +247,18 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
               data['phonenumber'] ?? _patPhoneController.text;
           _initialPatPhone = _patPhoneController.text.trim();
 
-          if (data['mobility'] != null &&
-              _mobilityOptions.contains(data['mobility'])) {
-            _selectedMobility = data['mobility'];
+          // 🌟 จัดการข้อมูล Mobility จาก Database ลงช่องกรอกใหม่
+          String fetchedMobility = data['mobility']?.toString() ?? 'ปกติ';
+          if (fetchedMobility.startsWith('ไม่ปกติ')) {
+            _selectedPatMobility = 'ไม่ปกติ';
+            if (fetchedMobility.contains(': ')) {
+              _patMobilityController.text = fetchedMobility.split(': ')[1];
+            } else {
+              _patMobilityController.text = fetchedMobility.replaceFirst('ไม่ปกติ', '').trim();
+            }
+          } else {
+            _selectedPatMobility = 'ปกติ';
+            _patMobilityController.clear();
           }
 
           if (data['birthdate'] != null) {
@@ -278,6 +290,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     _patAgeController.dispose();
     _patDiseaseController.dispose();
     _patAddressController.dispose();
+    _patMobilityController.dispose();
 
     _relFirstNameController.dispose();
     _relLastNameController.dispose();
@@ -373,9 +386,9 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
       return;
     }
 
-    // 🌟 ตรวจสอบรูปแบบอีเมล
+    // 🌟 ตรวจสอบรูปแบบอีเมล (อนุญาตให้เว้นว่างได้)
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(relEmail)) {
+    if (relEmail.isNotEmpty && !emailRegex.hasMatch(relEmail)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('รูปแบบอีเมลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง'),
@@ -517,6 +530,11 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           'relationship': _relRelationController.text.trim(),
         });
 
+        // 🌟 รวมข้อความ Mobility
+        String finalMobility = _selectedPatMobility == 'ไม่ปกติ'
+            ? 'ไม่ปกติ: ${_patMobilityController.text.trim()}'
+            : 'ปกติ';
+
         await FirebaseDatabase.instance
             .ref('Login/$uid/Relative/Patient')
             .update({
@@ -527,7 +545,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
               'gender': _patGenderController.text.trim(),
               'birthdate': _patBirthDateController.text.trim(),
               'disease': _patDiseaseController.text.trim(),
-              'mobility': _selectedMobility ?? '',
+              'mobility': finalMobility,
               'patientphoto': _profilePhotoBase64 ?? '',
               'address': _patAddressController.text.trim(),
               'latitude': _hasPinned ? _selectedLocation.latitude : 0.0,
@@ -665,8 +683,9 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                               keyboardType: TextInputType.number,
                             ),
                             _buildInputField(
-                              hint: 'ไอดีไลน์ผู้ป่วย',
+                              hint: 'ไอดีไลน์ผู้ป่วย (ถ้ามี)',
                               controller: _patLineIdController,
+                              isRequired: false, // 🌟 ไม่บังคับกรอก
                             ),
                             _buildInputField(
                               hint: 'เบอร์โทรศัพท์ผู้ป่วย',
@@ -709,12 +728,13 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                             ),
 
                             _buildInputField(
-                              hint: 'โรคประจำตัว',
+                              hint: 'โรคประจำตัว (ถ้าไม่มีให้เว้นว่าง)',
                               controller: _patDiseaseController,
+                              isRequired: false, // 🌟 ไม่บังคับกรอก
                             ),
 
-                            // 🌟 ความคล่องตัว (Mobility Dropdown)
-                            _buildMobilityDropdown(),
+                            // 🌟 ความคล่องตัว (Mobility Dropdown เปลี่ยนเป็น Radio + TextField)
+                            _buildMobilitySection(),
                           ],
                         ),
 
@@ -760,9 +780,10 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                               ],
                             ),
                             _buildInputField(
-                              hint: 'อีเมล (Email)',
+                              hint: 'อีเมล (Email) (ถ้ามี)',
                               controller: _relEmailController,
                               keyboardType: TextInputType.emailAddress,
+                              isRequired: false, // 🌟 ไม่บังคับกรอก
                             ),
                             Row(
                               children: [
@@ -777,8 +798,9 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: _buildInputField(
-                                    hint: 'ไอดีไลน์ญาติ',
+                                    hint: 'ไอดีไลน์ญาติ (ถ้ามี)',
                                     controller: _relLineIdController,
+                                    isRequired: false, // 🌟 ไม่บังคับกรอก
                                   ),
                                 ),
                               ],
@@ -1009,62 +1031,89 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     );
   }
 
-  Widget _buildMobilityDropdown() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: DropdownButtonFormField<String>(
-        value: _selectedMobility,
-        decoration: InputDecoration(
-          labelText: 'ความคล่องตัว (Mobility)',
-          labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF8D7AE6)),
-          filled: true,
-          fillColor: const Color(0xFFFAF8FF),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 12,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: greyBorder, width: 2.3),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: greyBorder, width: 2.3),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: primaryColor, width: 2.3),
+  // 🌟 ฟังก์ชันสร้างส่วนความคล่องตัวแบบใหม่
+  Widget _buildMobilitySection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4, left: 2),
+          child: Row(
+            children: const [
+              Text(
+                'สภาพร่างกายในการเคลื่อนไหว',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+              Text(
+                ' *',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              ),
+            ],
           ),
         ),
-        items: const [
-          DropdownMenuItem(
-            value: 'เดินได้ปกติ',
-            child: Text('เดินได้ปกติ', style: TextStyle(fontSize: 14)),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Radio<String>(
+                    value: 'ปกติ',
+                    groupValue: _selectedPatMobility,
+                    activeColor: primaryColor,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedPatMobility = value!;
+                        _patMobilityController.clear();
+                      });
+                    },
+                  ),
+                  const Text('ปกติ', style: TextStyle(fontSize: 14)),
+                  const SizedBox(width: 20),
+                  Radio<String>(
+                    value: 'ไม่ปกติ',
+                    groupValue: _selectedPatMobility,
+                    activeColor: primaryColor,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedPatMobility = value!;
+                      });
+                    },
+                  ),
+                  const Text('ไม่ปกติ', style: TextStyle(fontSize: 14)),
+                ],
+              ),
+              AnimatedCrossFade(
+                firstChild: const SizedBox(width: double.infinity, height: 0),
+                secondChild: Padding(
+                  padding: const EdgeInsets.only(top: 4.0),
+                  child: _buildInputField(
+                    hint: 'โปรดระบุ (เช่น ต้องพยุง, นั่งรถเข็น, ติดเตียง)',
+                    controller: _patMobilityController,
+                    maxLength: 100,
+                    isRequired: _selectedPatMobility == 'ไม่ปกติ',
+                    validator: (val) {
+                      if (_selectedPatMobility == 'ไม่ปกติ' && (val == null || val.trim().isEmpty)) {
+                        return 'กรุณาระบุอาการเมื่อเลือก "ไม่ปกติ"';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                crossFadeState: _selectedPatMobility == 'ไม่ปกติ'
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+                duration: const Duration(milliseconds: 300),
+              ),
+            ],
           ),
-          DropdownMenuItem(
-            value: 'เดินได้ไม่คล่อง',
-            child: Text('เดินได้ไม่คล่อง', style: TextStyle(fontSize: 14)),
-          ),
-          DropdownMenuItem(
-            value: 'ต้องพยุง',
-            child: Text('ต้องพยุง', style: TextStyle(fontSize: 14)),
-          ),
-          DropdownMenuItem(
-            value: 'ติดเตียง',
-            child: Text('ติดเตียง', style: TextStyle(fontSize: 14)),
-          ),
-        ],
-        onChanged: (val) {
-          setState(() {
-            _selectedMobility = val;
-          });
-        },
-        validator: (v) =>
-            (v == null || v.isEmpty) ? 'กรุณาเลือกความคล่องตัว' : null,
-      ),
+        ),
+      ],
     );
   }
 
+  // 🌟 เพิ่มตัวแปร isRequired เพื่อให้บางช่องปล่อยว่างได้
   Widget _buildInputField({
     required String hint,
     required TextEditingController controller,
@@ -1075,6 +1124,8 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     bool enabled = true,
     VoidCallback? onTap,
     Widget? suffixIcon,
+    bool isRequired = true, 
+    String? Function(String?)? validator,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -1091,9 +1142,13 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           color: Colors.black,
           fontWeight: FontWeight.normal,
         ),
-        validator: (v) {
+        // 🌟 ปิดการตรวจสอบว่าห้ามว่างเปล่า ถ้ากำหนดให้ isRequired = false
+        validator: validator ?? (v) {
           if (!enabled) return null;
-          return (v == null || v.isEmpty) ? 'กรุณากรอกข้อมูล' : null;
+          if (isRequired && (v == null || v.trim().isEmpty)) {
+            return 'กรุณากรอกข้อมูล';
+          }
+          return null;
         },
         decoration: InputDecoration(
           labelText: hint,

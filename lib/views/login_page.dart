@@ -30,7 +30,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  // 🌟 เปลี่ยนชื่อ Controller ให้เข้ากับเลขบัตรประชาชน[cite: 1]
+  // 🌟 เปลี่ยนชื่อ Controller ให้เข้ากับเลขบัตรประชาชน
   final TextEditingController _idCardController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -79,7 +79,7 @@ class _LoginPageState extends State<LoginPage> {
 
     final AuthService authService = AuthService();
 
-    // 🌟 เรียกใช้ฟังก์ชัน Login แบบ Bridge Pattern[cite: 1, 9]
+    // 🌟 เรียกใช้ฟังก์ชัน Login แบบ Bridge Pattern
     var result = await authService.loginWithIdCard(
       _idCardController.text.trim(),
       _passwordController.text.trim(),
@@ -166,7 +166,6 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
       }
-      // ... (ส่วนของ relative และ admin ปล่อยไว้แบบเดิมได้ หรือปรับแก้ logic คล้ายๆ กันถ้าต้องการ)
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -175,6 +174,302 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
     }
+  }
+
+  // ==========================================
+  // 🌟 1. ฟังก์ชัน Popup ตรวจสอบข้อมูลผู้ใช้
+  // ==========================================
+  void _showForgotPasswordDialog(BuildContext context) {
+    final TextEditingController resetIdCardController = TextEditingController();
+    final TextEditingController resetPhoneController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: Text(
+            'ลืมรหัสผ่าน',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: primaryColor,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'กรุณากรอกเลขบัตรประชาชนและเบอร์โทรศัพท์ที่ใช้สมัคร เพื่อยืนยันตัวตน',
+                  style: TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 15),
+                TextField(
+                  controller: resetIdCardController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 13,
+                  decoration: InputDecoration(
+                    hintText: 'เลขบัตรประชาชน 13 หลัก',
+                    counterText: "",
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: primaryColor),
+                    ),
+                    prefixIcon: const Icon(Icons.badge, color: Colors.grey),
+                  ),
+                ),
+                const SizedBox(height: 15),
+                TextField(
+                  controller: resetPhoneController,
+                  keyboardType: TextInputType.phone,
+                  maxLength: 10,
+                  decoration: InputDecoration(
+                    hintText: 'เบอร์โทรศัพท์ 10 หลัก',
+                    counterText: "",
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: primaryColor),
+                    ),
+                    prefixIcon: const Icon(Icons.phone, color: Colors.grey),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'ยกเลิก',
+                style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: () async {
+                String idCard = resetIdCardController.text.trim();
+                String phone = resetPhoneController.text.trim();
+
+                if (idCard.length == 13 && phone.length == 10) {
+                  // TODO: (ของจริง) นำ idCard และ phone ไปเช็คกับ Backend ว่าข้อมูลตรงกันจริงไหม
+                  // สมมติว่าตอนนี้ตรวจสอบผ่านแล้ว:
+                  
+                  Navigator.pop(context); // ปิด Popup ตรวจสอบข้อมูล
+
+                  // 🌟 เรียก Popup ตั้งรหัสผ่านใหม่ขึ้นมาแทน
+                  _showResetPasswordDialog(context, idCard); 
+                  
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('กรุณากรอกเลขบัตร 13 หลัก และเบอร์โทร 10 หลักให้ครบถ้วน'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text(
+                'ตรวจสอบ',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ==========================================
+  // 🌟 2. ฟังก์ชัน Popup สำหรับตั้งรหัสผ่านใหม่ (เพิ่มใหม่)
+  // ==========================================
+  void _showResetPasswordDialog(BuildContext context, String verifiedIdCard) {
+    final TextEditingController newPasswordController = TextEditingController();
+    final TextEditingController confirmPasswordController = TextEditingController();
+    bool isObscureNew = true;
+    bool isObscureConfirm = true;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // บังคับให้ต้องกดปุ่มยกเลิกหรือยืนยันเท่านั้น
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              title: Text(
+                'ตั้งรหัสผ่านใหม่',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'กรุณากรอกรหัสผ่านใหม่ที่คุณต้องการใช้งาน',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    const SizedBox(height: 15),
+                    
+                    // ช่องกรอกรหัสผ่านใหม่
+                    TextField(
+                      controller: newPasswordController,
+                      obscureText: isObscureNew,
+                      decoration: InputDecoration(
+                        hintText: 'รหัสผ่านใหม่',
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: primaryColor),
+                        ),
+                        prefixIcon: const Icon(Icons.lock, color: Colors.grey),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            isObscureNew ? Icons.visibility_off : Icons.visibility,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            setStateDialog(() {
+                              isObscureNew = !isObscureNew;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    
+                    // ช่องยืนยันรหัสผ่านใหม่
+                    TextField(
+                      controller: confirmPasswordController,
+                      obscureText: isObscureConfirm,
+                      decoration: InputDecoration(
+                        hintText: 'ยืนยันรหัสผ่านใหม่',
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: primaryColor),
+                        ),
+                        prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            isObscureConfirm ? Icons.visibility_off : Icons.visibility,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            setStateDialog(() {
+                              isObscureConfirm = !isObscureConfirm;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'ยกเลิก',
+                    style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: () async {
+                    String newPass = newPasswordController.text.trim();
+                    String confirmPass = confirmPasswordController.text.trim();
+
+                    if (newPass.isEmpty || confirmPass.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('กรุณากรอกรหัสผ่านให้ครบทั้ง 2 ช่อง'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+
+                    if (newPass != confirmPass) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('รหัสผ่านไม่ตรงกัน กรุณาลองใหม่'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+
+                    if (newPass.length < 6) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      return;
+                    }
+
+                    // TODO: (ของจริง) นำ verifiedIdCard และ newPass ยิง API เพื่ออัปเดตในฐานข้อมูล
+                    // await AuthService().updatePassword(verifiedIdCard, newPass);
+
+                    Navigator.pop(context); // ปิดหน้าตั้งรหัสผ่าน
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('เปลี่ยนรหัสผ่านสำเร็จ! กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'บันทึกรหัสผ่าน',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -246,7 +541,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 15),
 
-                      // 🌟 เปลี่ยน Hint เป็น เลขบัตรประชาชน[cite: 1]
+                      // 🌟 เปลี่ยน Hint เป็น เลขบัตรประชาชน
                       TextField(
                         controller: _idCardController,
                         keyboardType: TextInputType.number,
@@ -318,7 +613,8 @@ class _LoginPageState extends State<LoginPage> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: () {},
+                          // 🌟 เรียกใช้ฟังก์ชัน Popup เมื่อกดปุ่มลืมรหัสผ่าน
+                          onPressed: () => _showForgotPasswordDialog(context),
                           child: Text(
                             'ลืมรหัสผ่าน?',
                             style: TextStyle(color: primaryColor),

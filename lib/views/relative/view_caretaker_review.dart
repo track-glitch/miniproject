@@ -5,10 +5,13 @@ import 'package:miniproject/services/caretaker_service.dart';
 class ViewCaretakerReview extends StatefulWidget {
   final String caretakerId;
   final List<Map<String, dynamic>> reviews;
+  final Map<String, dynamic>? caretakerData; // 🌟 รับข้อมูลผู้ดูแลเข้ามา
+
   const ViewCaretakerReview({
     super.key,
     required this.caretakerId,
     required this.reviews,
+    this.caretakerData,
   });
 
   @override
@@ -69,20 +72,32 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
   }
 
   Future<void> _fetchData() async {
-    try {
-      final profile = await _service.getCaretakerProfile(widget.caretakerId);
-      if (profile != null) {
-        // 🌟 ใส่คำนำหน้าชื่อ นาย / นาง แบบเว้นวรรค
-        caretakerName = formatFullNameWithTitle(
-          gender: profile['gender']?.toString(),
-          firstname: profile['firstname']?.toString(),
-          lastname: profile['lastname']?.toString(),
-        );
-        caretakerCitizenId = profile['caretakerId'] ?? '';
-        caretakerImage = profile['profilephoto'] ?? '';
+    // 🌟 1. ตรวจสอบว่ามีข้อมูลผู้ดูแลส่งต่อมาด้วยหรือไม่ ถ้ามีให้ใช้ก่อนทันที
+    if (widget.caretakerData != null && widget.caretakerData!.isNotEmpty) {
+      final profile = widget.caretakerData!;
+      caretakerName = formatFullNameWithTitle(
+        gender: profile['gender']?.toString(),
+        firstname: profile['firstname']?.toString(),
+        lastname: profile['lastname']?.toString(),
+      );
+      caretakerCitizenId = profile['caretakerId']?.toString() ?? '';
+      caretakerImage = profile['profilephoto']?.toString() ?? '';
+    } else {
+      // 🌟 2. ถ้าไม่มีให้ดึงข้อมูลผ่าน CaretakerService ตามเดิม
+      try {
+        final profile = await _service.getCaretakerProfile(widget.caretakerId);
+        if (profile != null) {
+          caretakerName = formatFullNameWithTitle(
+            gender: profile['gender']?.toString(),
+            firstname: profile['firstname']?.toString(),
+            lastname: profile['lastname']?.toString(),
+          );
+          caretakerCitizenId = profile['caretakerId'] ?? '';
+          caretakerImage = profile['profilephoto'] ?? '';
+        }
+      } catch (e) {
+        print("Error fetching profile: $e");
       }
-    } catch (e) {
-      print("Error fetching profile: $e");
     }
 
     setState(() {
@@ -92,7 +107,7 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
     });
   }
 
-  // 🌟 ฟังก์ชันจัดรูปแบบตัวเลขจำนวนรีวิวให้อ่านง่าย (เผื่อมีรีวิวเยอะๆ เป็นหลักพัน)
+  // 🌟 ฟังก์ชันจัดรูปแบบตัวเลขจำนวนรีวิวให้อ่านง่าย
   String _formatCount(int count) {
     if (count >= 1000) {
       return '${(count / 1000).toStringAsFixed(1)}K';
@@ -126,6 +141,18 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
       } catch (_) {}
     }
 
+    // 🌟 คำนวณคะแนนเฉลี่ยของผู้ดูแล
+    double averageRating = 0.0;
+    if (allReviews.isNotEmpty) {
+      double sum = allReviews.fold(
+        0.0,
+        (prev, r) =>
+            prev +
+            (double.tryParse(r['ratingscore']?.toString() ?? '0') ?? 0.0),
+      );
+      averageRating = sum / allReviews.length;
+    }
+
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
@@ -152,6 +179,95 @@ class _ViewCaretakerReviewState extends State<ViewCaretakerReview> {
             ? Center(child: CircularProgressIndicator(color: primaryColor))
             : Column(
                 children: [
+                  // 🌟 ส่วนแสดงข้อมูลโปรไฟล์ผู้ดูแลคนนี้
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryColor.withOpacity(0.10),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundColor: const Color(0xFFE8D5FF),
+                          backgroundImage: caretakerImageProvider,
+                          child: caretakerImageProvider == null
+                              ? const Icon(
+                                  Icons.person,
+                                  size: 32,
+                                  color: Colors.black54,
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                caretakerName.isNotEmpty
+                                    ? caretakerName
+                                    : 'ผู้ดูแล',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: darkPurple,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 5),
+                              Row(
+                                children: [
+                                  Text(
+                                    averageRating.toStringAsFixed(1),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: Color(0xFF444444),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Row(
+                                    children: List.generate(
+                                      5,
+                                      (i) => Icon(
+                                        i < averageRating.floor()
+                                            ? Icons.star_rounded
+                                            : Icons.star_border_rounded,
+                                        color: const Color(0xFFFFC107),
+                                        size: 16,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '(${allReviews.length} รีวิว)',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // 🌟 ส่วนกรองดาวและรายการรีวิวตามรูปแบบเดิม
                   Expanded(
                     child: Container(
                       width: double.infinity,
