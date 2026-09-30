@@ -263,6 +263,10 @@ class _ListRequestPageState extends State<ListRequestPage> {
               Map<String, dynamic>.from(reqData),
             );
             String statusType = (req.requeststatus ?? 'pending').toLowerCase();
+            
+            // 🌟 ดึงชื่อผู้ป่วยจากฐานข้อมูล (ถ้ามี)
+            String patientName = reqData['patientName']?.toString() ?? 'ไม่ระบุชื่อผู้ป่วย';
+            if (patientName.isEmpty) patientName = 'ไม่ระบุชื่อผู้ป่วย';
 
             String caretakerFullName = 'รอผู้ดูแลตอบรับ';
             String caretakerImage = ''; // 🌟 เก็บรูปลงโมเดลเพื่อใช้ในหน้ารีวิว
@@ -323,6 +327,7 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 req.requestdate,
               ),
               category: req.departmentname ?? 'ทั่วไป',
+              patientName: patientName, // 🌟 เพิ่มข้อมูลชื่อผู้ป่วย
               caregiverName: caretakerFullName,
               caretakerImage: caretakerImage,
               isReviewed: isRev,
@@ -913,7 +918,15 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 ),
                 const SizedBox(height: 6),
 
-                // 🌟 แก้ไขให้ชื่อผู้ให้บริการกลับมาเป็น Text ธรรมดา เพราะย้ายปุ่มรีวิวออกไปแล้ว
+                // 🌟 เพิ่มบรรทัดสำหรับแสดงชื่อผู้ป่วยตรงนี้
+                Text(
+                  'ผู้รับบริการ: ${request.patientName}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+
                 Text(
                   'ผู้ให้บริการ: ${request.caregiverName}',
                   maxLines: 1,
@@ -1036,7 +1049,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
                         ),
                       ),
 
-                    // 🌟 ย้ายปุ่มรีวิวและป้ายรีวิวแล้ว มาวางไว้ตรงนี้
                     if (request.statusType == 'completed') ...[
                       if (request.isReviewed)
                         Container(
@@ -1195,8 +1207,8 @@ class RequestCardData {
   final String date;
   final String submitDate;
   final String category;
+  final String patientName; // 🌟 เพิ่มตัวแปรสำหรับเก็บชื่อผู้ป่วย
   final String caregiverName;
-  // 🌟 เพิ่มตัวแปรสำหรับเก็บภาพไปหน้ารีวิวและสถานะการรีวิว
   final String caretakerImage;
   final bool isReviewed;
   final RequestModel requestModel;
@@ -1208,6 +1220,7 @@ class RequestCardData {
     required this.date,
     required this.submitDate,
     required this.category,
+    required this.patientName,
     required this.caregiverName,
     required this.caretakerImage,
     required this.isReviewed,

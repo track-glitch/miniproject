@@ -61,6 +61,9 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   Map<String, dynamic>? _patientData;
   List<String> _caretakerBusyDates = [];
 
+  // 🌟 เพิ่มตัวแปรสำหรับเก็บ Key ผู้ป่วยที่กำลังทำงานอยู่ (สำคัญมาก)
+  String _activePatientKey = 'Patient';
+
   // ตัวแปรเก็บที่อยู่เดิมจากโปรไฟล์
   String _profileAddress = '';
   double _profileLat = 0.0;
@@ -121,9 +124,13 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
       if (snapshot.exists && snapshot.value != null) {
         final data = Map<String, dynamic>.from(snapshot.value as Map);
 
-        // 🌟 ดึงข้อมูลที่อยู่จากหน้าโปรไฟล์ของผู้ป่วย
-        if (data['Patient'] != null && data['Patient']['Location'] != null) {
-          final locData = data['Patient']['Location'];
+        // 🌟 ดึงข้อมูลจาก activePatientNode ว่าญาติกำลังเลือกใครอยู่ และบันทึกลงตัวแปรคลาส
+        _activePatientKey = data['activePatientNode']?.toString() ?? 'Patient';
+        var activePatientData = data[_activePatientKey] ?? data['Patient'];
+
+        // 🌟 ดึงข้อมูลที่อยู่จากผู้ป่วยคนที่เลือก
+        if (activePatientData != null && activePatientData['Location'] != null) {
+          final locData = activePatientData['Location'];
           _profileAddress = locData['address'] ?? '';
           _profileLat = (locData['latitude'] as num?)?.toDouble() ?? 0.0;
           _profileLng = (locData['longitude'] as num?)?.toDouble() ?? 0.0;
@@ -131,8 +138,8 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
 
         setState(() {
           _relativeData = data;
-          if (data['Patient'] != null) {
-            _patientData = Map<String, dynamic>.from(data['Patient'] as Map);
+          if (activePatientData != null) {
+            _patientData = Map<String, dynamic>.from(activePatientData as Map);
           }
         });
       }
@@ -724,9 +731,23 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                                 widget.caretakerData['caretakerId']
                                     ?.toString() ??
                                 widget.caretakerId;
+
+                            // 🌟 อ่านข้อมูลผู้ป่วยที่ถูกต้องมาแนบไว้ในคำขอ
+                            String pFirstName = _patientData?['firstname'] ?? '';
+                            String pLastName = _patientData?['lastname'] ?? '';
+                            String pGender = _patientData?['gender'] ?? '';
+                            String pPhone = _patientData?['phonenumber'] ?? '';
+
                             await requestRef.set({
                               "requestId": _generatedRequestId,
                               "caretakerId": realCaretakerIdCard,
+
+                              // ✅ แนบข้อมูลผู้ป่วยที่ถูกเลือก (activePatientKey)
+                              "targetPatientKey": _activePatientKey,
+                              "patientName": "$pFirstName $pLastName".trim(),
+                              "patientGender": pGender,
+                              "patientPhone": pPhone,
+
                               "requestdetail": _detailController.text.trim(),
                               "PickupLocation": pickupNode,
                               "DropoffLocation": dropoffNode,

@@ -22,12 +22,16 @@ class ViewRequestDetailPage extends StatefulWidget {
   final RequestModel requestModel;
   final String caretakerName;
   final String loggedUid;
+  
+  // 🌟 1. เพิ่มตัวแปรเพื่อรับข้อมูลผู้ป่วยแบบเต็มก้อนจากหน้า List เข้ามาโดยตรง
+  final Map<String, dynamic>? patientDataOverride;
 
   const ViewRequestDetailPage({
     super.key,
     required this.requestModel,
     required this.caretakerName,
     required this.loggedUid,
+    this.patientDataOverride, // 🌟 รับมาจากข้างนอก
   });
 
   @override
@@ -94,6 +98,13 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   void initState() {
     super.initState();
     isReported = widget.requestModel.report != null;
+    
+    // 🌟 2. ถ้าหน้า List ส่งข้อมูลมาให้ ก็ให้ใช้ของหน้า List เลย 
+    // จะได้ไม่ต้องดึงใหม่ผิดคน
+    if (widget.patientDataOverride != null) {
+      patientData = widget.patientDataOverride;
+    }
+    
     _setInitialStatus();
     _fetchDetailData();
   }
@@ -106,7 +117,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
         currentStatus = RequestStatus.pending;
         break;
       case 'accepted':
-      case 'pending_advice': // 🌟 เพิ่มบรรทัดนี้เข้ามา เพื่อให้รองรับสถานะ pending_advice ด้วย
+      case 'pending_advice':
         currentStatus = RequestStatus.acceptedEarly; 
         break;
       case 'completed':
@@ -129,13 +140,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
         relativeData = Map<String, dynamic>.from(relSnap.value as Map);
       }
 
-      final patSnap = await FirebaseDatabase.instance
-          .ref('Login/${widget.loggedUid}/Relative/Patient')
-          .get();
-      if (patSnap.exists && patSnap.value is Map) {
-        patientData = Map<String, dynamic>.from(patSnap.value as Map);
-      }
-
       final requestSnap = await FirebaseDatabase.instance
           .ref(
             'Login/${widget.loggedUid}/Relative/Request/${widget.requestModel.requestId}',
@@ -143,6 +147,17 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
           .get();
       if (requestSnap.exists && requestSnap.value is Map) {
         final reqData = requestSnap.value as Map;
+        
+        // 🌟 3. ถ้าไม่มีคนส่งข้อมูล override มา ให้เช็คว่าคำขอนี้ของผู้ป่วยคนไหน แล้วไปดึงคนนั้น
+        if (patientData == null && relativeData != null) {
+          String targetPatientKey = reqData['targetPatientKey']?.toString() ?? 'Patient';
+          if (relativeData![targetPatientKey] != null) {
+            patientData = Map<String, dynamic>.from(relativeData![targetPatientKey]);
+          } else {
+             patientData = Map<String, dynamic>.from(relativeData!['Patient']);
+          }
+        }
+        
         setState(() {
           doctorAdviceData = reqData['DoctorAdvice'];
         });
@@ -192,10 +207,8 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   void _navigateToDoctorAdvicePage() {
     if (doctorAdviceData == null) return;
 
-    // 🌟 ดึงข้อมูลจาก State ปัจจุบันมาใช้
     var req = widget.requestModel;
 
-    // คำนวณชื่อผู้ป่วยอีกครั้งเพื่อให้ใช้ในฟังก์ชันนี้ได้
     String patientFullName = formatFullNameWithTitle(
       gender: patientData?['gender']?.toString(),
       firstname: patientData?['firstname']?.toString(),
@@ -208,7 +221,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
         builder: (context) => ViewDoctorAdvicePage(
           loggedUid: widget.loggedUid,
           doctorAdviceData: doctorAdviceData,
-          // 🌟 แนบข้อมูลบริการปัจจุบันมาให้หน้านี้ใช้
           patientName: patientFullName,
           dateTime:
               '${_formatThaiDateFull(req.appointmentdate)} ${_formatTime(req.appointmenttime)}',
@@ -726,20 +738,46 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
 
   String _calculateAge(String? birthdate) {
     if (birthdate == null || birthdate.trim().isEmpty) return '-';
-    DateTime? birth = DateTime.tryParse(birthdate);
-    if (birth == null && birthdate.contains('/')) {
+    
+    DateTime? birth;
+    
+    // 1. กรณีที่วันที่ถูกเก็บมาแบบ dd/MM/yyyy (เช่น 15/05/2528)
+    if (birthdate.contains('/')) {
       final parts = birthdate.split('/');
       if (parts.length == 3) {
         final day = int.tryParse(parts[0]);
         final month = int.tryParse(parts[1]);
-        final year = int.tryParse(parts[2]);
+        int? year = int.tryParse(parts[2]);
+        
         if (day != null && month != null && year != null) {
+          // ถ้าปีเกิน 2400 แปลว่าเป็น พ.ศ. ให้ลบ 543 เพื่อแปลงเป็น ค.ศ.
+          if (year > 2400) {
+            year -= 543;
+          }
           birth = DateTime(year, month, day);
         }
       }
+    } 
+    // 2. กรณีที่เก็บแบบ ISO8601 string (เช่น 1985-05-15T...)
+    else {
+      birth = DateTime.tryParse(birthdate);
+      // ดักเผื่อกรณี ISO เก็บมาเป็นปี พ.ศ.
+      if (birth != null && birth.year > 2400) {
+        birth = DateTime(birth.year - 543, birth.month, birth.day);
+      }
     }
+
     if (birth == null) return '-';
-    return '${DateTime.now().year - birth.year}';
+
+    // 3. คำนวณอายุโดยเช็คเดือนและวันเกิดให้เป๊ะขึ้น
+    DateTime today = DateTime.now();
+    int age = today.year - birth.year;
+    if (today.month < birth.month || 
+       (today.month == birth.month && today.day < birth.day)) {
+      age--;
+    }
+    
+    return age.toString();
   }
 
   Widget _buildSectionWrapper({
@@ -802,13 +840,11 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       statusColor = const Color(0xFF2ECC71);
       statusBgColor = const Color(0xFFE9F7EF);
     } else if (currentStatus == RequestStatus.completed) {
-      // 🌟 เปลี่ยนคำว่า สิ้นสุดบริการ เป็น เสร็จสิ้น
       statusText = 'เสร็จสิ้น';
       statusColor = const Color(0xFF3498DB);
       statusBgColor = const Color(0xFFEBF5FB);
     } else if (currentStatus == RequestStatus.cancelled) {
-      // 🌟 เปลี่ยนคำว่า ยกเลิก เป็น ยกเลิก/ปฏิเสธ
-      statusText = 'ยกเลิก/ปฏิเสธ'; // แก้ไขตรงนี้ครับ
+      statusText = 'ยกเลิก/ปฏิเสธ';
       statusColor = const Color(0xFFE74C3C);
       statusBgColor = const Color(0xFFFDEDEC);
     }
@@ -1130,7 +1166,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     );
   }
 
-  // 🌟 ถอดปุ่มให้คะแนนรีวิวออกไปจากหน้านี้แล้ว
   Widget _buildBottomActionButtons() {
     if (currentStatus == RequestStatus.cancelled) {
       return const SizedBox.shrink();

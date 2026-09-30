@@ -135,8 +135,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   }
 
   Future<void> _loadUserNameAndLocation() async {
-    String currentUid =
-        widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+    String currentUid = widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
     if (currentUid.isEmpty) return;
 
     try {
@@ -162,11 +161,11 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
           if (isMatch) {
             var childData = allUsers[key];
             if (childData is Map && childData.containsKey('Relative')) {
-              var relNode = Map<String, dynamic>.from(
-                childData['Relative'] as Map,
-              );
+              var relNode = Map<String, dynamic>.from(childData['Relative'] as Map);
 
-              var patientNode = relNode['Patient'];
+              // 🌟 เช็ค activePatientNode ว่าเลือกผู้ป่วยคนไหนอยู่
+              String activeNode = relNode['activePatientNode']?.toString() ?? 'Patient';
+              var patientNode = relNode[activeNode] ?? relNode['Patient'];
 
               setState(() {
                 if (patientNode != null && patientNode is Map) {
@@ -184,8 +183,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                 }
 
                 String rawPhoto = '';
-                if (patientNode != null &&
-                    patientNode['patientphoto'] != null) {
+                if (patientNode != null && patientNode['patientphoto'] != null) {
                   rawPhoto = patientNode['patientphoto'].toString();
                 } else {
                   rawPhoto = relNode['profilephoto']?.toString() ?? '';
@@ -200,28 +198,19 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                 if (pad > 0) _userProfilePhoto += '=' * (4 - pad);
               });
 
-              // 🌟 ค้นหาพิกัดตำแหน่งของผู้ป่วย
-              double? pLat = _extractCoordinate(
-                      patientNode is Map ? patientNode : null,
-                      ['latitude', 'lat']) ??
+              // 🌟 ค้นหาพิกัดตำแหน่งของผู้ป่วย (คนที่เลือกอยู่)
+              double? pLat = _extractCoordinate(patientNode is Map ? patientNode : null, ['latitude', 'lat']) ??
                   _extractCoordinate(relNode, ['latitude', 'lat']);
-              double? pLng = _extractCoordinate(
-                      patientNode is Map ? patientNode : null,
-                      ['longitude', 'lng', 'long']) ??
+              double? pLng = _extractCoordinate(patientNode is Map ? patientNode : null, ['longitude', 'lng', 'long']) ??
                   _extractCoordinate(relNode, ['longitude', 'lng', 'long']);
 
-              // ถ้าไม่มีพิกัดตัวเลข ให้ลองแปลงจากที่อยู่ด้วย Geocoding
               if (pLat == null || pLng == null) {
-                String pAddress = (patientNode is Map
-                            ? patientNode['address']
-                            : null)
-                        ?.toString() ??
+                String pAddress = (patientNode is Map ? patientNode['address'] : null)?.toString() ??
                     relNode['address']?.toString() ??
                     '';
                 if (pAddress.trim().isNotEmpty) {
                   try {
-                    List<Location> locs =
-                        await geocoding.locationFromAddress(pAddress);
+                    List<Location> locs = await geocoding.locationFromAddress(pAddress);
                     if (locs.isNotEmpty) {
                       pLat = locs.first.latitude;
                       pLng = locs.first.longitude;
@@ -230,14 +219,11 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                 }
               }
 
-              // ถ้ายังไม่มีพิกัด ให้ลองสำรองด้วยตำแหน่ง GPS ปัจจุบันของอุปกรณ์
               if (pLat == null || pLng == null) {
                 try {
-                  bool serviceEnabled =
-                      await Geolocator.isLocationServiceEnabled();
+                  bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
                   if (serviceEnabled) {
-                    LocationPermission permission =
-                        await Geolocator.checkPermission();
+                    LocationPermission permission = await Geolocator.checkPermission();
                     if (permission == LocationPermission.whileInUse ||
                         permission == LocationPermission.always) {
                       Position pos = await Geolocator.getCurrentPosition(
@@ -261,12 +247,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                 if (requests is Map) {
                   requests.forEach((reqId, reqData) {
                     if (reqData is Map) {
-                      String status = (reqData['requeststatus'] ?? '')
-                          .toString()
-                          .toLowerCase();
-                      if (status == 'pending' ||
-                          status == 'accepted' ||
-                          status == 'pending_advice') {
+                      String status = (reqData['requeststatus'] ?? '').toString().toLowerCase();
+                      if (status == 'pending' || status == 'accepted' || status == 'pending_advice') {
                         String dateStr = reqData['appointmentdate'] ?? '';
                         if (dateStr.isNotEmpty) {
                           try {
@@ -1712,10 +1694,11 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                     }
 
                     PatientModel patient;
-                    if (relativeMap.containsKey('Patient')) {
-                      final pData = Map<String, dynamic>.from(
-                        relativeMap['Patient'] as Map,
-                      );
+                    String activeNode = relativeMap['activePatientNode']?.toString() ?? 'Patient';
+                    var targetPatientNode = relativeMap[activeNode] ?? relativeMap['Patient'];
+
+                    if (targetPatientNode != null) {
+                      final pData = Map<String, dynamic>.from(targetPatientNode as Map);
                       patient = PatientModel(
                         patientId: pData['patientId'] ?? '',
                         patientphoto: pData['patientphoto'] ?? '',

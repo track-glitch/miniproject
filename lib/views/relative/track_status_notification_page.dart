@@ -15,12 +15,14 @@ class TrackStatusNotificationPage extends StatefulWidget {
   final String? loggedUid;
   final RequestModel? requestModel;
   final String? caretakerName;
+  final String? patientName; // 🌟 1. เพิ่มตัวรับชื่อผู้ป่วย
 
   const TrackStatusNotificationPage({
     super.key,
     this.loggedUid,
     this.requestModel,
     this.caretakerName,
+    this.patientName,
   });
 
   @override
@@ -32,6 +34,7 @@ class _TrackStatusNotificationPageState
     extends State<TrackStatusNotificationPage> {
   List<_NotificationItem> _items = [];
   bool _isLoading = true;
+  String _currentPatientName = ''; // 🌟 2. ตัวแปรเก็บชื่อผู้ป่วยสำหรับแสดงผล
 
   static const Color primaryPurple = Color(0xFF7D3C98);
   static const Color darkPurple = Color(0xFF7D3C98);
@@ -43,6 +46,7 @@ class _TrackStatusNotificationPageState
   @override
   void initState() {
     super.initState();
+    _currentPatientName = widget.patientName ?? '';
     _fetchNotifications();
   }
 
@@ -53,6 +57,19 @@ class _TrackStatusNotificationPageState
     }
 
     try {
+      // 🌟 3. ไปดึงข้อมูล Request มาเพิ่มเติม เพื่อดึงชื่อผู้ป่วย (กรณีที่ไม่ได้ส่งผ่านพารามิเตอร์มา)
+      final reqSnap = await FirebaseDatabase.instance
+          .ref('Login/${widget.loggedUid}/Relative/Request/${widget.requestModel!.requestId}')
+          .get();
+      
+      if (reqSnap.exists && reqSnap.value is Map) {
+        final reqData = reqSnap.value as Map;
+        if (_currentPatientName.isEmpty) {
+          _currentPatientName = reqData['patientName']?.toString() ?? 'ไม่ระบุชื่อผู้ป่วย';
+        }
+      }
+
+      // ดึงแจ้งเตือน
       final snap = await FirebaseDatabase.instance
           .ref(
             'Login/${widget.loggedUid}/Relative/Request/${widget.requestModel!.requestId}/Notification',
@@ -213,10 +230,16 @@ class _TrackStatusNotificationPageState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // 🌟 4. เพิ่มชื่อผู้ป่วย
+                    _buildCompactInfo(
+                      'ผู้รับบริการ',
+                      _currentPatientName.isNotEmpty ? _currentPatientName : 'ไม่ระบุชื่อ',
+                      isBold: true,
+                    ),
+                    const SizedBox(height: 12),
                     _buildCompactInfo(
                       'ผู้ให้บริการ',
-                      widget.caretakerName ?? 'ไม่ระบุ',
-                      isBold: true,
+                      widget.caretakerName ?? 'รอผู้ดูแลตอบรับ',
                     ),
                     const SizedBox(height: 12),
                     _buildCompactInfo('สถานที่', req.hospitalname ?? '-'),
@@ -255,7 +278,7 @@ class _TrackStatusNotificationPageState
           style: TextStyle(
             fontSize: 13,
             fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-            color: Colors.black87,
+            color: isBold ? primaryPurple : Colors.black87, // ให้ชื่อผู้รับบริการเด่นขึ้น
           ),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
