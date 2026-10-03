@@ -83,6 +83,7 @@ flutter:
     - assets/data/districts.json
     - assets/data/provinces.json
     - assets/data/subdistricts.json
+    - assets/data/hospitals.json
     - .env
     
   fonts:

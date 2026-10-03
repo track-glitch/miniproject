@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:math';
 import 'dart:convert';
 import 'package:miniproject/widgets/location_picker_widget.dart';
+import '../../models/hospital_model.dart';
+import '../../models/department_model.dart';
 
 class ServiceRequestPage extends StatefulWidget {
   final Map<String, dynamic> caretakerData;
@@ -51,8 +54,11 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   bool _pickupHasPinned = false;
   bool _pickupMapExpanded = false;
 
-  // 🌟 สำหรับจุดส่ง (Dropoff)
-  LatLng _dropoffLocation = const LatLng(13.7563, 100.5018);
+  // 🌟 เพิ่มตัวแปรสำหรับโรงพยาบาล
+  List<HospitalModel> _hospitals = [];
+  HospitalModel? _selectedHospital;
+
+  LatLng _dropoffLocation = const LatLng(18.789735, 98.974654);
   bool _dropoffHasPinned = false;
   bool _dropoffMapExpanded = false;
 
@@ -100,9 +106,39 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
     _selectedDate = widget.initialSelectedDate ?? DateTime.now();
 
     _generatedRequestId = _generateCustomRequestId();
-
+    _loadHospitalData();
     _fetchProfileData();
     _fetchCaretakerBusyDates();
+  }
+
+  // 🌟 ฟังก์ชันโหลดข้อมูลโรงพยาบาลจากไฟล์ assets/hospitals.json
+  Future<void> _loadHospitalData() async {
+    try {
+      // 🌟 ระบุ Path ให้ตรงกับโฟลเดอร์ที่เก็บไฟล์ไว้ (เช่น assets/data/hospitals.json หรือ assets/hospitals.json)
+      String jsonString = await rootBundle.loadString(
+        'assets/data/hospitals.json',
+      );
+      List<dynamic> jsonResponse = jsonDecode(jsonString);
+
+      if (mounted) {
+        setState(() {
+          _hospitals = jsonResponse.map((data) {
+            return HospitalModel(
+              hospitalId: data['id'].toString(),
+              hospitalname: data['hospital_name'],
+              latitude: data['latitude'] != null
+                  ? (data['latitude'] as num).toDouble()
+                  : null,
+              longitude: data['longitude'] != null
+                  ? (data['longitude'] as num).toDouble()
+                  : null,
+            );
+          }).toList();
+        });
+      }
+    } catch (e) {
+      print("Error loading hospital data: $e");
+    }
   }
 
   String _generateCustomRequestId() {
@@ -520,6 +556,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                 const SizedBox(height: 20),
 
                 // ── โรงพยาบาลและรายละเอียด ──
+                // ── โรงพยาบาลและรายละเอียด ──
                 Row(
                   children: [
                     Text('โรงพยาบาลที่ต้องการไปพบแพทย์', style: _labelStyle()),
@@ -534,30 +571,61 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                TextFormField(
-                  controller: _hospitalController,
-                  style: const TextStyle(fontSize: 14),
-                  decoration: _inputDecoration('ชื่อโรงพยาบาล'),
-                  validator: (value) =>
-                      value!.isEmpty ? 'กรุณาระบุโรงพยาบาล' : null,
-                ),
-                const SizedBox(height: 16),
-                _buildAddressAndPinFields(
-                  addressController: null,
-                  location: _dropoffLocation,
-                  hasPinned: _dropoffHasPinned,
-                  isExpanded: _dropoffMapExpanded,
-                  showAddressField: false,
-                  pinButtonText: 'ระบุพิกัดจุดหมายปลายทาง',
-                  onToggleMap: () => setState(
-                    () => _dropoffMapExpanded = !_dropoffMapExpanded,
-                  ),
-                  onLocationChanged: (loc, addr) {
+
+                // 🌟 เปลี่ยนเป็น Autocomplete สำหรับเลือกโรงพยาบาล
+                Autocomplete<HospitalModel>(
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    if (textEditingValue.text.isEmpty) {
+                      return _hospitals; // แสดงทั้งหมดถ้ายังไม่พิมพ์
+                    }
+                    return _hospitals.where(
+                      (hospital) => hospital.hospitalname!.contains(
+                        textEditingValue.text,
+                      ),
+                    );
+                  },
+                  displayStringForOption: (HospitalModel option) =>
+                      option.hospitalname ?? '',
+                  onSelected: (HospitalModel selection) {
                     setState(() {
-                      _dropoffLocation = loc;
+                      _selectedHospital = selection;
+                      _hospitalController.text = selection.hospitalname ?? '';
+                      _dropoffLocation = LatLng(
+                        selection.latitude ?? 0.0,
+                        selection.longitude ?? 0.0,
+                      );
                       _dropoffHasPinned = true;
                     });
                   },
+                  fieldViewBuilder:
+                      (context, controller, focusNode, onEditingComplete) {
+                        return TextFormField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          onEditingComplete: onEditingComplete,
+                          style: const TextStyle(fontSize: 14),
+                          decoration:
+                              _inputDecoration(
+                                'พิมพ์ค้นหา หรือ เลือกโรงพยาบาล...',
+                              ).copyWith(
+                                suffixIcon: const Icon(
+                                  Icons.arrow_drop_down,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                          validator: (value) => _selectedHospital == null
+                              ? 'กรุณาเลือกโรงพยาบาลจากรายการ'
+                              : null,
+                          onChanged: (val) {
+                            // รีเซ็ตถ้ามีการลบ/พิมพ์ใหม่ แล้วไม่ตรงกับตัวเลือก
+                            if (_selectedHospital != null &&
+                                val != _selectedHospital!.hospitalname) {
+                              _selectedHospital = null;
+                              _dropoffHasPinned = false;
+                            }
+                          },
+                        );
+                      },
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -661,11 +729,12 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                             );
                             return;
                           }
-                          if (!_dropoffHasPinned) {
+
+                          if (!_dropoffHasPinned || _selectedHospital == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(
-                                  "กรุณาปักหมุดพิกัดจุดส่ง (โรงพยาบาล)",
+                                  "กรุณาเลือกโรงพยาบาลปลายทางจากรายการ",
                                 ),
                                 backgroundColor: Colors.red,
                               ),
@@ -674,7 +743,8 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                           }
 
                           if (_formKey.currentState!.validate() &&
-                              _selectedTime != null) {
+                              _selectedTime != null &&
+                              _selectedHospital != null) {
                             String uid =
                                 widget.loggedUid ??
                                 FirebaseAuth.instance.currentUser!.uid;
@@ -696,48 +766,32 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                               _selectedTime!.minute,
                             );
 
-                            Map<String, dynamic> pickupNode = {};
-                            if (_pickupOption == 1) {
-                              pickupNode = {
-                                'locationId': 'pickup_loc',
-                                'address': _profileAddress,
-                                'latitude': _profileLat,
-                                'longitude': _profileLng,
-                              };
-                            } else {
-                              pickupNode = {
-                                'locationId': 'pickup_loc',
-                                'address': _pickupAddressController.text.trim(),
-                                'latitude': _pickupLocation.latitude,
-                                'longitude': _pickupLocation.longitude,
-                              };
-                            }
-
-                            Map<String, dynamic> dropoffNode = {
-                              'locationId': 'dropoff_loc',
-                              'address': _hospitalController.text.trim(),
-                              'latitude': _dropoffLocation.latitude,
-                              'longitude': _dropoffLocation.longitude,
-                            };
+                            DepartmentModel departmentNode = DepartmentModel(
+                              departmentId:
+                                  "DEP-${DateTime.now().millisecondsSinceEpoch}",
+                              departmentname: _departmentController.text.trim(),
+                              hospital: _selectedHospital,
+                            );
 
                             String realCaretakerIdCard =
                                 widget.caretakerData['caretakerId']
                                     ?.toString() ??
                                 widget.caretakerId;
+
+                            // 🌟 บันทึกลง Firebase แบบโครงสร้างใหม่ ไม่มี pickup/dropoff
                             await requestRef.set({
                               "requestId": _generatedRequestId,
                               "caretakerId": realCaretakerIdCard,
+                              "pickupaddress": _profileAddress,
                               "requestdetail": _detailController.text.trim(),
-                              "PickupLocation": pickupNode,
-                              "DropoffLocation": dropoffNode,
-                              "hospitalname": _hospitalController.text.trim(),
-                              "departmentname": _departmentController.text
-                                  .trim(),
+                              "Department": departmentNode.toJson(),
                               "appointmentdate": _selectedDate
                                   .toIso8601String(),
                               "appointmenttime": apptDT.toIso8601String(),
                               "requestdate": DateTime.now().toIso8601String(),
                               "requeststatus": "pending",
+                              "longitude": _profileLng,
+                              "latitude": _profileLat,
                             });
 
                             if (!mounted) return;
@@ -813,173 +867,40 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
           Row(
             children: [
               Text(
-                '1. จุดนัดหมายรับส่งผู้ป่วย',
+                'สรุปข้อมูลการเดินทาง',
                 style: _labelStyle().copyWith(fontSize: 14),
               ),
-              const Text(
-                ' *',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.location_on, color: Colors.blue, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'จุดรับ: ตามที่อยู่ในโปรไฟล์ของผู้ป่วย\n(${_profileAddress.isNotEmpty ? _profileAddress : "ไม่พบที่อยู่"})',
+                  style: const TextStyle(fontSize: 13, height: 1.4),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-
-          RadioListTile(
-            title: Text(
-              'เลือกจุดรับตามหน้าโปรไฟล์\n(${_profileAddress.isNotEmpty ? _profileAddress : 'ไม่พบข้อมูลที่อยู่'})',
-              style: const TextStyle(fontSize: 13, height: 1.4),
-            ),
-            value: 1,
-            groupValue: _pickupOption,
-            activeColor: primaryColor,
-            contentPadding: EdgeInsets.zero,
-            onChanged: (val) => setState(() => _pickupOption = val as int),
-          ),
-          RadioListTile(
-            title: const Text(
-              'เลือกระบุพิกัดและจุดรับส่งใหม่',
-              style: TextStyle(fontSize: 13),
-            ),
-            value: 2,
-            groupValue: _pickupOption,
-            activeColor: primaryColor,
-            contentPadding: EdgeInsets.zero,
-            onChanged: (val) => setState(() => _pickupOption = val as int),
-          ),
-
-          if (_pickupOption == 2)
-            _buildAddressAndPinFields(
-              addressController: _pickupAddressController,
-              location: _pickupLocation,
-              hasPinned: _pickupHasPinned,
-              isExpanded: _pickupMapExpanded,
-              showAddressField: true,
-              pinButtonText: 'ระบุพิกัดจุดรับส่ง',
-              onToggleMap: () =>
-                  setState(() => _pickupMapExpanded = !_pickupMapExpanded),
-              onLocationChanged: (loc, addr) {
-                setState(() {
-                  _pickupLocation = loc;
-                  _pickupHasPinned = true;
-                });
-              },
-            ),
-        ],
-      ),
-    );
-  }
-
-  // ---------------- วิดเจ็ตรวม: สร้างช่องกรอกที่อยู่ + ปุ่มแผนที่ ----------------
-  Widget _buildAddressAndPinFields({
-    TextEditingController? addressController,
-    required LatLng location,
-    required bool hasPinned,
-    required bool isExpanded,
-    required bool showAddressField,
-    required String pinButtonText,
-    required VoidCallback onToggleMap,
-    required Function(LatLng, String) onLocationChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (showAddressField && addressController != null) ...[
-          TextFormField(
-            controller: addressController,
-            maxLines: 2,
-            style: const TextStyle(fontSize: 14),
-            decoration: _inputDecoration(
-              'บ้านเลขที่ ถนน ตำบล อำเภอ จังหวัด เลขไปรษณีย์',
-            ),
-            validator: (value) => (value == null || value.isEmpty)
-                ? 'กรุณาระบุรายละเอียดที่อยู่'
-                : null,
-          ),
           const SizedBox(height: 12),
-        ],
-
-        _buildPinButton(
-          hasPinned: hasPinned,
-          isExpanded: isExpanded,
-          defaultText: pinButtonText,
-          onTap: onToggleMap,
-        ),
-
-        AnimatedSize(
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeInOut,
-          alignment: Alignment.topCenter,
-          child: isExpanded
-              ? Container(
-                  margin: const EdgeInsets.only(top: 8),
-                  height: 260,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: LocationPickerWidget(
-                      initialLocation: location,
-                      initialAddress: addressController?.text ?? '',
-                      showAddressTextField: false,
-                      onLocationChanged: onLocationChanged,
-                    ),
-                  ),
-                )
-              : const SizedBox.shrink(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPinButton({
-    required bool hasPinned,
-    required bool isExpanded,
-    required String defaultText,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: hasPinned ? lightPurple : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: hasPinned ? primaryColor : Colors.grey.shade300,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.location_on,
-              color: hasPinned ? primaryColor : Colors.grey.shade700,
-              size: 22,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                hasPinned ? 'เลือกพิกัดแล้ว (แตะเพื่อแก้ไข)' : defaultText,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: hasPinned ? FontWeight.w600 : FontWeight.normal,
-                  color: hasPinned ? primaryColor : Colors.grey.shade700,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.location_on, color: Colors.red, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'จุดส่ง: ${_selectedHospital?.hospitalname ?? "กรุณาเลือกโรงพยาบาลจากรายการด้านบน"}',
+                  style: const TextStyle(fontSize: 13, height: 1.4),
                 ),
               ),
-            ),
-            AnimatedRotation(
-              turns: isExpanded ? 0.5 : 0,
-              duration: const Duration(milliseconds: 200),
-              child: Icon(Icons.keyboard_arrow_down, color: primaryColor),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "hospital_name": "โรงพยาบาลมหาราชนครเชียงใหม่",
+    "latitude": 18.789735,
+    "longitude": 98.974654
+  },
+  {
+    "id": 2,
+    "hospital_name": "โรงพยาบาลเทศบาลนครเชียงใหม่",
+    "latitude": 18.788646,
+    "longitude": 99.001756
+  },
+  {
+    "id": 3,
+    "hospital_name": "โรงพยาบาลนครพิงค์",
+    "latitude": 18.852324,
+    "longitude": 98.968358
+  },
+  {
+    "id": 4,
+    "hospital_name": "โรงพยาบาลสันกำแพง",
+    "latitude": 18.715741,
+    "longitude": 99.122776
+  },
+  {
+    "id": 5,
+    "hospital_name": "โรงพยาบาลสันทราย",
+    "latitude": 18.920993,
+    "longitude": 98.994225
+  },
+  {
+    "id": 6,
+    "hospital_name": "โรงพยาบาลกรุงเทพเชียงใหม่",
+    "latitude": 18.788711,
+    "longitude": 99.026184
+  },
+  {
+    "id": 7,
+    "hospital_name": "โรงพยาบาลราชเวช เชียงใหม่",
+    "latitude": 18.766898,
+    "longitude": 99.00432
+  },
+  {
+    "id": 8,
+    "hospital_name": "โรงพยาบาลเชียงใหม่ราม",
+    "latitude": 18.794797,
+    "longitude": 98.977983
+  },
+  {
+    "id": 9,
+    "hospital_name": "โรงพยาบาลไกลหมอ เชียงใหม่",
+    "latitude": 18.761037,
+    "longitude": 98.972741
+  },
+  {
+    "id": 10,
+    "hospital_name": "ศูนย์การแพทย์ศรีพัฒน์",
+    "latitude": 18.790708,
+    "longitude": 98.970897
+  }
+]

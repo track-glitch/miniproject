@@ -243,11 +243,11 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
 
       RequestCard card = RequestCard(
         id: req.requestId ?? 'Unknow',
-        serviceName: req.hospitalname ?? 'ไม่ระบุสถานที่',
+        serviceName: req.department?.hospital?.hospitalname ?? 'ไม่ระบุสถานที่',
         statusType: statusType,
         date: _formatThaiDateExact(req.appointmentdate, req.appointmenttime),
         submitDate: _formatThaiDateExact(req.requestdate, req.requestdate),
-        category: req.departmentname ?? 'ทั่วไป',
+        category: req.department?.departmentname ?? 'ทั่วไป',
         patient: patientName.isEmpty ? 'ไม่ระบุชื่อผู้ป่วย' : patientName,
         hasAlert: hasAlert,
         requestModel: req,

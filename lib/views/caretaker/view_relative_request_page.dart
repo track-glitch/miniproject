@@ -144,15 +144,24 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
         currentStatus = RequestStatus.pending;
     }
 
-    var pickup = widget.requestData.requestModel.pickuplocation;
-    var dropoff = widget.requestData.requestModel.dropofflocation;
-    if (pickup != null && pickup.latitude != null && pickup.longitude != null) {
-      pointA = LatLng(pickup.latitude!, pickup.longitude!);
+    var reqData = widget.requestData.requestModel;
+
+    double? lat = reqData.latitude != null
+        ? (reqData.latitude as num).toDouble()
+        : null;
+    double? lng = reqData.longitude != null
+        ? (reqData.longitude as num).toDouble()
+        : null;
+    if (lat != null && lng != null) {
+      pointA = LatLng(lat, lng);
     }
-    if (dropoff != null &&
-        dropoff.latitude != null &&
-        dropoff.longitude != null) {
-      pointB = LatLng(dropoff.latitude!, dropoff.longitude!);
+
+    // 🌟 2. ดึงพิกัดจุดส่ง (pointB) จาก Department -> Hospital
+    var hospital = widget.requestData.requestModel.department?.hospital;
+    if (hospital != null &&
+        hospital.latitude != null &&
+        hospital.longitude != null) {
+      pointB = LatLng(hospital.latitude!, hospital.longitude!);
     }
 
     _getRoute();
@@ -565,9 +574,15 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     String relLine = rel['lineId'] ?? 'ไม่มีข้อมูล';
 
     String requestDetail = reqModel.requestdetail ?? 'ไม่มีรายละเอียดเพิ่มเติม';
-    String pickupAddress = reqModel.pickuplocation?.address ?? 'ไม่ระบุจุดรับ';
+
+    // 🌟 ดึงชื่อที่อยู่จุดรับ จากโปรไฟล์ผู้ป่วย
+    String pickupAddress = pat['Location'] != null
+        ? pat['Location']['address'] ?? 'ไม่ระบุที่อยู่ผู้ป่วย'
+        : 'ไม่ระบุที่อยู่ผู้ป่วย';
+
+    // 🌟 ดึงชื่อโรงพยาบาลจุดส่ง จาก Department -> Hospital
     String dropoffAddress =
-        reqModel.dropofflocation?.address ?? 'ไม่ระบุจุดส่ง';
+        reqModel.department?.hospital?.hospitalname ?? 'ไม่ระบุโรงพยาบาล';
 
     String statusText = 'อยู่ระหว่างรอ';
     Color statusColor = Colors.grey;

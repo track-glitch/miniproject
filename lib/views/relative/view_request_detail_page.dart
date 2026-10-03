@@ -107,7 +107,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
         break;
       case 'accepted':
       case 'pending_advice': // 🌟 เพิ่มบรรทัดนี้เข้ามา เพื่อให้รองรับสถานะ pending_advice ด้วย
-        currentStatus = RequestStatus.acceptedEarly; 
+        currentStatus = RequestStatus.acceptedEarly;
         break;
       case 'completed':
         currentStatus = RequestStatus.completed;
@@ -212,8 +212,8 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
           patientName: patientFullName,
           dateTime:
               '${_formatThaiDateFull(req.appointmentdate)} ${_formatTime(req.appointmenttime)}',
-          hospital: req.hospitalname,
-          department: req.departmentname,
+          hospital: req.department?.hospital?.hospitalname,
+          department: req.department?.departmentname,
         ),
       ),
     );
@@ -915,13 +915,14 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                             Expanded(
                               child: _buildDocField(
                                 'โรงพยาบาล',
-                                req.hospitalname ?? 'ไม่ระบุสถานที่',
+                                req.department?.hospital?.hospitalname ??
+                                    'ไม่ระบุสถานที่',
                               ),
                             ),
                             Expanded(
                               child: _buildDocField(
                                 'แผนก',
-                                req.departmentname ?? '-',
+                                req.department?.departmentname ?? '-',
                               ),
                             ),
                           ],

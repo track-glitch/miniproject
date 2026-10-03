@@ -148,8 +148,10 @@ class _ListRequestPageState extends State<ListRequestPage> {
                     "${relNode['firstname'] ?? ''} ${relNode['lastname'] ?? ''}"
                         .trim();
 
-              String rawPhoto = relNode['profilephoto']?.toString() ??
-                                  relNode['Patient']?['patientphoto']?.toString() ?? '';
+                String rawPhoto =
+                    relNode['profilephoto']?.toString() ??
+                    relNode['Patient']?['patientphoto']?.toString() ??
+                    '';
                 _userProfilePhoto = rawPhoto
                     .replaceAll('\n', '')
                     .replaceAll('\r', '')
@@ -157,7 +159,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
                     .trim();
                 int pad = _userProfilePhoto.length % 4;
                 if (pad > 0) _userProfilePhoto += '=' * (4 - pad);
-
               });
             }
             break;
@@ -312,7 +313,8 @@ class _ListRequestPageState extends State<ListRequestPage> {
 
             RequestCardData card = RequestCardData(
               id: req.requestId ?? 'Unknow',
-              serviceName: req.hospitalname ?? 'ไม่ระบุสถานที่',
+              serviceName:
+                  req.department?.hospital?.hospitalname ?? 'ไม่ระบุสถานที่',
               statusType: statusType,
               date: _formatThaiDateExact(
                 req.appointmentdate,
@@ -322,7 +324,7 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 req.requestdate,
                 req.requestdate,
               ),
-              category: req.departmentname ?? 'ทั่วไป',
+              category: req.department?.departmentname ?? 'ทั่วไป',
               caregiverName: caretakerFullName,
               caretakerImage: caretakerImage,
               isReviewed: isRev,
@@ -438,7 +440,11 @@ class _ListRequestPageState extends State<ListRequestPage> {
                             ? MemoryImage(base64Decode(_userProfilePhoto))
                             : null,
                         child: _userProfilePhoto.isEmpty
-                            ? const Icon(Icons.person, color: Colors.white, size: 11)
+                            ? const Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 11,
+                              )
                             : null,
                       ),
                       const SizedBox(width: 5),
@@ -578,7 +584,7 @@ class _ListRequestPageState extends State<ListRequestPage> {
                   : ListView.builder(
                       controller: _scrollController,
                       // บังคับให้เลื่อนเพื่อรีเฟรชได้เสมอแม้ข้อมูลจะมีไม่เต็มหน้าจอ
-                      physics: const AlwaysScrollableScrollPhysics(), 
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       itemCount:
                           displayList.length + (_hasMoreInCurrentTab() ? 1 : 0),

@@ -218,7 +218,10 @@ class _TrackStatusNotificationPageState
                       isBold: true,
                     ),
                     const SizedBox(height: 12),
-                    _buildCompactInfo('สถานที่', req.hospitalname ?? '-'),
+                    _buildCompactInfo(
+                      'สถานที่',
+                      req.department?.hospital?.hospitalname ?? '-',
+                    ),
                   ],
                 ),
               ),
@@ -229,7 +232,10 @@ class _TrackStatusNotificationPageState
                   children: [
                     _buildCompactInfo('วันที่นัดหมาย', apptStr),
                     const SizedBox(height: 12),
-                    _buildCompactInfo('แผนก', req.departmentname ?? '-'),
+                    _buildCompactInfo(
+                      'แผนก',
+                      req.department?.departmentname ?? '-',
+                    ),
                   ],
                 ),
               ),
