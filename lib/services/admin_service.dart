@@ -755,7 +755,9 @@ class AdminService {
         phonenumber: item['relPhone'],
         lineId: item['relLineId'],
         relationship: item['relationship'],
-        patient: patient,
+        patients: {
+          patient.patientId ?? idCard: patient,
+        },
       );
 
       String targetKey = authUid.isNotEmpty ? authUid : idCard;

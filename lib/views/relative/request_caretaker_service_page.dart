@@ -124,16 +124,49 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
       if (snapshot.exists && snapshot.value != null) {
         final data = Map<String, dynamic>.from(snapshot.value as Map);
 
-        // 🌟 ดึงข้อมูลจาก activePatientNode ว่าญาติกำลังเลือกใครอยู่ และบันทึกลงตัวแปรคลาส
-        _activePatientKey = data['activePatientNode']?.toString() ?? 'Patient';
-        var activePatientData = data[_activePatientKey] ?? data['Patient'];
+        _activePatientKey = data['activePatientNode']?.toString() ?? '';
+        dynamic activePatientData;
 
-        // 🌟 ดึงข้อมูลที่อยู่จากผู้ป่วยคนที่เลือก
-        if (activePatientData != null && activePatientData['Location'] != null) {
-          final locData = activePatientData['Location'];
-          _profileAddress = locData['address'] ?? '';
-          _profileLat = (locData['latitude'] as num?)?.toDouble() ?? 0.0;
-          _profileLng = (locData['longitude'] as num?)?.toDouble() ?? 0.0;
+        // 🌟 ดึงข้อมูลจากโหนด Patient ย่อย (โครงสร้างใหม่)
+        dynamic patientNode = data['Patient'] ?? data['patients'];
+        if (patientNode != null && patientNode is Map) {
+          final pMap = Map<String, dynamic>.from(patientNode);
+          if (_activePatientKey.isNotEmpty &&
+              pMap.containsKey(_activePatientKey)) {
+            activePatientData = pMap[_activePatientKey];
+          } else if (pMap.isNotEmpty) {
+            _activePatientKey = pMap.keys.first;
+            activePatientData = pMap.values.first;
+          }
+        }
+
+        // Fallback โครงสร้างเดิม
+        if (activePatientData == null && data.containsKey(_activePatientKey)) {
+          activePatientData = data[_activePatientKey];
+        }
+        if (activePatientData == null &&
+            data['Patient'] != null &&
+            data['Patient'] is Map &&
+            data['Patient'].containsKey('firstname')) {
+          activePatientData = data['Patient'];
+          _activePatientKey = 'Patient';
+        }
+
+        // 🌟 ดึงที่อยู่ (รองรับทั้ง Location และ address ทั่วไป)
+        if (activePatientData != null && activePatientData is Map) {
+          if (activePatientData['Location'] != null &&
+              activePatientData['Location'] is Map) {
+            final locData = activePatientData['Location'];
+            _profileAddress = locData['address']?.toString() ?? '';
+            _profileLat = (locData['latitude'] as num?)?.toDouble() ?? 0.0;
+            _profileLng = (locData['longitude'] as num?)?.toDouble() ?? 0.0;
+          } else {
+            _profileAddress = activePatientData['address']?.toString() ?? '';
+            _profileLat =
+                (activePatientData['latitude'] as num?)?.toDouble() ?? 0.0;
+            _profileLng =
+                (activePatientData['longitude'] as num?)?.toDouble() ?? 0.0;
+          }
         }
 
         setState(() {
@@ -733,7 +766,8 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                                 widget.caretakerId;
 
                             // 🌟 อ่านข้อมูลผู้ป่วยที่ถูกต้องมาแนบไว้ในคำขอ
-                            String pFirstName = _patientData?['firstname'] ?? '';
+                            String pFirstName =
+                                _patientData?['firstname'] ?? '';
                             String pLastName = _patientData?['lastname'] ?? '';
                             String pGender = _patientData?['gender'] ?? '';
                             String pPhone = _patientData?['phonenumber'] ?? '';
@@ -742,8 +776,10 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                               "requestId": _generatedRequestId,
                               "caretakerId": realCaretakerIdCard,
 
-                              // ✅ แนบข้อมูลผู้ป่วยที่ถูกเลือก (activePatientKey)
                               "targetPatientKey": _activePatientKey,
+                              "patientId":
+                                  _patientData?['patientId'] ??
+                                  _activePatientKey,
                               "patientName": "$pFirstName $pLastName".trim(),
                               "patientGender": pGender,
                               "patientPhone": pPhone,
@@ -1063,6 +1099,27 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
       firstname: firstName,
       lastname: lastName,
     );
+
+    ImageProvider? imageProvider;
+    if (photoBase64 != null && photoBase64.isNotEmpty) {
+      try {
+        String cleanBase64 = photoBase64;
+        if (cleanBase64.contains(',')) {
+          cleanBase64 = cleanBase64.split(',').last;
+        }
+        cleanBase64 = cleanBase64
+            .replaceAll('\n', '')
+            .replaceAll('\r', '')
+            .replaceAll(' ', '')
+            .trim();
+        int pad = cleanBase64.length % 4;
+        if (pad > 0) cleanBase64 += '=' * (4 - pad);
+
+        imageProvider = MemoryImage(base64Decode(cleanBase64));
+      } catch (e) {
+        imageProvider = null;
+      }
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

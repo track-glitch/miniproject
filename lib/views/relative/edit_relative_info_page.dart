@@ -34,9 +34,9 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
   bool _isLoading = true;
 
-  // 🌟 State สำหรับรองรับผู้ป่วยหลายคน
+  // 🌟 State สำหรับรองรับผู้ป่วยหลายคนภายใต้โหนด Patient/{patientId}
   Map<String, Map<String, dynamic>> _patientsData = {};
-  String _currentPatientKey = 'Patient';
+  String _currentPatientKey = '';
   bool _isAddingNewPatient = false;
 
   // 🎨 โทนสีม่วง
@@ -162,19 +162,36 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         _initialRelPhone = _relPhoneController.text.trim();
 
         _patientsData.clear();
-        relData.forEach((key, value) {
-          if (key.startsWith('Patient') && value is Map) {
-            _patientsData[key] = Map<String, dynamic>.from(value);
-          }
-        });
+
+        // 🌟 ดึงข้อมูลจากโหนด Patient ย่อย (รองรับทั้ง 'Patient' และ 'patients')
+        dynamic patientNode = relData['Patient'] ?? relData['patients'];
+        if (patientNode != null && patientNode is Map) {
+          final pMap = Map<String, dynamic>.from(patientNode);
+          pMap.forEach((pKey, pVal) {
+            if (pVal is Map) {
+              _patientsData[pKey.toString()] = Map<String, dynamic>.from(pVal);
+            }
+          });
+        }
+
+        // รองรับ fallback ข้อมูลแบบเดิมถ้ายังมีตกค้าง
+        if (_patientsData.isEmpty) {
+          relData.forEach((key, value) {
+            if (key.startsWith('Patient') && value is Map) {
+              _patientsData[key] = Map<String, dynamic>.from(value);
+            }
+          });
+        }
 
         if (_patientsData.isNotEmpty) {
           // 🌟 ตรวจสอบว่ามีผู้ป่วยที่เลือกไว้ล่าสุดหรือไม่ (activePatientNode)
-          if (relData.containsKey('activePatientNode') && _patientsData.containsKey(relData['activePatientNode'])) {
-            _currentPatientKey = relData['activePatientNode'];
+          if (relData.containsKey('activePatientNode') &&
+              _patientsData.containsKey(relData['activePatientNode'].toString())) {
+            _currentPatientKey = relData['activePatientNode'].toString();
           } else {
             _currentPatientKey = _patientsData.keys.first;
           }
+          _isAddingNewPatient = false;
           _loadPatientDataToForm(_currentPatientKey);
         } else {
           _prepareNewPatient();
@@ -253,19 +270,9 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   }
 
   void _prepareNewPatient() {
-    int maxIndex = 1;
-    _patientsData.keys.forEach((key) {
-      if (key == 'Patient') return;
-      String numStr = key.replaceAll('Patient', '');
-      int? num = int.tryParse(numStr);
-      if (num != null && num > maxIndex) {
-        maxIndex = num;
-      }
-    });
-
     setState(() {
       _isAddingNewPatient = true;
-      _currentPatientKey = 'Patient${maxIndex + 1}';
+      _currentPatientKey = '';
       
       _patFirstNameController.clear();
       _patLastNameController.clear();
@@ -371,6 +378,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     final String relEmail = _relEmailController.text.trim().toLowerCase();
     final String relPhone = _relPhoneController.text.trim();
     final String patPhone = _patPhoneController.text.trim();
+    final String patIdCard = _patIdCardController.text.trim();
 
     if (relPhone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(relPhone)) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -383,6 +391,14 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     if (patPhone.isNotEmpty && (patPhone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(patPhone))) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('กรุณากรอกเบอร์โทรศัพท์ผู้ป่วยให้ถูกต้อง (ตัวเลข 10 หลัก)'),
+        backgroundColor: Colors.red,
+      ));
+      return;
+    }
+
+    if (patIdCard.length != 13 || !RegExp(r'^[0-9]+$').hasMatch(patIdCard)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('กรุณากรอกหมายเลขบัตรประชาชนผู้ป่วยให้ครบ 13 หลัก'),
         backgroundColor: Colors.red,
       ));
       return;
@@ -479,19 +495,22 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                   return;
                 }
 
-                rData.forEach((k, v) {
-                  if (k.startsWith('Patient') && v is Map) {
-                    String pPhone = (v['phonenumber'] ?? '').toString().trim();
-                    if (needCheckPatPhone && pPhone.isNotEmpty && pPhone == patPhone) {
-                      setState(() => _isLoading = false);
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('เบอร์โทรศัพท์ผู้ป่วยนี้ถูกใช้งานแล้วในระบบ'),
-                        backgroundColor: Colors.red,
-                      ));
-                      return;
+                dynamic pNode = rData['Patient'] ?? rData['patients'];
+                if (pNode is Map) {
+                  pNode.forEach((k, v) {
+                    if (v is Map) {
+                      String pPhone = (v['phonenumber'] ?? '').toString().trim();
+                      if (needCheckPatPhone && pPhone.isNotEmpty && pPhone == patPhone) {
+                        setState(() => _isLoading = false);
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('เบอร์โทรศัพท์ผู้ป่วยนี้ถูกใช้งานแล้วในระบบ'),
+                          backgroundColor: Colors.red,
+                        ));
+                        return;
+                      }
                     }
-                  }
-                });
+                  });
+                }
               }
             }
           }
@@ -499,7 +518,13 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
       }
 
       if (uid.isNotEmpty) {
-        // 🌟 บันทึก 'activePatientNode' ไว้ใน Database ของญาติ เพื่อให้หน้าอื่นดึงไปใช้ได้
+        // 🌟 กำหนด Key ของผู้ป่วย: ถ้าเพิ่มใหม่ให้ใช้หมายเลขบัตรประชาชน (หรือ Key เดิมกรณีแก้ไข)
+        String targetPatientKey = _isAddingNewPatient ? patIdCard : _currentPatientKey;
+        if (targetPatientKey.isEmpty) {
+          targetPatientKey = patIdCard;
+        }
+
+        // 🌟 บันทึกข้อมูลญาติ และตั้ง activePatientNode
         await FirebaseDatabase.instance.ref('Login/$uid/Relative').update({
           'firstname': _relFirstNameController.text.trim(),
           'lastname': _relLastNameController.text.trim(),
@@ -507,17 +532,18 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           'phonenumber': relPhone,
           'lineId': _relLineIdController.text.trim(),
           'relationship': _relRelationController.text.trim(),
-          'activePatientNode': _currentPatientKey, // <--- เพิ่มตรงนี้
+          'activePatientNode': targetPatientKey,
         });
 
         String finalMobility = _selectedPatMobility == 'ไม่ปกติ'
             ? 'ไม่ปกติ: ${_patMobilityController.text.trim()}'
             : 'ปกติ';
 
+        // 🌟 บันทึกข้อมูลผู้ป่วยลงในโหนด Login/$uid/Relative/Patient/$targetPatientKey
         await FirebaseDatabase.instance
-            .ref('Login/$uid/Relative/$_currentPatientKey')
+            .ref('Login/$uid/Relative/Patient/$targetPatientKey')
             .update({
-              'patientId': _patIdCardController.text.trim(),
+              'patientId': patIdCard,
               'firstname': _patFirstNameController.text.trim(),
               'lastname': _patLastNameController.text.trim(),
               'phonenumber': patPhone,
@@ -568,7 +594,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 🌟 ดึงชื่อผู้ป่วยจริงๆ มาแสดงใน Dropdown
+    // 🌟 ดึงชื่อผู้ป่วยมาแสดงใน Dropdown
     List<DropdownMenuItem<String>> dropdownItems = [];
     
     _patientsData.keys.forEach((key) {
@@ -580,8 +606,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
       if (fname.isNotEmpty || lname.isNotEmpty) {
         displayName = '$fname $lname';
       } else {
-        // ถ้าผู้ใช้ยังไม่ได้กรอกชื่อ ให้ใส่ชื่อเริ่มต้น
-        displayName = key == 'Patient' ? 'ผู้ป่วย 1 (ยังไม่มีชื่อ)' : 'ผู้ป่วย ${key.replaceAll("Patient", "")} (ยังไม่มีชื่อ)';
+        displayName = 'ผู้ป่วย ID: $key';
       }
           
       dropdownItems.add(
@@ -682,7 +707,10 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<String>(
-                              value: selectedValue,
+                              value: (selectedValue.isNotEmpty && 
+                                     (selectedValue == 'NEW' || _patientsData.containsKey(selectedValue)))
+                                  ? selectedValue 
+                                  : (_patientsData.isNotEmpty ? _patientsData.keys.first : null),
                               isExpanded: true,
                               icon: Icon(Icons.keyboard_arrow_down, color: primaryColor, size: 28),
                               items: dropdownItems,
@@ -728,6 +756,8 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                               hint: 'หมายเลขบัตรประชาชน',
                               controller: _patIdCardController,
                               keyboardType: TextInputType.number,
+                              maxLength: 13,
+                              readOnly: !_isAddingNewPatient, // อนุญาตให้กรอกเฉพาะตอนเพิ่มคนใหม่
                             ),
                             _buildInputField(
                               hint: 'ไอดีไลน์ผู้ป่วย (ถ้ามี)',

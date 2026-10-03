@@ -8,7 +8,6 @@ import 'package:miniproject/views/relative/view_doctor_advice_page.dart';
 import '../../widgets/custom_header_nav.dart';
 import '../../services/caretaker_service.dart';
 import 'package:miniproject/models/request_model.dart';
-// ไม่จำเป็นต้อง import 'review_caretaker_page.dart' แล้วเพราะย้ายไปทำที่ List แทน
 
 enum RequestStatus {
   pending,
@@ -31,7 +30,7 @@ class ViewRequestDetailPage extends StatefulWidget {
     required this.requestModel,
     required this.caretakerName,
     required this.loggedUid,
-    this.patientDataOverride, // 🌟 รับมาจากข้างนอก
+    this.patientDataOverride,
   });
 
   @override
@@ -99,8 +98,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     super.initState();
     isReported = widget.requestModel.report != null;
     
-    // 🌟 2. ถ้าหน้า List ส่งข้อมูลมาให้ ก็ให้ใช้ของหน้า List เลย 
-    // จะได้ไม่ต้องดึงใหม่ผิดคน
+    // 🌟 2. ถ้ามี patientDataOverride ส่งมาจากหน้า List ให้ใช้ทันที
     if (widget.patientDataOverride != null) {
       patientData = widget.patientDataOverride;
     }
@@ -148,13 +146,45 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       if (requestSnap.exists && requestSnap.value is Map) {
         final reqData = requestSnap.value as Map;
         
-        // 🌟 3. ถ้าไม่มีคนส่งข้อมูล override มา ให้เช็คว่าคำขอนี้ของผู้ป่วยคนไหน แล้วไปดึงคนนั้น
+        // 🌟 3. ค้นหาข้อมูลผู้ป่วยให้ถูกต้องตามโครงสร้าง Sub-collection Patient/{patientId}
         if (patientData == null && relativeData != null) {
-          String targetPatientKey = reqData['targetPatientKey']?.toString() ?? 'Patient';
-          if (relativeData![targetPatientKey] != null) {
+          String targetPatientKey = reqData['targetPatientKey']?.toString() ??
+              reqData['patientId']?.toString() ??
+              '';
+
+          dynamic pNode = relativeData!['Patient'] ?? relativeData!['patients'];
+
+          if (pNode != null && pNode is Map) {
+            final pMap = Map<String, dynamic>.from(pNode);
+            if (targetPatientKey.isNotEmpty && pMap.containsKey(targetPatientKey)) {
+              patientData = Map<String, dynamic>.from(pMap[targetPatientKey] as Map);
+            } else if (pMap.isNotEmpty) {
+              // กรณีไม่ตรงกับ Key ให้ลองหาจากค่าข้างในที่ patientId ตรงกัน
+              for (var val in pMap.values) {
+                if (val is Map && val['patientId']?.toString() == targetPatientKey) {
+                  patientData = Map<String, dynamic>.from(val);
+                  break;
+                }
+              }
+              // ถ้ายังไม่เจอ ให้ fallback คนแรก
+              patientData ??= Map<String, dynamic>.from(pMap.values.first as Map);
+            }
+          }
+
+          // Fallback เผื่อโครงสร้างเดิมแบบ Flat key
+          if (patientData == null &&
+              targetPatientKey.isNotEmpty &&
+              relativeData![targetPatientKey] != null &&
+              relativeData![targetPatientKey] is Map) {
             patientData = Map<String, dynamic>.from(relativeData![targetPatientKey]);
-          } else {
-             patientData = Map<String, dynamic>.from(relativeData!['Patient']);
+          }
+
+          // Fallback เผื่อ Patient ก้อนเดียวแบบเก่าดั้งเดิม
+          if (patientData == null &&
+              relativeData!['Patient'] != null &&
+              relativeData!['Patient'] is Map &&
+              relativeData!['Patient'].containsKey('firstname')) {
+            patientData = Map<String, dynamic>.from(relativeData!['Patient']);
           }
         }
         
@@ -741,7 +771,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     
     DateTime? birth;
     
-    // 1. กรณีที่วันที่ถูกเก็บมาแบบ dd/MM/yyyy (เช่น 15/05/2528)
     if (birthdate.contains('/')) {
       final parts = birthdate.split('/');
       if (parts.length == 3) {
@@ -750,18 +779,14 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
         int? year = int.tryParse(parts[2]);
         
         if (day != null && month != null && year != null) {
-          // ถ้าปีเกิน 2400 แปลว่าเป็น พ.ศ. ให้ลบ 543 เพื่อแปลงเป็น ค.ศ.
           if (year > 2400) {
             year -= 543;
           }
           birth = DateTime(year, month, day);
         }
       }
-    } 
-    // 2. กรณีที่เก็บแบบ ISO8601 string (เช่น 1985-05-15T...)
-    else {
+    } else {
       birth = DateTime.tryParse(birthdate);
-      // ดักเผื่อกรณี ISO เก็บมาเป็นปี พ.ศ.
       if (birth != null && birth.year > 2400) {
         birth = DateTime(birth.year - 543, birth.month, birth.day);
       }
@@ -769,7 +794,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
 
     if (birth == null) return '-';
 
-    // 3. คำนวณอายุโดยเช็คเดือนและวันเกิดให้เป๊ะขึ้น
     DateTime today = DateTime.now();
     int age = today.year - birth.year;
     if (today.month < birth.month || 

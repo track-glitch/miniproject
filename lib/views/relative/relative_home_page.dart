@@ -163,9 +163,28 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
             if (childData is Map && childData.containsKey('Relative')) {
               var relNode = Map<String, dynamic>.from(childData['Relative'] as Map);
 
-              // 🌟 เช็ค activePatientNode ว่าเลือกผู้ป่วยคนไหนอยู่
-              String activeNode = relNode['activePatientNode']?.toString() ?? 'Patient';
-              var patientNode = relNode[activeNode] ?? relNode['Patient'];
+              // 🌟 เช็ค activePatientNode และรองรับโครงสร้างผู้ป่วยแบบ Sub-node Patient/{patientId}
+              String activeNode = relNode['activePatientNode']?.toString() ?? '';
+              dynamic patientNode;
+
+              if (relNode['Patient'] != null && relNode['Patient'] is Map) {
+                final patientsMap = Map<String, dynamic>.from(relNode['Patient'] as Map);
+                if (activeNode.isNotEmpty && patientsMap.containsKey(activeNode)) {
+                  patientNode = patientsMap[activeNode];
+                } else if (patientsMap.isNotEmpty) {
+                  patientNode = patientsMap.values.first;
+                }
+              }
+
+              // Fallback โครงสร้างเดิม
+              if (patientNode == null && relNode.containsKey(activeNode)) {
+                patientNode = relNode[activeNode];
+              }
+              if (patientNode == null && relNode['Patient'] != null && relNode['Patient'] is Map && !relNode['Patient'].containsKey('firstname')) {
+                // กรณีเป็น node เปล่า
+              } else if (patientNode == null && relNode['Patient'] != null) {
+                patientNode = relNode['Patient'];
+              }
 
               setState(() {
                 if (patientNode != null && patientNode is Map) {
@@ -183,10 +202,15 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                 }
 
                 String rawPhoto = '';
-                if (patientNode != null && patientNode['patientphoto'] != null) {
+                if (patientNode != null && patientNode is Map && patientNode['patientphoto'] != null) {
                   rawPhoto = patientNode['patientphoto'].toString();
                 } else {
                   rawPhoto = relNode['profilephoto']?.toString() ?? '';
+                }
+
+                // 🌟 ตัด prefix data:image/...;base64, ออกก่อน decode
+                if (rawPhoto.contains(',')) {
+                  rawPhoto = rawPhoto.split(',').last;
                 }
 
                 _userProfilePhoto = rawPhoto
@@ -702,6 +726,16 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // 🌟 ถอดรหัสรูปโปรไฟล์ของผู้ป่วย/ญาติที่มุมบนขวา พร้อมรองรับ Error
+    ImageProvider? userImageProvider;
+    if (_userProfilePhoto.isNotEmpty) {
+      try {
+        userImageProvider = MemoryImage(base64Decode(_userProfilePhoto));
+      } catch (e) {
+        userImageProvider = null;
+      }
+    }
+
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
@@ -788,10 +822,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                             CircleAvatar(
                               radius: 11,
                               backgroundColor: Colors.white.withOpacity(0.3),
-                              backgroundImage: _userProfilePhoto.isNotEmpty
-                                  ? MemoryImage(base64Decode(_userProfilePhoto))
-                                  : null,
-                              child: _userProfilePhoto.isEmpty
+                              backgroundImage: userImageProvider,
+                              child: userImageProvider == null
                                   ? const Icon(
                                       Icons.person,
                                       color: Colors.white,
@@ -1092,7 +1124,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
                   const SizedBox(height: 10),
 
-                  // 🌟 ข้อ 3: เอาปุ่มค้นหาใกล้ฉันออก เหลือเฉพาะปุ่มข้อมูลที่เป็นประโยชน์
                   Row(
                     children: [
                       Expanded(
@@ -1306,11 +1337,31 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                       reviewData['reviewdate']?.toString() ??
                                       DateTime.now().toIso8601String();
 
-                                  String reviewerGender =
-                                      (relativeNode['Patient']?['gender'] ??
-                                              relativeNode['gender'] ??
-                                              '')
-                                          .toString();
+                                  // ดึงข้อมูลผู้รีวิว รองรับทั้งโครงสร้างใหม่และเดิม
+                                  String reviewerGender = '';
+                                  String reviewerImage = '';
+
+                                  if (relativeNode['Patient'] != null && relativeNode['Patient'] is Map) {
+                                    final pMap = relativeNode['Patient'] as Map;
+                                    if (pMap.containsKey('gender')) {
+                                      reviewerGender = pMap['gender']?.toString() ?? '';
+                                      reviewerImage = pMap['patientphoto']?.toString() ?? '';
+                                    } else if (pMap.isNotEmpty) {
+                                      final firstP = pMap.values.first;
+                                      if (firstP is Map) {
+                                        reviewerGender = firstP['gender']?.toString() ?? '';
+                                        reviewerImage = firstP['patientphoto']?.toString() ?? '';
+                                      }
+                                    }
+                                  }
+
+                                  if (reviewerGender.isEmpty) {
+                                    reviewerGender = relativeNode['gender']?.toString() ?? '';
+                                  }
+                                  if (reviewerImage.isEmpty) {
+                                    reviewerImage = relativeNode['profilephoto']?.toString() ?? '';
+                                  }
+
                                   String rFirstname =
                                       (relativeNode['firstname'] ?? '')
                                           .toString();
@@ -1328,13 +1379,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                       reviewerName == 'ไม่ระบุ') {
                                     reviewerName = 'ผู้ใช้บริการ';
                                   }
-
-                                  String reviewerImage =
-                                      relativeNode['profilephoto']
-                                          ?.toString() ??
-                                      relativeNode['Patient']?['patientphoto']
-                                          ?.toString() ??
-                                      '';
 
                                   if (!caregiverReviewsMap.containsKey(cId))
                                     caregiverReviewsMap[cId] = [];
@@ -1508,17 +1552,15 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                     double ratingA = (a['rating'] as double?) ?? 0.0;
                     double ratingB = (b['rating'] as double?) ?? 0.0;
 
-                    // เปรียบเทียบระยะทางก่อน
                     if (distA != null && distB != null) {
                       int distComp = distA.compareTo(distB);
-                      if (distComp != 0) return distComp; // ใกล้สุดมาก่อน
+                      if (distComp != 0) return distComp;
                     } else if (distA != null && distB == null) {
-                      return -1; // คนที่รู้ระยะทางอยู่ก่อน
+                      return -1;
                     } else if (distA == null && distB != null) {
                       return 1;
                     }
 
-                    // ถ้าระยะทางเท่ากัน หรือไม่มีระยะทาง ให้เรียงตามเรตติ้งรีวิวจากมากไปน้อย
                     int ratingComp = ratingB.compareTo(ratingA);
                     if (ratingComp != 0) return ratingComp;
 
@@ -1694,10 +1736,24 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                     }
 
                     PatientModel patient;
-                    String activeNode = relativeMap['activePatientNode']?.toString() ?? 'Patient';
-                    var targetPatientNode = relativeMap[activeNode] ?? relativeMap['Patient'];
+                    String activeNode = relativeMap['activePatientNode']?.toString() ?? '';
+                    dynamic targetPatientNode;
 
-                    if (targetPatientNode != null) {
+                    // 🌟 ดึงข้อมูลผู้ป่วยจากโครงสร้าง Sub-node Patient/{patientId}
+                    if (relativeMap['Patient'] != null && relativeMap['Patient'] is Map) {
+                      final pMap = Map<String, dynamic>.from(relativeMap['Patient'] as Map);
+                      if (activeNode.isNotEmpty && pMap.containsKey(activeNode)) {
+                        targetPatientNode = pMap[activeNode];
+                      } else if (pMap.isNotEmpty) {
+                        targetPatientNode = pMap.values.first;
+                      }
+                    }
+
+                    if (targetPatientNode == null && relativeMap.containsKey(activeNode)) {
+                      targetPatientNode = relativeMap[activeNode];
+                    }
+
+                    if (targetPatientNode != null && targetPatientNode is Map) {
                       final pData = Map<String, dynamic>.from(targetPatientNode as Map);
                       patient = PatientModel(
                         patientId: pData['patientId'] ?? '',
@@ -1808,7 +1864,12 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
     int serviceCount = data['serviceCount'] ?? 0;
     double? distKm = data['distanceKm'] as double?;
 
+    // 🌟 ถอดรหัสรูปภาพโปรไฟล์ของผู้ดูแล พร้อมตัด prefix base64
     String rawProfilePhoto = data['profilephoto']?.toString() ?? '';
+    if (rawProfilePhoto.contains(',')) {
+      rawProfilePhoto = rawProfilePhoto.split(',').last;
+    }
+
     String cleanedBase64 = rawProfilePhoto
         .replaceAll('\n', '')
         .replaceAll('\r', '')
@@ -1817,6 +1878,15 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
     int pad = cleanedBase64.length % 4;
     if (pad > 0) cleanedBase64 += '=' * (4 - pad);
     bool hasProfileImage = cleanedBase64.isNotEmpty;
+
+    ImageProvider? caretakerImageProvider;
+    if (hasProfileImage) {
+      try {
+        caretakerImageProvider = MemoryImage(base64Decode(cleanedBase64));
+      } catch (e) {
+        caretakerImageProvider = null;
+      }
+    }
 
     return Container(
       width: double.infinity,
@@ -1841,10 +1911,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
             CircleAvatar(
               radius: 30,
               backgroundColor: lightPurple,
-              backgroundImage: hasProfileImage
-                  ? MemoryImage(base64Decode(cleanedBase64))
-                  : null,
-              child: !hasProfileImage
+              backgroundImage: caretakerImageProvider,
+              child: caretakerImageProvider == null
                   ? Icon(Icons.person, size: 32, color: primaryColor)
                   : null,
             ),
@@ -2009,7 +2077,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                       ),
                     ),
 
-                  // 🌟 ข้อ 2: แสดงระยะห่างระหว่างผู้ป่วยกับผู้ให้บริการ
                   Row(
                     children: [
                       Icon(Icons.near_me_outlined,

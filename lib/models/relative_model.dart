@@ -12,7 +12,7 @@ class RelativeModel {
   String? lineId;
   String? relationship;
 
-  PatientModel? patient; // 1 : 1
+  Map<String, PatientModel>? patients; // 1 : 1..n
   List<RequestModel>? requests; // 1 : 1..n
 
   RelativeModel({
@@ -25,11 +25,24 @@ class RelativeModel {
     this.phonenumber,
     this.lineId,
     this.relationship,
-    this.patient,
+    this.patients,
     this.requests,
   });
 
   factory RelativeModel.fromJson(Map<String, dynamic> json) {
+    Map<String, PatientModel>? parsedPatients;
+    if (json['Patient'] != null || json['patients'] != null) {
+      final patientsData = json['Patient'] ?? json['patients'];
+      if (patientsData is Map) {
+        parsedPatients = patientsData.map(
+          (key, value) => MapEntry(
+            key.toString(),
+            PatientModel.fromJson(Map<String, dynamic>.from(value)),
+          ),
+        );
+      }
+    }
+
     return RelativeModel(
       relativeId: json['relativeId'],
       password: json['password'],
@@ -40,13 +53,13 @@ class RelativeModel {
       phonenumber: json['phonenumber'],
       lineId: json['lineId'],
       relationship: json['relationship'],
-      patient: json['patient'] != null
-          ? PatientModel.fromJson(json['patient'])
-          : null,
-      requests: json['requests'] != null
-          ? (json['requests'] as List)
-                .map((e) => RequestModel.fromJson(e))
-                .toList()
+      patients: parsedPatients,
+      requests: json['Request'] != null || json['requests'] != null
+          ? ((json['Request'] ?? json['requests']) as dynamic)
+              .values
+              .map((e) => RequestModel.fromJson(Map<String, dynamic>.from(e)))
+              .toList()
+              .cast<RequestModel>()
           : null,
     );
   }
@@ -62,7 +75,7 @@ class RelativeModel {
       'phonenumber': phonenumber,
       'lineId': lineId,
       'relationship': relationship,
-      'Patient': patient?.toJson(),
+      'Patient': patients?.map((key, val) => MapEntry(key, val.toJson())),
       'Request': requests?.map((e) => e.toJson()).toList(),
     };
   }
