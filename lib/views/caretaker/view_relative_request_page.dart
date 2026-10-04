@@ -576,9 +576,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
     String requestDetail = reqModel.requestdetail ?? 'ไม่มีรายละเอียดเพิ่มเติม';
 
     // 🌟 ดึงชื่อที่อยู่จุดรับ จากโปรไฟล์ผู้ป่วย
-    String pickupAddress = pat['Location'] != null
-        ? pat['Location']['address'] ?? 'ไม่ระบุที่อยู่ผู้ป่วย'
-        : 'ไม่ระบุที่อยู่ผู้ป่วย';
+    String pickupAddress = reqModel.pickupaddress ?? 'ไม่ระบุที่อยู่จุดรับ';
 
     // 🌟 ดึงชื่อโรงพยาบาลจุดส่ง จาก Department -> Hospital
     String dropoffAddress =

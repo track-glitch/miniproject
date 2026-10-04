@@ -226,9 +226,29 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
 
     for (var item in data) {
       RequestModel req = item['requestModel'];
-      Map<String, dynamic> pat = item['patientData'];
       Map<String, dynamic> rel = item['relativeData'];
       bool isRead = req.isReadCaretaker ?? false;
+
+      // 🌟 ดึงข้อมูล Patient แบบเจาะจงคน โดยใช้ patientId
+      Map<String, dynamic> pat = {};
+      var allPatData = item['patientData'];
+
+      if (allPatData != null && allPatData is Map) {
+        String? reqPatientId = req.patientId;
+
+        if (reqPatientId != null && reqPatientId.isNotEmpty) {
+          // ถ้าคำขอระบุ patientId ให้ดึงเฉพาะคนนั้น
+          if (allPatData[reqPatientId] != null) {
+            pat = Map<String, dynamic>.from(allPatData[reqPatientId]);
+          }
+        } else {
+          // ถ้าคำขอเก่าไม่มี patientId ให้ดึงจาก activePatientNode เผื่อไว้
+          String? activeId = rel['activePatientNode'];
+          if (activeId != null && allPatData[activeId] != null) {
+            pat = Map<String, dynamic>.from(allPatData[activeId]);
+          }
+        }
+      }
 
       String statusType = (req.requeststatus ?? 'pending').toLowerCase();
       bool hasAlert =
@@ -238,33 +258,39 @@ class _ListRelativeRequestPageState extends State<ListRelativeRequestPage> {
       String prefix = patGender == 'ชาย'
           ? 'นาย '
           : (patGender == 'หญิง' ? 'นาง ' : 'คุณ ');
-      String patientName =
-          "$prefix${pat['firstname'] ?? ''} ${pat['lastname'] ?? ''}".trim();
 
-      RequestCard card = RequestCard(
-        id: req.requestId ?? 'Unknow',
-        serviceName: req.department?.hospital?.hospitalname ?? 'ไม่ระบุสถานที่',
-        statusType: statusType,
-        date: _formatThaiDateExact(req.appointmentdate, req.appointmenttime),
-        submitDate: _formatThaiDateExact(req.requestdate, req.requestdate),
-        category: req.department?.departmentname ?? 'ทั่วไป',
-        patient: patientName.isEmpty ? 'ไม่ระบุชื่อผู้ป่วย' : patientName,
-        hasAlert: hasAlert,
-        requestModel: req,
-        patientData: pat,
-        relativeData: rel,
-        relativeUid: item['relativeUid'] ?? '',
-        isRead: isRead,
-      );
+      // 🌟 เช็กด้วยว่ามีข้อมูลจริงๆ ไหม ถ้าไม่มีให้ข้ามคำนำหน้าไปเลย
+      String patientName = '';
+      if (pat['firstname'] != null || pat['lastname'] != null) {
+        patientName =
+            "$prefix${pat['firstname'] ?? ''} ${pat['lastname'] ?? ''}".trim();
 
-      if (statusType == 'pending') {
-        pendingList.add(card);
-      } else if (statusType == 'accepted' || statusType == 'pending_advice') {
-        acceptedList.add(card);
-      } else if (statusType == 'completed') {
-        completedList.add(card);
-      } else {
-        cancelledList.add(card);
+        RequestCard card = RequestCard(
+          id: req.requestId ?? 'Unknow',
+          serviceName:
+              req.department?.hospital?.hospitalname ?? 'ไม่ระบุสถานที่',
+          statusType: statusType,
+          date: _formatThaiDateExact(req.appointmentdate, req.appointmenttime),
+          submitDate: _formatThaiDateExact(req.requestdate, req.requestdate),
+          category: req.department?.departmentname ?? 'ทั่วไป',
+          patient: patientName.isEmpty ? 'ไม่ระบุชื่อผู้ป่วย' : patientName,
+          hasAlert: hasAlert,
+          requestModel: req,
+          patientData: pat,
+          relativeData: rel,
+          relativeUid: item['relativeUid'] ?? '',
+          isRead: isRead,
+        );
+
+        if (statusType == 'pending') {
+          pendingList.add(card);
+        } else if (statusType == 'accepted' || statusType == 'pending_advice') {
+          acceptedList.add(card);
+        } else if (statusType == 'completed') {
+          completedList.add(card);
+        } else {
+          cancelledList.add(card);
+        }
       }
     }
 

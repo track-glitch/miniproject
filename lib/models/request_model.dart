@@ -15,6 +15,7 @@ class RequestModel {
   String? requeststatus;
   String? pickupaddress;
   String? caretakerId;
+  String? patientId;
   bool? isReadCaretaker;
   double? longitude;
   double? latitude;
@@ -35,6 +36,7 @@ class RequestModel {
     this.requeststatus,
     this.pickupaddress,
     this.caretakerId,
+    this.patientId,
     this.longitude,
     this.latitude,
     this.review,
@@ -61,6 +63,7 @@ class RequestModel {
       requeststatus: json['requeststatus'],
       pickupaddress: json['pickupaddress'],
       caretakerId: json['caretakerId'],
+      patientId: json['patientId'],
       longitude: json['longitude'],
       latitude: json['latitude'],
       isReadCaretaker: json['isReadCaretaker'] ?? false,
@@ -109,6 +112,7 @@ class RequestModel {
       'requestdate': requestdate?.toIso8601String(),
       'requeststatus': requeststatus,
       'caretakerId': caretakerId,
+      'patientId': patientId,
       'isReadCaretaker': isReadCaretaker ?? false,
       'Review': review?.toJson(),
       'DoctorAdvice': doctoradvice?.toJson(),

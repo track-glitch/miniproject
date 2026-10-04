@@ -58,6 +58,9 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   List<HospitalModel> _hospitals = [];
   HospitalModel? _selectedHospital;
 
+  // 🌟 เพิ่มตัวแปรสำหรับจัดการลิสต์ผู้ป่วย
+  String? _activePatientId;
+
   LatLng _dropoffLocation = const LatLng(18.789735, 98.974654);
   bool _dropoffHasPinned = false;
   bool _dropoffMapExpanded = false;
@@ -147,7 +150,6 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
     return "REQ-PEND1-$randomNumber";
   }
 
-  // 🌟 อัปเดตฟังก์ชันดึงข้อมูลให้ทะลุเข้าไปใน Patient -> Location
   Future<void> _fetchProfileData() async {
     String uid = widget.loggedUid ?? FirebaseAuth.instance.currentUser!.uid;
     try {
@@ -157,9 +159,21 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
       if (snapshot.exists && snapshot.value != null) {
         final data = Map<String, dynamic>.from(snapshot.value as Map);
 
-        // 🌟 ดึงข้อมูลที่อยู่จากหน้าโปรไฟล์ของผู้ป่วย
-        if (data['Patient'] != null && data['Patient']['Location'] != null) {
-          final locData = data['Patient']['Location'];
+        // 🌟 1. ดึง ID ของผู้ป่วยที่ Active อยู่
+        String activeId = data['activePatientNode']?.toString() ?? '';
+        Map<String, dynamic>? currentPatient;
+
+        // 🌟 2. เข้าไปดึงข้อมูลผู้ป่วยเฉพาะคนที่มี ID ตรงกับ activeId
+        if (activeId.isNotEmpty && data['Patient'] != null) {
+          final patientNode = data['Patient'] as Map;
+          if (patientNode[activeId] != null) {
+            currentPatient = Map<String, dynamic>.from(patientNode[activeId]);
+          }
+        }
+
+        // 🌟 3. อัปเดตพิกัดจุดรับให้ตรงกับผู้ป่วยที่ Active
+        if (currentPatient != null && currentPatient['Location'] != null) {
+          final locData = currentPatient['Location'];
           _profileAddress = locData['address'] ?? '';
           _profileLat = (locData['latitude'] as num?)?.toDouble() ?? 0.0;
           _profileLng = (locData['longitude'] as num?)?.toDouble() ?? 0.0;
@@ -167,13 +181,26 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
 
         setState(() {
           _relativeData = data;
-          if (data['Patient'] != null) {
-            _patientData = Map<String, dynamic>.from(data['Patient'] as Map);
-          }
+          _patientData = currentPatient;
+          _activePatientId = activeId;
         });
       }
     } catch (e) {
       print("Error fetch profile data: $e");
+    }
+  }
+
+  // 🌟 ฟังก์ชันอัปเดตที่อยู่จุดรับเมื่อเลือกผู้ป่วย
+  void _updatePatientLocation(Map<String, dynamic> patient) {
+    if (patient['Location'] != null) {
+      final locData = patient['Location'];
+      _profileAddress = locData['address'] ?? '';
+      _profileLat = (locData['latitude'] as num?)?.toDouble() ?? 0.0;
+      _profileLng = (locData['longitude'] as num?)?.toDouble() ?? 0.0;
+    } else {
+      _profileAddress = '';
+      _profileLat = 0.0;
+      _profileLng = 0.0;
     }
   }
 
@@ -546,9 +573,12 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                 // ── ข้อมูลบุคคล ──
                 Text('ข้อมูลผู้ป่วยและญาติ', style: _labelStyle()),
                 const SizedBox(height: 8),
+
+                // 🌟 แสดงการ์ดผู้ป่วยที่กำลัง Active อยู่ได้เลย (ข้อมูลจะดึงจาก _patientData อัตโนมัติ)
                 _buildPatientCard(),
+
+                // 🌟 แสดงการ์ดญาติ
                 _buildRelativeCard(),
-                const SizedBox(height: 12),
 
                 Text('ผู้ดูแลที่ให้บริการ', style: _labelStyle()),
                 const SizedBox(height: 8),
@@ -778,10 +808,12 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                                     ?.toString() ??
                                 widget.caretakerId;
 
-                            // 🌟 บันทึกลง Firebase แบบโครงสร้างใหม่ ไม่มี pickup/dropoff
+                            // 🌟 บันทึกลง Firebase
                             await requestRef.set({
                               "requestId": _generatedRequestId,
                               "caretakerId": realCaretakerIdCard,
+                              "patientId":
+                                  _activePatientId, // 🌟 ใช้ ID จาก Active Node
                               "pickupaddress": _profileAddress,
                               "requestdetail": _detailController.text.trim(),
                               "Department": departmentNode.toJson(),

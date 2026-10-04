@@ -129,13 +129,29 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
         relativeData = Map<String, dynamic>.from(relSnap.value as Map);
       }
 
-      final patSnap = await FirebaseDatabase.instance
-          .ref('Login/${widget.loggedUid}/Relative/Patient')
-          .get();
-      if (patSnap.exists && patSnap.value is Map) {
-        patientData = Map<String, dynamic>.from(patSnap.value as Map);
+      // 🌟 เปลี่ยนจากการดึง Patient ทั้งก้อน เป็นดึงเฉพาะ Patient ที่ระบุในคำขอ
+      String? targetPatientId = widget.requestModel.patientId;
+      if (targetPatientId != null && targetPatientId.isNotEmpty) {
+        final patSnap = await FirebaseDatabase.instance
+            .ref('Login/${widget.loggedUid}/Relative/Patient/$targetPatientId')
+            .get();
+        if (patSnap.exists && patSnap.value is Map) {
+          patientData = Map<String, dynamic>.from(patSnap.value as Map);
+        }
+      } else {
+        // 🌟 ถ้าคำขอเก่าไม่มี patientId ก็ดึง activePatientNode มาใช้เผื่อไว้ก่อน
+        String? activeId = relativeData?['activePatientNode'];
+        if (activeId != null && activeId.isNotEmpty) {
+          final patSnap = await FirebaseDatabase.instance
+              .ref('Login/${widget.loggedUid}/Relative/Patient/$activeId')
+              .get();
+          if (patSnap.exists && patSnap.value is Map) {
+            patientData = Map<String, dynamic>.from(patSnap.value as Map);
+          }
+        }
       }
 
+      // (โค้ดดึง Request และ Caretaker คงเดิม...)
       final requestSnap = await FirebaseDatabase.instance
           .ref(
             'Login/${widget.loggedUid}/Relative/Request/${widget.requestModel.requestId}',
