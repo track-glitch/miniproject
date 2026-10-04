@@ -282,4 +282,28 @@ class AuthService {
       return null; //
     }
   }
+
+
+
+  // ➕ เพิ่มผู้ป่วยใหม่เข้าไปในบัญชีญาติ
+Future<bool> addNewPatient({
+  required String uid,
+  required PatientModel patient,
+}) async {
+  try {
+    // บันทึกต่อท้ายในโหนด Login/{uid}/Relative/Patient/{patientId}
+    await _dbRef
+        .child('Login')
+        .child(uid)
+        .child('Relative')
+        .child('Patient')
+        .child(patient.patientId!)
+        .set(patient.toJson());
+    return true;
+  } catch (e) {
+    print("เกิดข้อผิดพลาดในการเพิ่มผู้ป่วย: $e");
+    return false;
+  }
+}
+
 }

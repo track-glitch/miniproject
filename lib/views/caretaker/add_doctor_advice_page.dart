@@ -58,10 +58,13 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
+    // 🌟 คำนวณวันพรุ่งนี้
+    final DateTime tomorrow = DateTime.now().add(const Duration(days: 1));
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
+      initialDate: tomorrow, // 🌟 เปลี่ยนค่าเริ่มต้นเป็นวันพรุ่งนี้
+      firstDate: tomorrow, // 🌟 บังคับให้เลือกได้ตั้งแต่วันพรุ่งนี้เป็นต้นไป
       lastDate: DateTime(2101),
       builder: (context, child) {
         return Theme(
@@ -174,26 +177,51 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
             _buildSectionCard(
               title: "การนัดหมายครั้งต่อไป",
               icon: Icons.calendar_month_outlined,
-              trailing: Checkbox(
-                value: _hasNextAppointment,
-                activeColor: primaryPurple,
-                onChanged: (bool? value) {
-                  setState(() {
-                    _hasNextAppointment = value ?? false;
-                    if (!_hasNextAppointment) {
-                      _doctorController.clear();
-                      _dateController.clear();
-                      _timeController.clear();
-                    }
-                  });
-                },
-              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    "ติ๊กถูกหากมีการนัดหมายในครั้งถัดไป",
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: RadioListTile<bool>(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text(
+                            'ไม่มี',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                          value: false,
+                          groupValue: _hasNextAppointment,
+                          activeColor: primaryPurple,
+                          onChanged: (bool? value) {
+                            setState(() {
+                              _hasNextAppointment = value ?? false;
+                              _doctorController.clear();
+                              _dateController.clear();
+                              _timeController.clear();
+                              _imageFile = null;
+                              _base64Image = null;
+                            });
+                          },
+                        ),
+                      ),
+                      Expanded(
+                        child: RadioListTile<bool>(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text(
+                            'มี',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                          value: true,
+                          groupValue: _hasNextAppointment,
+                          activeColor: primaryPurple,
+                          onChanged: (bool? value) {
+                            setState(() {
+                              _hasNextAppointment = value ?? true;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                   Visibility(
                     visible: _hasNextAppointment,
@@ -208,6 +236,34 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                         _timePickerField("เวลา", _timeController, context),
                         _textField("สถานที่", _hospitalController),
                         _textField("แผนก", _deptController),
+                        const SizedBox(height: 12),
+                        GestureDetector(
+                          onTap: _pickImage,
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            decoration: BoxDecoration(
+                              color: sectionBgColor,
+                              border: Border.all(
+                                color: primaryPurple,
+                                style: BorderStyle.solid,
+                                width: 1.2,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: _imageFile == null
+                                ? Center(
+                                    child: Text(
+                                      "📎 เพิ่มรูปถ่ายใบนัดหมาย (ถ้ามี)",
+                                      style: TextStyle(
+                                        color: primaryPurple,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  )
+                                : Image.file(_imageFile!, height: 120),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -247,34 +303,6 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
                         color: Colors.grey.shade400,
                         fontSize: 13,
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  GestureDetector(
-                    onTap: _pickImage,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      decoration: BoxDecoration(
-                        color: sectionBgColor,
-                        border: Border.all(
-                          color: primaryPurple,
-                          style: BorderStyle.solid,
-                          width: 1.2,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: _imageFile == null
-                          ? Center(
-                              child: Text(
-                                "📎 เพิ่มรูปถ่ายใบนัดหมาย (ถ้ามี)",
-                                style: TextStyle(
-                                  color: primaryPurple,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            )
-                          : Image.file(_imageFile!, height: 120),
                     ),
                   ),
                 ],

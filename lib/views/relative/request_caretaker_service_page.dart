@@ -70,6 +70,9 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   Map<String, dynamic>? _patientData;
   List<String> _caretakerBusyDates = [];
 
+  // 🌟 เพิ่มตัวแปรสำหรับเก็บ Key ผู้ป่วยที่กำลังทำงานอยู่ (สำคัญมาก)
+  String _activePatientKey = 'Patient';
+
   // ตัวแปรเก็บที่อยู่เดิมจากโปรไฟล์
   String _profileAddress = '';
   double _profileLat = 0.0;
@@ -995,6 +998,27 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
       firstname: firstName,
       lastname: lastName,
     );
+
+    ImageProvider? imageProvider;
+    if (photoBase64 != null && photoBase64.isNotEmpty) {
+      try {
+        String cleanBase64 = photoBase64;
+        if (cleanBase64.contains(',')) {
+          cleanBase64 = cleanBase64.split(',').last;
+        }
+        cleanBase64 = cleanBase64
+            .replaceAll('\n', '')
+            .replaceAll('\r', '')
+            .replaceAll(' ', '')
+            .trim();
+        int pad = cleanBase64.length % 4;
+        if (pad > 0) cleanBase64 += '=' * (4 - pad);
+
+        imageProvider = MemoryImage(base64Decode(cleanBase64));
+      } catch (e) {
+        imageProvider = null;
+      }
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

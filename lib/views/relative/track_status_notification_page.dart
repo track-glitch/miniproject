@@ -15,12 +15,14 @@ class TrackStatusNotificationPage extends StatefulWidget {
   final String? loggedUid;
   final RequestModel? requestModel;
   final String? caretakerName;
+  final String? patientName; // 🌟 1. เพิ่มตัวรับชื่อผู้ป่วย
 
   const TrackStatusNotificationPage({
     super.key,
     this.loggedUid,
     this.requestModel,
     this.caretakerName,
+    this.patientName,
   });
 
   @override
@@ -32,16 +34,19 @@ class _TrackStatusNotificationPageState
     extends State<TrackStatusNotificationPage> {
   List<_NotificationItem> _items = [];
   bool _isLoading = true;
+  String _currentPatientName = ''; // 🌟 2. ตัวแปรเก็บชื่อผู้ป่วยสำหรับแสดงผล
 
   static const Color primaryPurple = Color(0xFF7D3C98);
   static const Color darkPurple = Color(0xFF7D3C98);
-  static const Color lightPurpleBg = const Color.fromARGB(255, 225, 202, 255);
-  // 🌟 สี Highlight สำหรับสถานะล่าสุด
-  static const Color highlightColor = Color(0xFF00B0FF);
+  static const Color lightPurpleBg = Color.fromARGB(255, 225, 202, 255);
+
+  // 🌟 ปรับเป็นสีเหลือง (Amber/Golden Yellow) เพื่อให้อ่านง่ายบนพื้นขาว
+  static const Color highlightColor = Color(0xFFE69500);
 
   @override
   void initState() {
     super.initState();
+    _currentPatientName = widget.patientName ?? '';
     _fetchNotifications();
   }
 
@@ -52,6 +57,19 @@ class _TrackStatusNotificationPageState
     }
 
     try {
+      // 🌟 3. ไปดึงข้อมูล Request มาเพิ่มเติม เพื่อดึงชื่อผู้ป่วย (กรณีที่ไม่ได้ส่งผ่านพารามิเตอร์มา)
+      final reqSnap = await FirebaseDatabase.instance
+          .ref('Login/${widget.loggedUid}/Relative/Request/${widget.requestModel!.requestId}')
+          .get();
+      
+      if (reqSnap.exists && reqSnap.value is Map) {
+        final reqData = reqSnap.value as Map;
+        if (_currentPatientName.isEmpty) {
+          _currentPatientName = reqData['patientName']?.toString() ?? 'ไม่ระบุชื่อผู้ป่วย';
+        }
+      }
+
+      // ดึงแจ้งเตือน
       final snap = await FirebaseDatabase.instance
           .ref(
             'Login/${widget.loggedUid}/Relative/Request/${widget.requestModel!.requestId}/Notification',
@@ -212,10 +230,16 @@ class _TrackStatusNotificationPageState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // 🌟 4. เพิ่มชื่อผู้ป่วย
+                    _buildCompactInfo(
+                      'ผู้รับบริการ',
+                      _currentPatientName.isNotEmpty ? _currentPatientName : 'ไม่ระบุชื่อ',
+                      isBold: true,
+                    ),
+                    const SizedBox(height: 12),
                     _buildCompactInfo(
                       'ผู้ให้บริการ',
-                      widget.caretakerName ?? 'ไม่ระบุ',
-                      isBold: true,
+                      widget.caretakerName ?? 'รอผู้ดูแลตอบรับ',
                     ),
                     const SizedBox(height: 12),
                     _buildCompactInfo(
@@ -260,7 +284,7 @@ class _TrackStatusNotificationPageState
           style: TextStyle(
             fontSize: 13,
             fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-            color: Colors.black87,
+            color: isBold ? primaryPurple : Colors.black87, // ให้ชื่อผู้รับบริการเด่นขึ้น
           ),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
@@ -371,11 +395,9 @@ class _TrackStatusNotificationPageState
           : RefreshIndicator(
               color: primaryPurple,
               onRefresh: () async {
-                // เมื่อดึงหน้าจอลง ให้เรียกฟังก์ชันโหลดข้อมูลใหม่
                 await _fetchNotifications();
               },
               child: ListView(
-                // 🌟 บังคับให้ดึงหน้าจอเพื่อรีเฟรชได้เสมอ แม้ข้อมูลจะน้อยหรือไม่มีเลย
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -693,7 +715,7 @@ class _NotificationItem {
   });
 }
 
-// 🌟 NotificationCard ที่นำไอคอนออกและชิดซ้าย
+// 🌟 ปรับสีสถานะล่าสุดเป็นสีเหลือง และข้อความเก่าเป็นสีเทา
 class _NotificationCard extends StatelessWidget {
   final _NotificationItem item;
 
@@ -703,44 +725,39 @@ class _NotificationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool latest = item.isLatest;
 
-    // แยกวันที่กับเวลาออกจากกัน
+    // แยกวันที่กับเวลา
     String dateStr = item.dateTime;
     String timeStr = '';
     final parts = item.dateTime.split(' ');
     if (parts.length >= 2) {
       dateStr = parts[0];
-      timeStr = parts.sublist(1).join(' '); // นำเวลาและ น. มารวมกัน
+      timeStr = parts.sublist(1).join(' ');
     }
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        // ขอบสีม่วง/เขียว ให้คล้าย Reference และเพิ่มแสงเงา
+        // ขอบ: สีเหลืองสำหรับสถานะล่าสุด และสีเทาสำหรับการ์ดเก่า
         border: Border.all(
           color: latest
               ? _TrackStatusNotificationPageState.highlightColor
-              : _TrackStatusNotificationPageState.primaryPurple.withOpacity(
-                  0.6,
-                ),
-          width: latest ? 2.0 : 1.5,
+              : Colors.grey.shade300,
+          width: latest ? 2.0 : 1.2,
         ),
         boxShadow: [
           BoxShadow(
             color: latest
                 ? _TrackStatusNotificationPageState.highlightColor.withOpacity(
-                    0.15,
+                    0.2,
                   )
-                : _TrackStatusNotificationPageState.primaryPurple.withOpacity(
-                    0.15,
-                  ),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+                : Colors.black.withOpacity(0.04),
+            blurRadius: latest ? 14 : 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: IntrinsicHeight(
-        // ให้การ์ดความสูงเท่ากันทั้งซ้าย-ขวา
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -751,8 +768,8 @@ class _NotificationCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: latest
                     ? _TrackStatusNotificationPageState.highlightColor
-                          .withOpacity(0.05)
-                    : _TrackStatusNotificationPageState.lightPurpleBg,
+                          .withOpacity(0.08)
+                    : Colors.grey.shade100,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(14),
                   bottomLeft: Radius.circular(14),
@@ -766,7 +783,7 @@ class _NotificationCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade800,
+                      color: latest ? Colors.grey.shade800 : Colors.grey.shade600,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -776,7 +793,7 @@ class _NotificationCard extends StatelessWidget {
                       timeStr,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade600,
+                        color: latest ? Colors.grey.shade600 : Colors.grey.shade400,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -792,7 +809,7 @@ class _NotificationCard extends StatelessWidget {
               color: Colors.grey.shade200,
             ),
 
-            // 🌟 ฝั่งขวา: แสดงสถานะ และรายละเอียด (นำ Icon ออก)
+            // ฝั่งขวา: แสดงสถานะและรายละเอียด
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(14),
@@ -800,6 +817,7 @@ class _NotificationCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    // หัวข้อสถานะ: ล่าสุดเป็นสีเหลือง ข้อความเก่าเป็นสีเทา
                     Text(
                       item.status,
                       style: TextStyle(
@@ -807,16 +825,17 @@ class _NotificationCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         color: latest
                             ? _TrackStatusNotificationPageState.highlightColor
-                            : _TrackStatusNotificationPageState.darkPurple,
+                            : Colors.grey.shade600,
                       ),
                     ),
                     if (item.detail.isNotEmpty) ...[
                       const SizedBox(height: 6),
+                      // รายละเอียด: ข้อความเก่าปรับเป็นสีเทาจางลง
                       Text(
                         item.detail,
                         style: TextStyle(
                           fontSize: 13,
-                          color: Colors.grey.shade700,
+                          color: latest ? Colors.black87 : Colors.grey.shade500,
                           height: 1.4,
                         ),
                         maxLines: 4,

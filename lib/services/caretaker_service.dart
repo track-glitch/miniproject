@@ -103,7 +103,6 @@ class CaretakerService {
   }
 
   // 🌟 ฟังก์ชันสำหรับดึงคำขอ (Requests) ของผู้ดูแลคนนี้โดยเฉพาะ
-  // 🌟 ฟังก์ชันสำหรับดึงคำขอ (Requests) โดยแปลง UID เป็น caretakerId ก่อน
   Future<List<Map<String, dynamic>>> getRequestsForCaretaker(String uid) async {
     try {
       // 🕵️‍♂️ จังหวะที่ 1: เอา uid ไปสืบหา caretakerId (เลขบัตร ปชช.) ของคนๆ นี้ก่อน
@@ -135,12 +134,9 @@ class CaretakerService {
       data.forEach((userUid, userEntry) {
         if (userEntry['Relative'] != null) {
           final relativeData = userEntry['Relative'] as Map<String, dynamic>;
-          final patientData = relativeData['Patient'] as Map<String, dynamic>?;
 
           if (relativeData['Request'] != null) {
             final requestsMap = relativeData['Request'] as Map<String, dynamic>;
-
-            // 🌟 ในไฟล์ caretaker_service.dart ปรับปรุงฟังก์ชัน getRequestsForCaretaker
 
             requestsMap.forEach((reqId, reqData) {
               // 🌟 จุดสำคัญ: เทียบ caretakerId ในคำขอ กับ myCaretakerId ที่เราสืบมาได้!
@@ -174,23 +170,26 @@ class CaretakerService {
                           });
 
                       // 2. ปรับค่าในตัวแปรจำลอง (Local Map) ณ ตอนนี้ทันที!
-                      // เพื่อให้ RequestModel รับรู้ค่าใหม่และแสดงคำว่า "NEW" บนหน้าจอทันทีโดยไม่ต้องรอรีเฟรช
                       reqData['isReadCaretaker'] = false;
                       reqData['hasTriggeredTimeAlert'] = true;
                     }
                   }
                 }
                 // =========================================================
+                
+                // 🌟 อ่าน targetPatientKey เพื่อดึงข้อมูลผู้ป่วยที่ถูกต้อง (ถ้าไม่มีค่า ให้ดึง Patient ปกติ)
+                String targetPatientKey = reqData['targetPatientKey']?.toString() ?? 'Patient';
+                final patientData = relativeData[targetPatientKey] as Map<String, dynamic>? ?? relativeData['Patient'] as Map<String, dynamic>?;
 
                 allRequests.add({
                   'requestModel': RequestModel.fromJson(
                     reqData,
                   ), // ค่านี่จะกลายเป็นผลลัพธ์ล่าสุดทันที
                   'relativeData': relativeData,
-                  'patientData': patientData ?? {},
+                  'patientData': patientData ?? {}, // 🌟 ส่งก้อน Patient ที่ถูกต้องไปให้ฝั่ง UI
                   'relativeUid': userUid,
                   'isReadCaretaker': reqData['isReadCaretaker'] ?? false,
-                  'rawData': reqData,
+                  'rawData': reqData, // 🌟 ส่งข้อมูลดิบติดไปด้วยเผื่อนำไปใช้ต่อ
                 });
               }
             });
@@ -231,42 +230,38 @@ class CaretakerService {
     }
   }
 
-  // 🌟 ฟังก์ชันดึงรีวิวล่าสุด (ใช้ของเดิมที่มีอยู่แล้วมาต่อยอด)
+  // 🌟 ฟังก์ชันดึงรีวิวล่าสุด
   Future<List<Map<String, dynamic>>> getRecentReviews(
     String uid, {
     int limit = 2,
   }) async {
     try {
-      // 💡 1. เรียกใช้ฟังก์ชันเดิมของคุณ ที่ไปกวาด Request ทั้งหมดของอาสาคนนี้มา
-      // (ฟังก์ชันเดียวกับที่คุณใช้ในหน้า List)
       final allRequests = await getRequestsForCaretaker(uid);
 
       List<Map<String, dynamic>> reviews = [];
 
-      // 💡 2. วนลูปดูทีละ Request เพื่อหาว่าอันไหนมี Review ซ่อนอยู่
       for (var item in allRequests) {
         RequestModel req = item['requestModel'];
         Map<String, dynamic>? relData = item['relativeData'];
+        Map<String, dynamic>? reqRawData = item['rawData'];
         String reviewerImg = '';
-        // ถ้าคำขอนี้มีการเขียน Review เอาไว้
+        
         if (req.review != null) {
-          // เอาชื่อญาติมาเป็นชื่อคนรีวิว
           String reviewerName = 'ไม่ระบุชื่อ';
           if (relData != null) {
             reviewerName =
                 "${relData['firstname'] ?? ''} ${relData['lastname'] ?? ''}"
                     .trim();
-            reviewerImg = relData['Patient']['patientphoto'] ?? '';
+                    
+            // 🌟 เช็คว่าคำขอนี้อ้างอิงถึงผู้ป่วยคนไหน แล้วไปดึงรูปของคนนั้นมา
+            String targetPatientKey = reqRawData?['targetPatientKey']?.toString() ?? 'Patient';
+            reviewerImg = relData[targetPatientKey]?['patientphoto'] ?? relData['Patient']?['patientphoto'] ?? '';
           }
 
           reviews.add({
             'reviewerName': reviewerName.isEmpty ? 'ไม่ระบุชื่อ' : reviewerName,
-
-            // ⚠️ ปรับ .rating และ .comment ให้ตรงกับตัวแปรใน ReviewModel ของคุณ
             'rating': req.review!.rating ?? 5.0,
             'comment': req.review!.comment ?? 'ไม่มีข้อความ',
-
-            // ใช้เวลาของคำขอมาจัดเรียง (ถ้าใน ReviewModel มีเวลา ก็เปลี่ยนไปใช้ของ Review แทนได้ครับ)
             'timestamp': req.requestdate?.toIso8601String() ?? '',
             'timeAgo': _formatSimpleDate(req.requestdate?.toIso8601String()),
             'reviewerImage': reviewerImg,
@@ -274,12 +269,10 @@ class CaretakerService {
         }
       }
 
-      // 💡 3. เรียงลำดับจาก ใหม่ -> เก่า
       reviews.sort(
         (a, b) => (b['timestamp'] ?? '').compareTo(a['timestamp'] ?? ''),
       );
 
-      // 💡 4. ตัดเอาไปโชว์แค่จำนวนจำกัด (เช่น 2 อัน)
       print(reviews.take(limit).toList());
       return reviews.take(limit).toList();
     } catch (e) {
@@ -310,8 +303,8 @@ class CaretakerService {
       for (var item in allRequests) {
         RequestModel req = item['requestModel'];
         Map<String, dynamic>? relData = item['relativeData'];
+        Map<String, dynamic>? reqRawData = item['rawData'];
 
-        // ถ้าคำขอนี้มีการรีวิว
         if (req.review != null) {
           String reviewerName = 'ไม่ระบุชื่อ';
           String reviewerImg = '';
@@ -320,8 +313,10 @@ class CaretakerService {
             reviewerName =
                 "${relData['firstname'] ?? ''} ${relData['lastname'] ?? ''}"
                     .trim();
-            reviewerImg =
-                relData['Patient']['patientphoto'] ?? relData['image'] ?? '';
+                    
+            // 🌟 เช็คว่าคำขอนี้อ้างอิงถึงผู้ป่วยคนไหน แล้วไปดึงรูปของคนนั้นมา
+            String targetPatientKey = reqRawData?['targetPatientKey']?.toString() ?? 'Patient';
+            reviewerImg = relData[targetPatientKey]?['patientphoto'] ?? relData['Patient']?['patientphoto'] ?? relData['image'] ?? '';
           }
 
           reviews.add({
@@ -335,12 +330,10 @@ class CaretakerService {
         }
       }
 
-      // เรียงจากใหม่ไปเก่า (Reverse)
       reviews.sort(
         (a, b) => (b['timestamp'] ?? '').compareTo(a['timestamp'] ?? ''),
       );
 
-      // 🌟 รีเทิร์นค่ากลับไปทั้งหมดเลย ไม่ต้องจำกัด Row
       return reviews;
     } catch (e) {
       print('Error fetching all reviews: $e');

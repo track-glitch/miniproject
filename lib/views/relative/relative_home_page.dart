@@ -4,14 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:miniproject/models/patient_model.dart';
 import 'package:miniproject/models/relative_model.dart';
-import 'package:miniproject/services/function_service.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:miniproject/views/relative/edit_relative_info_page.dart';
 import 'package:miniproject/views/relative/list_request_page.dart';
-import 'package:miniproject/views/relative/track_status_notification_page.dart';
 import 'package:miniproject/views/relative/view_caretaker_profile_page.dart';
-import 'package:miniproject/views/relative/view_caretaker_review.dart';
 import 'package:miniproject/views/login_page.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
@@ -43,7 +40,11 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   String _userName = '';
   String _userProfilePhoto = '';
   DateTime? _selectedFilterDate;
-  bool _isLocating = false; // 🌟 เพิ่มตัวแปรเช็กสถานะกำลังค้นหาตำแหน่ง
+
+  // 🌟 พิกัดตำแหน่งของผู้ป่วย (ใช้คำนวณระยะห่าง)
+  double? _patientLat;
+  double? _patientLng;
+
   List<dynamic> provinceData = [];
   List<dynamic> districtData = [];
   List<dynamic> subdistrictsData = [];
@@ -87,22 +88,40 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
     return '$prefixWithSpace$fName $lName'.trim();
   }
 
+  // 🌟 ฟังก์ชันช่วยดึงพิกัดจาก Map รองรับหลายคีย์
+  double? _extractCoordinate(Map? map, List<String> keys) {
+    if (map == null) return null;
+    for (var k in keys) {
+      if (map[k] != null) {
+        var val = double.tryParse(map[k].toString());
+        if (val != null) return val;
+      }
+    }
+    if (map['Location'] is Map) {
+      for (var k in keys) {
+        if (map['Location'][k] != null) {
+          var val = double.tryParse(map['Location'][k].toString());
+          if (val != null) return val;
+        }
+      }
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
-
-    // 🌟 ดึงข้อมูลจาก Firebase มารอไว้แค่ครั้งเดียวตอนเปิดหน้า
     _loginStream = FirebaseDatabase.instance.ref('Login').onValue;
 
     _searchController.addListener(() {
       setState(() {
-        _currentPage = 1; // 🌟 รีเซ็ตกลับไปหน้าแรกเสมอเมื่อพิมพ์ค้นหา
+        _currentPage = 1;
       });
     });
-    _loadUserName();
+
+    _loadUserNameAndLocation();
     loadThailandData();
 
-    // 🌟 ดักจับการเลื่อนจอ ถ้าถึงด้านล่างสุดให้โหลดหน้าต่อไป
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
           _scrollController.position.maxScrollExtent - 50) {
@@ -115,9 +134,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
     });
   }
 
-  Future<void> _loadUserName() async {
-    String currentUid =
-        widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+  Future<void> _loadUserNameAndLocation() async {
+    String currentUid = widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
     if (currentUid.isEmpty) return;
 
     try {
@@ -143,21 +161,39 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
           if (isMatch) {
             var childData = allUsers[key];
             if (childData is Map && childData.containsKey('Relative')) {
-              var relNode = Map<String, dynamic>.from(
-                childData['Relative'] as Map,
-              );
+              var relNode = Map<String, dynamic>.from(childData['Relative'] as Map);
+
+              // 🌟 เช็ค activePatientNode และรองรับโครงสร้างผู้ป่วยแบบ Sub-node Patient/{patientId}
+              String activeNode = relNode['activePatientNode']?.toString() ?? '';
+              dynamic patientNode;
+
+              if (relNode['Patient'] != null && relNode['Patient'] is Map) {
+                final patientsMap = Map<String, dynamic>.from(relNode['Patient'] as Map);
+                if (activeNode.isNotEmpty && patientsMap.containsKey(activeNode)) {
+                  patientNode = patientsMap[activeNode];
+                } else if (patientsMap.isNotEmpty) {
+                  patientNode = patientsMap.values.first;
+                }
+              }
+
+              // Fallback โครงสร้างเดิม
+              if (patientNode == null && relNode.containsKey(activeNode)) {
+                patientNode = relNode[activeNode];
+              }
+              if (patientNode == null && relNode['Patient'] != null && relNode['Patient'] is Map && !relNode['Patient'].containsKey('firstname')) {
+                // กรณีเป็น node เปล่า
+              } else if (patientNode == null && relNode['Patient'] != null) {
+                patientNode = relNode['Patient'];
+              }
+
               setState(() {
-                // ── 🌟 1. ดึงข้อมูลโหนด Patient มาใช้เป็นหลัก ──
-                var patientNode = relNode['Patient'];
                 if (patientNode != null && patientNode is Map) {
-                  // ถ้ามีข้อมูลผู้ป่วย -> ให้แสดงชื่อผู้ป่วย
                   _userName = formatFullNameWithTitle(
                     gender: patientNode['gender']?.toString(),
                     firstname: patientNode['firstname']?.toString(),
                     lastname: patientNode['lastname']?.toString(),
                   );
                 } else {
-                  // ถ้ายังไม่มีข้อมูลผู้ป่วย -> สำรองใช้ชื่อญาติ
                   _userName = formatFullNameWithTitle(
                     gender: relNode['gender']?.toString(),
                     firstname: relNode['firstname']?.toString(),
@@ -165,13 +201,16 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   );
                 }
 
-                // ── 🌟 2. ดึงรูปโปรไฟล์ของผู้ป่วยก่อน ถ้าไม่มีถึงจะใช้รูปญาติ ──
                 String rawPhoto = '';
-                if (patientNode != null &&
-                    patientNode['patientphoto'] != null) {
+                if (patientNode != null && patientNode is Map && patientNode['patientphoto'] != null) {
                   rawPhoto = patientNode['patientphoto'].toString();
                 } else {
                   rawPhoto = relNode['profilephoto']?.toString() ?? '';
+                }
+
+                // 🌟 ตัด prefix data:image/...;base64, ออกก่อน decode
+                if (rawPhoto.contains(',')) {
+                  rawPhoto = rawPhoto.split(',').last;
                 }
 
                 _userProfilePhoto = rawPhoto
@@ -183,18 +222,57 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                 if (pad > 0) _userProfilePhoto += '=' * (4 - pad);
               });
 
+              // 🌟 ค้นหาพิกัดตำแหน่งของผู้ป่วย (คนที่เลือกอยู่)
+              double? pLat = _extractCoordinate(patientNode is Map ? patientNode : null, ['latitude', 'lat']) ??
+                  _extractCoordinate(relNode, ['latitude', 'lat']);
+              double? pLng = _extractCoordinate(patientNode is Map ? patientNode : null, ['longitude', 'lng', 'long']) ??
+                  _extractCoordinate(relNode, ['longitude', 'lng', 'long']);
+
+              if (pLat == null || pLng == null) {
+                String pAddress = (patientNode is Map ? patientNode['address'] : null)?.toString() ??
+                    relNode['address']?.toString() ??
+                    '';
+                if (pAddress.trim().isNotEmpty) {
+                  try {
+                    List<Location> locs = await geocoding.locationFromAddress(pAddress);
+                    if (locs.isNotEmpty) {
+                      pLat = locs.first.latitude;
+                      pLng = locs.first.longitude;
+                    }
+                  } catch (_) {}
+                }
+              }
+
+              if (pLat == null || pLng == null) {
+                try {
+                  bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+                  if (serviceEnabled) {
+                    LocationPermission permission = await Geolocator.checkPermission();
+                    if (permission == LocationPermission.whileInUse ||
+                        permission == LocationPermission.always) {
+                      Position pos = await Geolocator.getCurrentPosition(
+                        desiredAccuracy: LocationAccuracy.medium,
+                      );
+                      pLat = pos.latitude;
+                      pLng = pos.longitude;
+                    }
+                  }
+                } catch (_) {}
+              }
+
+              setState(() {
+                _patientLat = pLat;
+                _patientLng = pLng;
+              });
+
               _myBookedDates.clear();
               if (relNode.containsKey('Request')) {
                 var requests = relNode['Request'];
                 if (requests is Map) {
                   requests.forEach((reqId, reqData) {
                     if (reqData is Map) {
-                      String status = (reqData['requeststatus'] ?? '')
-                          .toString()
-                          .toLowerCase();
-                      if (status == 'pending' ||
-                          status == 'accepted' ||
-                          status == 'pending_advice') {
+                      String status = (reqData['requeststatus'] ?? '').toString().toLowerCase();
+                      if (status == 'pending' || status == 'accepted' || status == 'pending_advice') {
                         String dateStr = reqData['appointmentdate'] ?? '';
                         if (dateStr.isNotEmpty) {
                           try {
@@ -215,20 +293,26 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
         }
       }
     } catch (e) {
-      print("Error fetching username: $e");
+      print("Error fetching username or location: $e");
     }
   }
 
+  // 🌟 ข้อ 5: ห้ามเลือกวันที่ปัจจุบัน (firstDate เริ่มต้นจากวันพรุ่งนี้เป็นต้นไป)
   void _openFilterCalendar() async {
     DateTime now = DateTime.now();
-    DateTime today = DateTime(now.year, now.month, now.day);
+    DateTime tomorrow = DateTime(now.year, now.month, now.day)
+        .add(const Duration(days: 2)); // 🌟 วันพรุ่งนี้
+
+    DateTime initial = _selectedFilterDate ?? tomorrow;
+    if (initial.isBefore(tomorrow)) {
+      initial = tomorrow;
+    }
 
     DateTime? selectedDate = await showDatePicker(
       context: context,
-      initialDate: today,
-      firstDate: today,
+      initialDate: initial,
+      firstDate: tomorrow, // 🌟 ห้ามเลือกวันที่ปัจจุบัน
       lastDate: DateTime(now.year + 2, 12, 31),
-      // 🌟 เอา selectableDayPredicate ที่คอยล็อควันที่ออกไปทั้งหมดเลยครับ
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -267,7 +351,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   @override
   void dispose() {
     _searchController.dispose();
-    _scrollController.dispose(); // 🌟 คืนหน่วยความจำของ ScrollController
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -640,102 +724,18 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
     );
   }
 
-  Future<void> _findNearMe() async {
-    // 🌟 เปลี่ยนจาก Popup เด้งบังจอ มาเป็นการอัปเดตปุ่มหมุนๆ แทน
-    setState(() => _isLocating = true);
-
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) throw Exception('กรุณาเปิด GPS บนอุปกรณ์ของคุณ');
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('แอปไม่ได้รับอนุญาตให้เข้าถึงตำแหน่ง');
-        }
-      }
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception('สิทธิ์ GPS ถูกปิดกั้นถาวร กรุณาเปิดในตั้งค่า');
-      }
-
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      List<Placemark> placemarks = await geocoding.placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
-
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks.first;
-
-        String rawProvince = place.administrativeArea ?? '';
-        String rawDistrict =
-            place.subAdministrativeArea ?? place.locality ?? '';
-
-        String cleanProvEn = rawProvince
-            .toLowerCase()
-            .replaceAll('chang wat', '')
-            .replaceAll('province', '')
-            .trim();
-
-        String cleanDistEn = rawDistrict
-            .toLowerCase()
-            .replaceAll('amphoe', '')
-            .replaceAll('district', '')
-            .replaceAll('khet', '')
-            .trim();
-
-        String finalProvinceTh = cleanProvEn;
-        String finalDistrictTh = cleanDistEn;
-        int? provCode;
-
-        for (var p in provinceData) {
-          String pEn = (p['provinceNameEn'] ?? '').toString().toLowerCase();
-          if (pEn == cleanProvEn || cleanProvEn.contains(pEn)) {
-            finalProvinceTh = p['provinceNameTh'];
-            provCode = p['provinceCode'];
-            break;
-          }
-        }
-
-        for (var d in districtData) {
-          String dEn = (d['districtNameEn'] ?? '').toString().toLowerCase();
-          int pCode = d['provinceCode'];
-          if (provCode != null && provCode != pCode) continue;
-          if (dEn == cleanDistEn ||
-              cleanDistEn.contains(dEn) ||
-              dEn.contains(cleanDistEn)) {
-            finalDistrictTh = d['districtNameTh'];
-            break;
-          }
-        }
-
-        setState(() {
-          String displayText = '';
-          if (finalDistrictTh.isNotEmpty && finalDistrictTh != cleanDistEn) {
-            displayText += 'อำเภอ $finalDistrictTh ';
-          }
-          if (finalProvinceTh.isNotEmpty && finalProvinceTh != cleanProvEn) {
-            displayText += 'จังหวัด $finalProvinceTh';
-          }
-
-          _searchController.text = displayText.trim();
-        });
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-      );
-    } finally {
-      if (mounted) setState(() => _isLocating = false); // 🌟 ปิดสถานะโหลด
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    // 🌟 ถอดรหัสรูปโปรไฟล์ของผู้ป่วย/ญาติที่มุมบนขวา พร้อมรองรับ Error
+    ImageProvider? userImageProvider;
+    if (_userProfilePhoto.isNotEmpty) {
+      try {
+        userImageProvider = MemoryImage(base64Decode(_userProfilePhoto));
+      } catch (e) {
+        userImageProvider = null;
+      }
+    }
+
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
@@ -751,7 +751,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   widget.loggedUid ?? currentUser?.uid ?? '';
               final bool isLoggedIn = effectiveUid.isNotEmpty;
 
-              // ── ถ้ายังไม่ล็อกอิน: แสดงเป็นปุ่มรูปคน + ข้อความ "เข้าสู่ระบบ" ──
               if (!isLoggedIn) {
                 return Center(
                   child: Padding(
@@ -801,7 +800,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                 );
               }
 
-              // ── ถ้าล็อกอินแล้ว: แสดงรูปโปรไฟล์ + ไอคอนออกจากระบบ (เหมือนเดิม) ──
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -824,10 +822,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                             CircleAvatar(
                               radius: 11,
                               backgroundColor: Colors.white.withOpacity(0.3),
-                              backgroundImage: _userProfilePhoto.isNotEmpty
-                                  ? MemoryImage(base64Decode(_userProfilePhoto))
-                                  : null,
-                              child: _userProfilePhoto.isEmpty
+                              backgroundImage: userImageProvider,
+                              child: userImageProvider == null
                                   ? const Icon(
                                       Icons.person,
                                       color: Colors.white,
@@ -936,33 +932,131 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   ),
                 ],
               ),
-              padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
               child: Column(
                 children: [
                   Text(
                     'ค้นหาผู้ดูแล',
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: headingColor,
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
+
+                  // 🌟 ข้อ 1: แยกกล่องเลือกวันที่ออกมาโดยเฉพาะ
+                  InkWell(
+                    onTap: _openFilterCalendar,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: _selectedFilterDate != null
+                              ? primaryColor
+                              : greyBorder,
+                          width: 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryColor.withOpacity(0.08),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_month_rounded,
+                            color: _selectedFilterDate != null
+                                ? primaryColor
+                                : Colors.grey.shade600,
+                            size: 22,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'วันที่ต้องการรับบริการ (นัดหมาย)',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade600,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _selectedFilterDate != null
+                                      ? DateFormat('dd/MM/yyyy')
+                                          .format(_selectedFilterDate!)
+                                      : 'แตะเพื่อเลือกวันที่ (เลือกได้ตั้งแต่พรุ่งนี้)',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: _selectedFilterDate != null
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: _selectedFilterDate != null
+                                        ? primaryColor
+                                        : Colors.grey.shade400,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (_selectedFilterDate != null)
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedFilterDate = null;
+                                  _currentPage = 1;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            )
+                          else
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 14,
+                              color: Colors.grey.shade400,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // 🌟 ช่องค้นหา (แยกออกมาเดี่ยวๆ สามารถพิมพ์ค้นหาได้ทันที)
                   Container(
-                    height: 48,
+                    height: 46,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(
-                        color: _selectedFilterDate != null
-                            ? primaryColor
-                            : greyBorder,
-                        width: 1.2,
-                      ),
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(color: greyBorder, width: 1.2),
                       boxShadow: [
                         BoxShadow(
-                          color: primaryColor.withOpacity(0.10),
-                          blurRadius: 8,
+                          color: primaryColor.withOpacity(0.08),
+                          blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
                       ],
@@ -972,26 +1066,17 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                         const SizedBox(width: 14),
                         Icon(
                           Icons.search_rounded,
-                          color: _selectedFilterDate != null
-                              ? primaryColor
-                              : Colors.grey,
+                          color: primaryColor,
                           size: 22,
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: TextField(
                             controller: _searchController,
-                            readOnly: _selectedFilterDate == null,
-                            onTap: () {
-                              if (_selectedFilterDate == null)
-                                _openFilterCalendar();
-                            },
                             decoration: InputDecoration(
-                              hintText: _selectedFilterDate == null
-                                  ? 'เลือกวันที่ทางขวาก่อนพิมพ์ค้นหา...'
-                                  : 'ค้นหา ชื่อ-นามสกุล หรือ ที่อยู่',
+                              hintText: 'ค้นหาด้วยชื่อผู้ดูแล หรือ ที่อยู่...',
                               hintStyle: TextStyle(
-                                fontSize: 12.5,
+                                fontSize: 13,
                                 color: Colors.grey.shade400,
                               ),
                               border: InputBorder.none,
@@ -999,67 +1084,36 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                             ),
                           ),
                         ),
-                        GestureDetector(
-                          onTap: _openFilterCalendar,
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: Row(
-                              children: [
-                                if (_selectedFilterDate != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 4.0),
-                                    child: Text(
-                                      DateFormat(
-                                        'dd/MM',
-                                      ).format(_selectedFilterDate!),
-                                      style: TextStyle(
-                                        color: primaryColor,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                Icon(
-                                  Icons.calendar_month,
-                                  color: _selectedFilterDate != null
-                                      ? primaryColor
-                                      : Colors.grey.shade500,
-                                  size: 22,
-                                ),
-                                if (_selectedFilterDate != null)
-                                  GestureDetector(
-                                    onTap: () => setState(() {
-                                      _selectedFilterDate = null;
-                                      _searchController.clear();
-                                    }),
-                                    child: const Padding(
-                                      padding: EdgeInsets.only(left: 4.0),
-                                      child: Icon(
-                                        Icons.close,
-                                        size: 16,
-                                        color: Colors.red,
-                                      ),
-                                    ),
-                                  ),
-                              ],
+                        if (_searchController.text.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(
+                              Icons.clear,
+                              size: 18,
+                              color: Colors.grey,
                             ),
+                            onPressed: () {
+                              setState(() {
+                                _searchController.clear();
+                              });
+                            },
                           ),
-                        ),
                       ],
                     ),
                   ),
+
                   const SizedBox(height: 8),
+
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: const [
-                      Icon(Icons.info_outline, color: Colors.red, size: 16),
+                      Icon(Icons.info_outline, color: Colors.red, size: 15),
                       SizedBox(width: 4),
                       Flexible(
                         child: Text(
                           'แนะนำให้ส่งคำขอล่วงหน้าก่อน 3 วันเพื่อให้ผู้ดูแลมีเวลาเตรียมตัว',
                           style: TextStyle(
                             color: Colors.red,
-                            fontSize: 12,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.bold,
                           ),
                           textAlign: TextAlign.center,
@@ -1067,192 +1121,127 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Column(
+
+                  const SizedBox(height: 10),
+
+                  Row(
                     children: [
-                      Material(
-                        color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(22),
-                        child: InkWell(
+                      Expanded(
+                        child: Material(
+                          color: Colors.transparent,
                           borderRadius: BorderRadius.circular(22),
-                          // 🌟 ป้องกันการกดซ้ำตอนที่มันกำลังโหลด
-                          onTap: _isLocating ? null : _findNearMe,
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 11),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFA78BFA), Color(0xFF7C3AED)],
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(22),
+                            onTap: _showServiceStepsModal,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 9,
+                                horizontal: 4,
                               ),
-                              borderRadius: BorderRadius.circular(22),
-                              boxShadow: [
-                                BoxShadow(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF0FDF4),
+                                borderRadius: BorderRadius.circular(22),
+                                border: Border.all(
                                   color: const Color(
-                                    0xFF7C3AED,
-                                  ).withOpacity(0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
+                                    0xFF22C55E,
+                                  ).withOpacity(0.5),
+                                  width: 1.2,
                                 ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                // 🌟 ถ้ากำลังค้นหาให้ขึ้นวงกลมหมุนๆ
-                                if (_isLocating)
-                                  const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFF22C55E,
+                                    ).withOpacity(0.08),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(
+                                    Icons.format_list_bulleted_rounded,
+                                    color: Color(0xFF16A34A),
+                                    size: 15,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      'ขั้นตอนการทำงาน',
+                                      style: TextStyle(
+                                        color: Color(0xFF16A34A),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  )
-                                else
-                                  const Icon(
-                                    Icons.my_location_rounded,
-                                    color: Colors.white,
-                                    size: 16,
                                   ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  _isLocating
-                                      ? 'กำลังค้นหา...'
-                                      : 'ค้นหาใกล้ฉัน',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Material(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(22),
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(22),
-                                onTap: _showServiceStepsModal,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 9,
-                                    horizontal: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF0FDF4),
-                                    borderRadius: BorderRadius.circular(22),
-                                    border: Border.all(
-                                      color: const Color(
-                                        0xFF22C55E,
-                                      ).withOpacity(0.5),
-                                      width: 1.2,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(
-                                          0xFF22C55E,
-                                        ).withOpacity(0.08),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: const [
-                                      Icon(
-                                        Icons.format_list_bulleted_rounded,
-                                        color: Color(0xFF16A34A),
-                                        size: 15,
-                                      ),
-                                      SizedBox(width: 4),
-                                      Flexible(
-                                        child: Text(
-                                          'ขั้นตอนการทำงาน',
-                                          style: TextStyle(
-                                            color: Color(0xFF16A34A),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(22),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(22),
+                            onTap: _showPricingDetailsDialog,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 9,
+                                horizontal: 4,
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Material(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(22),
-                              child: InkWell(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFFBEB),
                                 borderRadius: BorderRadius.circular(22),
-                                onTap: _showPricingDetailsDialog,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 9,
-                                    horizontal: 4,
+                                border: Border.all(
+                                  color: const Color(
+                                    0xFFF59E0B,
+                                  ).withOpacity(0.5),
+                                  width: 1.2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFFF59E0B,
+                                    ).withOpacity(0.08),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFFFBEB),
-                                    borderRadius: BorderRadius.circular(22),
-                                    border: Border.all(
-                                      color: const Color(
-                                        0xFFF59E0B,
-                                      ).withOpacity(0.5),
-                                      width: 1.2,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(
-                                          0xFFF59E0B,
-                                        ).withOpacity(0.08),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(
+                                    Icons.payments_outlined,
+                                    color: Color(0xFFD97706),
+                                    size: 15,
                                   ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: const [
-                                      Icon(
-                                        Icons.payments_outlined,
+                                  SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(
+                                      'รายละเอียดค่าใช้จ่าย',
+                                      style: TextStyle(
                                         color: Color(0xFFD97706),
-                                        size: 15,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                      SizedBox(width: 4),
-                                      Flexible(
-                                        child: Text(
-                                          'รายละเอียดค่าใช้จ่าย',
-                                          style: TextStyle(
-                                            color: Color(0xFFD97706),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
@@ -1262,10 +1251,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
             Expanded(
               child: StreamBuilder<DatabaseEvent>(
-                // 🌟 เปลี่ยนมาใช้ตัวแปร _loginStream
                 stream: _loginStream,
                 builder: (context, snapshot) {
-                  // 🌟 เพิ่มเงื่อนไข && !snapshot.hasData เพื่อให้หมุนแค่ตอนโหลดครั้งแรกสุดเท่านั้น
                   if (snapshot.connectionState == ConnectionState.waiting &&
                       !snapshot.hasData) {
                     return Center(
@@ -1350,11 +1337,31 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                       reviewData['reviewdate']?.toString() ??
                                       DateTime.now().toIso8601String();
 
-                                  String reviewerGender =
-                                      (relativeNode['Patient']?['gender'] ??
-                                              relativeNode['gender'] ??
-                                              '')
-                                          .toString();
+                                  // ดึงข้อมูลผู้รีวิว รองรับทั้งโครงสร้างใหม่และเดิม
+                                  String reviewerGender = '';
+                                  String reviewerImage = '';
+
+                                  if (relativeNode['Patient'] != null && relativeNode['Patient'] is Map) {
+                                    final pMap = relativeNode['Patient'] as Map;
+                                    if (pMap.containsKey('gender')) {
+                                      reviewerGender = pMap['gender']?.toString() ?? '';
+                                      reviewerImage = pMap['patientphoto']?.toString() ?? '';
+                                    } else if (pMap.isNotEmpty) {
+                                      final firstP = pMap.values.first;
+                                      if (firstP is Map) {
+                                        reviewerGender = firstP['gender']?.toString() ?? '';
+                                        reviewerImage = firstP['patientphoto']?.toString() ?? '';
+                                      }
+                                    }
+                                  }
+
+                                  if (reviewerGender.isEmpty) {
+                                    reviewerGender = relativeNode['gender']?.toString() ?? '';
+                                  }
+                                  if (reviewerImage.isEmpty) {
+                                    reviewerImage = relativeNode['profilephoto']?.toString() ?? '';
+                                  }
+
                                   String rFirstname =
                                       (relativeNode['firstname'] ?? '')
                                           .toString();
@@ -1372,13 +1379,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                       reviewerName == 'ไม่ระบุ') {
                                     reviewerName = 'ผู้ใช้บริการ';
                                   }
-
-                                  String reviewerImage =
-                                      relativeNode['profilephoto']
-                                          ?.toString() ??
-                                      relativeNode['Patient']?['patientphoto']
-                                          ?.toString() ??
-                                      '';
 
                                   if (!caregiverReviewsMap.containsKey(cId))
                                     caregiverReviewsMap[cId] = [];
@@ -1401,13 +1401,15 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                     rootValue.forEach((userUidKey, userNodeValue) {
                       if (userNodeValue is Map &&
                           userNodeValue.containsKey('Caretaker')) {
+                        String accountStatus = (userNodeValue['Caretaker']
+                                    ['accountstatus']
+                                ?.toString() ??
+                            '')
+                            .trim()
+                            .toLowerCase();
 
-                        // 🌟 ดึงค่าจากคีย์ 'accountstatus' ที่อยู่ภายใต้ 'Caretaker' ตามรูปในฐานข้อมูล
-                        String accountStatus = (userNodeValue['Caretaker']['accountstatus']?.toString() ?? '').trim().toLowerCase();
-                        
-                        // 🌟 ถ้าสถานะเป็น suspended ให้ return เพื่อข้ามคนนี้ไปเลย ไม่ต้องเอาไปแสดงผล
                         if (accountStatus == 'suspended') {
-                          return; 
+                          return;
                         }
 
                         final caretakerRawData = userNodeValue['Caretaker'];
@@ -1429,7 +1431,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
                           data['serviceCount'] =
                               completedServicesMap[idCard] ?? 0;
-
                           data['reviewsList'] = reviewList;
 
                           if (reviewList.isEmpty) {
@@ -1445,6 +1446,31 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                             data['comments'] = reviewList.length;
                           }
 
+                          // 🌟 ข้อ 2: คำนวณระยะห่างระหว่างผู้ป่วยและผู้ดูแล
+                          double? cLat = _extractCoordinate(
+                                  data, ['latitude', 'lat']) ??
+                              _extractCoordinate(
+                                  userNodeValue, ['latitude', 'lat']);
+                          double? cLng = _extractCoordinate(
+                                  data, ['longitude', 'lng', 'long']) ??
+                              _extractCoordinate(
+                                  userNodeValue, ['longitude', 'lng', 'long']);
+
+                          if (cLat != null &&
+                              cLng != null &&
+                              _patientLat != null &&
+                              _patientLng != null) {
+                            double distInMeters = Geolocator.distanceBetween(
+                              _patientLat!,
+                              _patientLng!,
+                              cLat,
+                              cLng,
+                            );
+                            data['distanceKm'] = distInMeters / 1000.0;
+                          } else {
+                            data['distanceKm'] = null;
+                          }
+
                           caretakersList.add(data);
                         }
                       }
@@ -1453,7 +1479,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
                   if (caretakersList.isEmpty)
                     return const Center(
-                      child: Text('ไม่พบข้อมูลผู้ดูแลระบบในคลังข้อมูล'),
+                      child: Text('ไม่พบข้อมูลผู้ดูแลในคลังข้อมูล'),
                     );
 
                   final searchQuery = _searchController.text
@@ -1518,16 +1544,34 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                     }
                     return isMatch;
                   }).toList();
-                  filteredList.sort(
-                    (a, b) => (b['rating'] as double).compareTo(
-                      a['rating'] as double,
-                    ),
-                  );
+
+                  // 🌟 ข้อ 4: เรียงลำดับจากระยะห่างที่ใกล้ที่สุดไปไกลที่สุด และตามด้วยคะแนนรีวิว
+                  filteredList.sort((a, b) {
+                    double? distA = a['distanceKm'] as double?;
+                    double? distB = b['distanceKm'] as double?;
+                    double ratingA = (a['rating'] as double?) ?? 0.0;
+                    double ratingB = (b['rating'] as double?) ?? 0.0;
+
+                    if (distA != null && distB != null) {
+                      int distComp = distA.compareTo(distB);
+                      if (distComp != 0) return distComp;
+                    } else if (distA != null && distB == null) {
+                      return -1;
+                    } else if (distA == null && distB != null) {
+                      return 1;
+                    }
+
+                    int ratingComp = ratingB.compareTo(ratingA);
+                    if (ratingComp != 0) return ratingComp;
+
+                    int commentsA = (a['comments'] as int?) ?? 0;
+                    int commentsB = (b['comments'] as int?) ?? 0;
+                    return commentsB.compareTo(commentsA);
+                  });
 
                   if (filteredList.isEmpty)
                     return const Center(child: Text('ไม่พบผลลัพธ์การค้นหา'));
 
-                  // 🌟 จัดการ Pagination ที่ฝั่งแสดงผล
                   _currentFilteredLength = filteredList.length;
                   final displayList = filteredList
                       .take(_currentPage * _perPage)
@@ -1536,12 +1580,10 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                       (_currentPage * _perPage) < filteredList.length;
 
                   return ListView.builder(
-                    controller:
-                        _scrollController, // 🌟 ใช้ ScrollController ดักการปัดจอลง
+                    controller: _scrollController,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: displayList.length + (hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
-                      // 🌟 ถ้ากำลังโหลดตัวถัดไป ให้แสดงวงกลมหมุนที่ล่างสุด
                       if (index == displayList.length) {
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1591,7 +1633,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
               'รายการคำขอ',
               false,
               onTap: () {
-                // 🌟 เพิ่มการเช็กการเข้าสู่ระบบก่อนกดไปหน้ารายการคำขอ
                 String currentUid =
                     widget.loggedUid ??
                     FirebaseAuth.instance.currentUser?.uid ??
@@ -1695,10 +1736,25 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                     }
 
                     PatientModel patient;
-                    if (relativeMap.containsKey('Patient')) {
-                      final pData = Map<String, dynamic>.from(
-                        relativeMap['Patient'] as Map,
-                      );
+                    String activeNode = relativeMap['activePatientNode']?.toString() ?? '';
+                    dynamic targetPatientNode;
+
+                    // 🌟 ดึงข้อมูลผู้ป่วยจากโครงสร้าง Sub-node Patient/{patientId}
+                    if (relativeMap['Patient'] != null && relativeMap['Patient'] is Map) {
+                      final pMap = Map<String, dynamic>.from(relativeMap['Patient'] as Map);
+                      if (activeNode.isNotEmpty && pMap.containsKey(activeNode)) {
+                        targetPatientNode = pMap[activeNode];
+                      } else if (pMap.isNotEmpty) {
+                        targetPatientNode = pMap.values.first;
+                      }
+                    }
+
+                    if (targetPatientNode == null && relativeMap.containsKey(activeNode)) {
+                      targetPatientNode = relativeMap[activeNode];
+                    }
+
+                    if (targetPatientNode != null && targetPatientNode is Map) {
+                      final pData = Map<String, dynamic>.from(targetPatientNode as Map);
                       patient = PatientModel(
                         patientId: pData['patientId'] ?? '',
                         patientphoto: pData['patientphoto'] ?? '',
@@ -1806,8 +1862,14 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
         (data['reviewsList'] as List<Map<String, dynamic>>?) ?? [];
 
     int serviceCount = data['serviceCount'] ?? 0;
+    double? distKm = data['distanceKm'] as double?;
 
+    // 🌟 ถอดรหัสรูปภาพโปรไฟล์ของผู้ดูแล พร้อมตัด prefix base64
     String rawProfilePhoto = data['profilephoto']?.toString() ?? '';
+    if (rawProfilePhoto.contains(',')) {
+      rawProfilePhoto = rawProfilePhoto.split(',').last;
+    }
+
     String cleanedBase64 = rawProfilePhoto
         .replaceAll('\n', '')
         .replaceAll('\r', '')
@@ -1816,6 +1878,15 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
     int pad = cleanedBase64.length % 4;
     if (pad > 0) cleanedBase64 += '=' * (4 - pad);
     bool hasProfileImage = cleanedBase64.isNotEmpty;
+
+    ImageProvider? caretakerImageProvider;
+    if (hasProfileImage) {
+      try {
+        caretakerImageProvider = MemoryImage(base64Decode(cleanedBase64));
+      } catch (e) {
+        caretakerImageProvider = null;
+      }
+    }
 
     return Container(
       width: double.infinity,
@@ -1840,10 +1911,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
             CircleAvatar(
               radius: 30,
               backgroundColor: lightPurple,
-              backgroundImage: hasProfileImage
-                  ? MemoryImage(base64Decode(cleanedBase64))
-                  : null,
-              child: !hasProfileImage
+              backgroundImage: caretakerImageProvider,
+              child: caretakerImageProvider == null
                   ? Icon(Icons.person, size: 32, color: primaryColor)
                   : null,
             ),
@@ -1910,7 +1979,6 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   ),
                   const SizedBox(height: 5),
 
-                  // ── แถวคะแนนและดาว (ปรับเหลือแสดงจำนวนรีวิวปกติ ไม่ต้องกดเปิดรีวิวจากตรงนี้) ──
                   Row(
                     children: [
                       Text(
@@ -1921,7 +1989,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                           color: Color(0xFF555555),
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 3),
                       Row(
                         children: List.generate(
                           5,
@@ -1934,9 +2002,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        comments == 0
-                            ? 'ยังไม่มีรีวิว'
-                            : '($comments รีวิว)',
+                        comments == 0 ? 'ยังไม่มีรีวิว' : '($comments รีวิว)',
                         style: const TextStyle(
                           fontSize: 11,
                           color: Colors.black54,
@@ -2013,6 +2079,31 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
                   Row(
                     children: [
+                      Icon(Icons.near_me_outlined,
+                          size: 13, color: primaryColor),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          distKm != null
+                              ? 'ระยะห่าง: ${distKm.toStringAsFixed(1)} กม.'
+                              : 'ระยะห่าง: กรุณาเข้าสู่ระบบเพื่อดูระยะห่าง',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: distKm != null
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                            color: distKm != null ? accentTeal : Colors.black54,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+
+                  Row(
+                    children: [
                       Icon(Icons.location_on, size: 13, color: primaryColor),
                       const SizedBox(width: 4),
                       Expanded(
@@ -2031,7 +2122,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      Icon(Icons.directions_car, size: 13, color: primaryColor),
+                      Icon(Icons.directions_car,
+                          size: 13, color: primaryColor),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -2061,8 +2153,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                             MaterialPageRoute(
                               builder: (context) => CaretakerProfilePage(
                                 caretakerId: data['id'],
-                                loggedUid:
-                                    widget.loggedUid ??
+                                loggedUid: widget.loggedUid ??
                                     FirebaseAuth.instance.currentUser?.uid,
                                 selectedDate: _selectedFilterDate,
                                 reviews: reviewsList,

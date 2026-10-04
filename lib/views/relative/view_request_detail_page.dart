@@ -8,7 +8,6 @@ import 'package:miniproject/views/relative/view_doctor_advice_page.dart';
 import '../../widgets/custom_header_nav.dart';
 import '../../services/caretaker_service.dart';
 import 'package:miniproject/models/request_model.dart';
-// ไม่จำเป็นต้อง import 'review_caretaker_page.dart' แล้วเพราะย้ายไปทำที่ List แทน
 
 enum RequestStatus {
   pending,
@@ -23,11 +22,15 @@ class ViewRequestDetailPage extends StatefulWidget {
   final String caretakerName;
   final String loggedUid;
 
+  // 🌟 1. เพิ่มตัวแปรเพื่อรับข้อมูลผู้ป่วยแบบเต็มก้อนจากหน้า List เข้ามาโดยตรง
+  final Map<String, dynamic>? patientDataOverride;
+
   const ViewRequestDetailPage({
     super.key,
     required this.requestModel,
     required this.caretakerName,
     required this.loggedUid,
+    this.patientDataOverride,
   });
 
   @override
@@ -94,6 +97,12 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   void initState() {
     super.initState();
     isReported = widget.requestModel.report != null;
+
+    // 🌟 2. ถ้ามี patientDataOverride ส่งมาจากหน้า List ให้ใช้ทันที
+    if (widget.patientDataOverride != null) {
+      patientData = widget.patientDataOverride;
+    }
+
     _setInitialStatus();
     _fetchDetailData();
   }
@@ -159,6 +168,58 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
           .get();
       if (requestSnap.exists && requestSnap.value is Map) {
         final reqData = requestSnap.value as Map;
+
+        // 🌟 3. ค้นหาข้อมูลผู้ป่วยให้ถูกต้องตามโครงสร้าง Sub-collection Patient/{patientId}
+        if (patientData == null && relativeData != null) {
+          String targetPatientKey =
+              reqData['targetPatientKey']?.toString() ??
+              reqData['patientId']?.toString() ??
+              '';
+
+          dynamic pNode = relativeData!['Patient'] ?? relativeData!['patients'];
+
+          if (pNode != null && pNode is Map) {
+            final pMap = Map<String, dynamic>.from(pNode);
+            if (targetPatientKey.isNotEmpty &&
+                pMap.containsKey(targetPatientKey)) {
+              patientData = Map<String, dynamic>.from(
+                pMap[targetPatientKey] as Map,
+              );
+            } else if (pMap.isNotEmpty) {
+              // กรณีไม่ตรงกับ Key ให้ลองหาจากค่าข้างในที่ patientId ตรงกัน
+              for (var val in pMap.values) {
+                if (val is Map &&
+                    val['patientId']?.toString() == targetPatientKey) {
+                  patientData = Map<String, dynamic>.from(val);
+                  break;
+                }
+              }
+              // ถ้ายังไม่เจอ ให้ fallback คนแรก
+              patientData ??= Map<String, dynamic>.from(
+                pMap.values.first as Map,
+              );
+            }
+          }
+
+          // Fallback เผื่อโครงสร้างเดิมแบบ Flat key
+          if (patientData == null &&
+              targetPatientKey.isNotEmpty &&
+              relativeData![targetPatientKey] != null &&
+              relativeData![targetPatientKey] is Map) {
+            patientData = Map<String, dynamic>.from(
+              relativeData![targetPatientKey],
+            );
+          }
+
+          // Fallback เผื่อ Patient ก้อนเดียวแบบเก่าดั้งเดิม
+          if (patientData == null &&
+              relativeData!['Patient'] != null &&
+              relativeData!['Patient'] is Map &&
+              relativeData!['Patient'].containsKey('firstname')) {
+            patientData = Map<String, dynamic>.from(relativeData!['Patient']);
+          }
+        }
+
         setState(() {
           doctorAdviceData = reqData['DoctorAdvice'];
         });
@@ -208,10 +269,8 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   void _navigateToDoctorAdvicePage() {
     if (doctorAdviceData == null) return;
 
-    // 🌟 ดึงข้อมูลจาก State ปัจจุบันมาใช้
     var req = widget.requestModel;
 
-    // คำนวณชื่อผู้ป่วยอีกครั้งเพื่อให้ใช้ในฟังก์ชันนี้ได้
     String patientFullName = formatFullNameWithTitle(
       gender: patientData?['gender']?.toString(),
       firstname: patientData?['firstname']?.toString(),
@@ -224,7 +283,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
         builder: (context) => ViewDoctorAdvicePage(
           loggedUid: widget.loggedUid,
           doctorAdviceData: doctorAdviceData,
-          // 🌟 แนบข้อมูลบริการปัจจุบันมาให้หน้านี้ใช้
           patientName: patientFullName,
           dateTime:
               '${_formatThaiDateFull(req.appointmentdate)} ${_formatTime(req.appointmenttime)}',
@@ -742,20 +800,40 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
 
   String _calculateAge(String? birthdate) {
     if (birthdate == null || birthdate.trim().isEmpty) return '-';
-    DateTime? birth = DateTime.tryParse(birthdate);
-    if (birth == null && birthdate.contains('/')) {
+
+    DateTime? birth;
+
+    if (birthdate.contains('/')) {
       final parts = birthdate.split('/');
       if (parts.length == 3) {
         final day = int.tryParse(parts[0]);
         final month = int.tryParse(parts[1]);
-        final year = int.tryParse(parts[2]);
+        int? year = int.tryParse(parts[2]);
+
         if (day != null && month != null && year != null) {
+          if (year > 2400) {
+            year -= 543;
+          }
           birth = DateTime(year, month, day);
         }
       }
+    } else {
+      birth = DateTime.tryParse(birthdate);
+      if (birth != null && birth.year > 2400) {
+        birth = DateTime(birth.year - 543, birth.month, birth.day);
+      }
     }
+
     if (birth == null) return '-';
-    return '${DateTime.now().year - birth.year}';
+
+    DateTime today = DateTime.now();
+    int age = today.year - birth.year;
+    if (today.month < birth.month ||
+        (today.month == birth.month && today.day < birth.day)) {
+      age--;
+    }
+
+    return age.toString();
   }
 
   Widget _buildSectionWrapper({
@@ -818,13 +896,11 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       statusColor = const Color(0xFF2ECC71);
       statusBgColor = const Color(0xFFE9F7EF);
     } else if (currentStatus == RequestStatus.completed) {
-      // 🌟 เปลี่ยนคำว่า สิ้นสุดบริการ เป็น เสร็จสิ้น
       statusText = 'เสร็จสิ้น';
       statusColor = const Color(0xFF3498DB);
       statusBgColor = const Color(0xFFEBF5FB);
     } else if (currentStatus == RequestStatus.cancelled) {
-      // 🌟 เปลี่ยนคำว่า ยกเลิก เป็น ยกเลิก/ปฏิเสธ
-      statusText = 'ยกเลิก/ปฏิเสธ'; // แก้ไขตรงนี้ครับ
+      statusText = 'ยกเลิก/ปฏิเสธ';
       statusColor = const Color(0xFFE74C3C);
       statusBgColor = const Color(0xFFFDEDEC);
     }
@@ -1147,7 +1223,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     );
   }
 
-  // 🌟 ถอดปุ่มให้คะแนนรีวิวออกไปจากหน้านี้แล้ว
   Widget _buildBottomActionButtons() {
     if (currentStatus == RequestStatus.cancelled) {
       return const SizedBox.shrink();

@@ -143,6 +143,34 @@ class _ListRequestPageState extends State<ListRequestPage> {
               var relNode = Map<String, dynamic>.from(
                 childData['Relative'] as Map,
               );
+
+              // 🌟 ตรวจหาผู้ป่วยที่เลือกอยู่ (activePatientNode) หรือคนแรกในโหนด Patient ย่อย
+              String activeNode =
+                  relNode['activePatientNode']?.toString() ?? '';
+              dynamic patientNode;
+
+              if (relNode['Patient'] != null && relNode['Patient'] is Map) {
+                final pMap = Map<String, dynamic>.from(
+                  relNode['Patient'] as Map,
+                );
+                if (activeNode.isNotEmpty && pMap.containsKey(activeNode)) {
+                  patientNode = pMap[activeNode];
+                } else if (pMap.isNotEmpty) {
+                  patientNode = pMap.values.first;
+                }
+              }
+
+              if (patientNode == null && relNode.containsKey(activeNode)) {
+                patientNode = relNode[activeNode];
+              }
+
+              if (patientNode == null &&
+                  relNode['Patient'] != null &&
+                  relNode['Patient'] is Map &&
+                  relNode['Patient'].containsKey('firstname')) {
+                patientNode = relNode['Patient'];
+              }
+
               setState(() {
                 _userName =
                     "${relNode['firstname'] ?? ''} ${relNode['lastname'] ?? ''}"
@@ -265,6 +293,11 @@ class _ListRequestPageState extends State<ListRequestPage> {
             );
             String statusType = (req.requeststatus ?? 'pending').toLowerCase();
 
+            // 🌟 ดึงชื่อผู้ป่วยจากฐานข้อมูล (ถ้ามี)
+            String patientName =
+                reqData['patientName']?.toString() ?? 'ไม่ระบุชื่อผู้ป่วย';
+            if (patientName.isEmpty) patientName = 'ไม่ระบุชื่อผู้ป่วย';
+
             String caretakerFullName = 'รอผู้ดูแลตอบรับ';
             String caretakerImage = ''; // 🌟 เก็บรูปลงโมเดลเพื่อใช้ในหน้ารีวิว
 
@@ -276,6 +309,11 @@ class _ListRequestPageState extends State<ListRequestPage> {
               String gender = cData['gender']?.toString() ?? '';
               String bdStr = cData['birthdate']?.toString() ?? '';
               caretakerImage = cData['profilephoto']?.toString() ?? '';
+
+              // ตัด prefix data:image/...;base64, ออกเพื่อให้แสดงผลสมบูรณ์
+              if (caretakerImage.contains(',')) {
+                caretakerImage = caretakerImage.split(',').last;
+              }
 
               String prefix = '';
               if (bdStr.isNotEmpty) {
@@ -325,6 +363,8 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 req.requestdate,
               ),
               category: req.department?.departmentname ?? 'ทั่วไป',
+              // 🌟 เพิ่มบรรทัดนี้ เพื่อส่งชื่อผู้ป่วยเข้าไปในโมเดล (มันดึงค่าไว้รอแล้วในตัวแปร patientName ด้านบน)
+              patientName: patientName,
               caregiverName: caretakerFullName,
               caretakerImage: caretakerImage,
               isReviewed: isRev,
@@ -398,6 +438,16 @@ class _ListRequestPageState extends State<ListRequestPage> {
         backgroundColor: bgColor,
         body: Center(child: CircularProgressIndicator(color: primaryPurple)),
       );
+    }
+
+    // 🌟 จัดเตรียม ImageProvider ของโปรไฟล์มุมขวาบนแบบปลอดภัย
+    ImageProvider? userImageProvider;
+    if (_userProfilePhoto.isNotEmpty) {
+      try {
+        userImageProvider = MemoryImage(base64Decode(_userProfilePhoto));
+      } catch (e) {
+        userImageProvider = null;
+      }
     }
 
     final displayList = _getCurrentTabRequestsDisplay();
@@ -520,7 +570,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
                     'ตอบรับแล้ว',
                     _requestsAcceptedAll.length,
                   ),
-                  // 🌟 แก้ไขชื่อ Tab ให้เป็น เสร็จสิ้น และ ยกเลิก/ปฏิเสธ
                   _buildTabItem(
                     Icons.star_border_rounded,
                     'ให้รีวิว',
@@ -539,20 +588,17 @@ class _ListRequestPageState extends State<ListRequestPage> {
           Expanded(
             child: RefreshIndicator(
               color: primaryPurple,
-              // ทำงานเมื่อมีการดึงหน้าจอลง
               onRefresh: () async {
-                // 🌟 รีเซ็ตจำนวนหน้าที่โหลดกลับเป็นค่าเริ่มต้นก่อนดึงข้อมูลใหม่
                 setState(() {
                   _pendingPage = 1;
                   _acceptedPage = 1;
                   _completedPage = 1;
                   _cancelledPage = 1;
                 });
-                await _fetchMyRequests(); // เรียกฟังก์ชันโหลดข้อมูลใหม่
+                await _fetchMyRequests();
               },
               child: displayList.isEmpty
                   ? ListView(
-                      // บังคับให้สามารถเลื่อนหน้าจอได้แม้ไม่มีข้อมูล เพื่อให้ดึงรีเฟรชได้
                       physics: const AlwaysScrollableScrollPhysics(),
                       children: [
                         SizedBox(
@@ -725,9 +771,32 @@ class _ListRequestPageState extends State<ListRequestPage> {
                     }
 
                     PatientModel patient;
-                    if (relativeMap.containsKey('Patient')) {
-                      final pData = Map<String, dynamic>.from(
+                    String activeNode =
+                        relativeMap['activePatientNode']?.toString() ?? '';
+                    dynamic targetPatientNode;
+
+                    // 🌟 ดึงข้อมูลจากโหนด Patient ย่อย (โครงสร้างใหม่)
+                    if (relativeMap['Patient'] != null &&
+                        relativeMap['Patient'] is Map) {
+                      final pMap = Map<String, dynamic>.from(
                         relativeMap['Patient'] as Map,
+                      );
+                      if (activeNode.isNotEmpty &&
+                          pMap.containsKey(activeNode)) {
+                        targetPatientNode = pMap[activeNode];
+                      } else if (pMap.isNotEmpty) {
+                        targetPatientNode = pMap.values.first;
+                      }
+                    }
+
+                    if (targetPatientNode == null &&
+                        relativeMap.containsKey(activeNode)) {
+                      targetPatientNode = relativeMap[activeNode];
+                    }
+
+                    if (targetPatientNode != null && targetPatientNode is Map) {
+                      final pData = Map<String, dynamic>.from(
+                        targetPatientNode as Map,
                       );
                       patient = PatientModel(
                         patientId: pData['patientId'] ?? '',
@@ -919,7 +988,19 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 ),
                 const SizedBox(height: 6),
 
-                // 🌟 แก้ไขให้ชื่อผู้ให้บริการกลับมาเป็น Text ธรรมดา เพราะย้ายปุ่มรีวิวออกไปแล้ว
+                // 🌟 เพิ่มบรรทัดสำหรับแสดงชื่อผู้ป่วยตรงนี้
+                Text(
+                  'ผู้รับบริการ: ${request.patientName}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade700,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+
                 Text(
                   'ผู้ให้บริการ: ${request.caregiverName}',
                   maxLines: 1,
@@ -1042,7 +1123,6 @@ class _ListRequestPageState extends State<ListRequestPage> {
                         ),
                       ),
 
-                    // 🌟 ย้ายปุ่มรีวิวและป้ายรีวิวแล้ว มาวางไว้ตรงนี้
                     if (request.statusType == 'completed') ...[
                       if (request.isReviewed)
                         Container(
@@ -1201,8 +1281,8 @@ class RequestCardData {
   final String date;
   final String submitDate;
   final String category;
+  final String patientName;
   final String caregiverName;
-  // 🌟 เพิ่มตัวแปรสำหรับเก็บภาพไปหน้ารีวิวและสถานะการรีวิว
   final String caretakerImage;
   final bool isReviewed;
   final RequestModel requestModel;
@@ -1214,6 +1294,7 @@ class RequestCardData {
     required this.date,
     required this.submitDate,
     required this.category,
+    required this.patientName,
     required this.caregiverName,
     required this.caretakerImage,
     required this.isReviewed,

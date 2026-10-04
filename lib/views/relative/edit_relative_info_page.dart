@@ -34,6 +34,11 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
   bool _isLoading = true;
 
+  // 🌟 State สำหรับรองรับผู้ป่วยหลายคนภายใต้โหนด Patient/{patientId}
+  Map<String, Map<String, dynamic>> _patientsData = {};
+  String _currentPatientKey = '';
+  bool _isAddingNewPatient = false;
+
   // 🎨 โทนสีม่วง
   final Color primaryColor = const Color(0xFF9B59B6);
   final Color darkPurple = const Color(0xFF9B59B6);
@@ -64,7 +69,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   final TextEditingController _patDiseaseController = TextEditingController();
   final TextEditingController _patAddressController = TextEditingController();
 
-  // 🌟 ตัวแปรความคล่องตัว (เปลี่ยนจาก Dropdown เป็น Radio แบบพิมพ์ได้)
   String _selectedPatMobility = "ปกติ";
   final TextEditingController _patMobilityController = TextEditingController();
 
@@ -75,7 +79,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   final TextEditingController _relLineIdController = TextEditingController();
   final TextEditingController _relRelationController = TextEditingController();
 
-  // 🌟 เก็บค่าตั้งต้นของเบอร์โทรและอีเมล เพื่อข้ามการตรวจถ้าไม่ได้เปลี่ยน
   String _initialRelEmail = '';
   String _initialRelPhone = '';
   String _initialPatPhone = '';
@@ -83,7 +86,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   @override
   void initState() {
     super.initState();
-    _initData();
+    _initRelativeData();
 
     _fetchAndForceShowData().then((_) {
       if (mounted) {
@@ -94,7 +97,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     });
   }
 
-  // 🌟 คำนวณอายุจากวันเกิด
   void _calculateAge(String birthDateStr) {
     if (birthDateStr.isEmpty) {
       _patAgeController.text = '';
@@ -127,155 +129,168 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     }
   }
 
-  void _initData() {
-    _patFirstNameController.text = widget.currentPatient.firstname ?? '';
-    _patLastNameController.text = widget.currentPatient.lastname ?? '';
-    _patIdCardController.text = widget.currentPatient.patientId ?? '';
-    _patPhoneController.text = widget.currentPatient.phonenumber ?? '';
-    _patGenderController.text = widget.currentPatient.gender ?? '';
-    _patDiseaseController.text = widget.currentPatient.disease ?? '';
-
-    // 🌟 ตรวจสอบข้อมูลความคล่องตัวให้ตรงกับรูปแบบใหม่
-    String existingMobility = widget.currentPatient.mobility ?? 'ปกติ';
-    if (existingMobility.startsWith('ไม่ปกติ')) {
-      _selectedPatMobility = 'ไม่ปกติ';
-      if (existingMobility.contains(': ')) {
-        _patMobilityController.text = existingMobility.split(': ')[1];
-      } else {
-        _patMobilityController.text = existingMobility.replaceFirst('ไม่ปกติ', '').trim();
-      }
-    } else {
-      _selectedPatMobility = 'ปกติ';
-    }
-
-    _patAddressController.text = widget.currentPatient.location?.address ?? '';
-    _patLineIdController.text = widget.currentRelative.lineId ?? '';
-
-    if (widget.currentPatient.location?.latitude != null &&
-        widget.currentPatient.location?.longitude != null &&
-        widget.currentPatient.location?.latitude != 0.0) {
-      _selectedLocation = LatLng(
-        widget.currentPatient.location!.latitude!,
-        widget.currentPatient.location!.longitude!,
-      );
-      _hasPinned = true;
-    }
-
-    if (widget.currentPatient.birthdate != null) {
-      final date = widget.currentPatient.birthdate!;
-      _patBirthDateController.text =
-          "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year + 543}";
-      _calculateAge(_patBirthDateController.text);
-    }
-
+  void _initRelativeData() {
     _relFirstNameController.text = widget.currentRelative.firstname ?? '';
     _relLastNameController.text = widget.currentRelative.lastname ?? '';
     _relEmailController.text = widget.currentRelative.email ?? '';
     _relPhoneController.text = widget.currentRelative.phonenumber ?? '';
     _relLineIdController.text = widget.currentRelative.lineId ?? '';
     _relRelationController.text = widget.currentRelative.relationship ?? '';
-    _profilePhotoBase64 = widget.currentPatient.patientphoto;
 
-    // 🌟 จำค่าเดิมไว้
     _initialRelEmail = (widget.currentRelative.email ?? '').trim().toLowerCase();
     _initialRelPhone = (widget.currentRelative.phonenumber ?? '').trim();
-    _initialPatPhone = (widget.currentPatient.phonenumber ?? '').trim();
   }
 
   Future<void> _fetchAndForceShowData() async {
     String uid = widget.loggedUid;
 
     if (uid.isNotEmpty) {
-      final relSnapshot = await FirebaseDatabase.instance
-          .ref('Login/$uid/Relative')
-          .get();
+      final relSnapshot =
+          await FirebaseDatabase.instance.ref('Login/$uid/Relative').get();
 
       if (!mounted) return;
 
       if (relSnapshot.exists && relSnapshot.value is Map) {
         final relData = Map<String, dynamic>.from(relSnapshot.value as Map);
-        _patLineIdController.text =
-            relData['lineId'] ?? _patLineIdController.text;
-        _relLineIdController.text =
-            relData['lineId'] ?? _relLineIdController.text;
+        
+        _patLineIdController.text = relData['lineId'] ?? _patLineIdController.text;
+        _relLineIdController.text = relData['lineId'] ?? _relLineIdController.text;
         _relEmailController.text = relData['email'] ?? _relEmailController.text;
         _relPhoneController.text = relData['phonenumber'] ?? _relPhoneController.text;
 
         _initialRelEmail = _relEmailController.text.trim().toLowerCase();
         _initialRelPhone = _relPhoneController.text.trim();
-      }
 
-      final patSnapshot = await FirebaseDatabase.instance
-          .ref('Login/$uid/Relative/Patient')
-          .get();
+        _patientsData.clear();
 
-      if (!mounted) return;
-
-      if (patSnapshot.exists && patSnapshot.value is Map) {
-        final data = Map<String, dynamic>.from(patSnapshot.value as Map);
-
-        setState(() {
-          if (data['Location'] != null && data['Location'] is Map) {
-            final loc = Map<String, dynamic>.from(data['Location'] as Map);
-            _patAddressController.text = loc['address']?.toString() ?? '';
-
-            double lat =
-                double.tryParse(loc['latitude']?.toString() ?? '0') ?? 0.0;
-            double lng =
-                double.tryParse(loc['longitude']?.toString() ?? '0') ?? 0.0;
-            if (lat != 0.0 && lng != 0.0) {
-              _selectedLocation = LatLng(lat, lng);
-              _hasPinned = true;
+        // 🌟 ดึงข้อมูลจากโหนด Patient ย่อย (รองรับทั้ง 'Patient' และ 'patients')
+        dynamic patientNode = relData['Patient'] ?? relData['patients'];
+        if (patientNode != null && patientNode is Map) {
+          final pMap = Map<String, dynamic>.from(patientNode);
+          pMap.forEach((pKey, pVal) {
+            if (pVal is Map) {
+              _patientsData[pKey.toString()] = Map<String, dynamic>.from(pVal);
             }
-          }
-          else if (data['address'] != null &&
-              data['address'].toString().isNotEmpty) {
-            _patAddressController.text = data['address'].toString();
-            double lat =
-                double.tryParse(data['latitude']?.toString() ?? '0') ?? 0.0;
-            double lng =
-                double.tryParse(data['longitude']?.toString() ?? '0') ?? 0.0;
-            if (lat != 0.0 && lng != 0.0) {
-              _selectedLocation = LatLng(lat, lng);
-              _hasPinned = true;
-            }
-          }
+          });
+        }
 
-          _patDiseaseController.text =
-              data['disease'] ?? _patDiseaseController.text;
-          _patPhoneController.text =
-              data['phonenumber'] ?? _patPhoneController.text;
-          _initialPatPhone = _patPhoneController.text.trim();
-
-          // 🌟 จัดการข้อมูล Mobility จาก Database ลงช่องกรอกใหม่
-          String fetchedMobility = data['mobility']?.toString() ?? 'ปกติ';
-          if (fetchedMobility.startsWith('ไม่ปกติ')) {
-            _selectedPatMobility = 'ไม่ปกติ';
-            if (fetchedMobility.contains(': ')) {
-              _patMobilityController.text = fetchedMobility.split(': ')[1];
-            } else {
-              _patMobilityController.text = fetchedMobility.replaceFirst('ไม่ปกติ', '').trim();
+        // รองรับ fallback ข้อมูลแบบเดิมถ้ายังมีตกค้าง
+        if (_patientsData.isEmpty) {
+          relData.forEach((key, value) {
+            if (key.startsWith('Patient') && value is Map) {
+              _patientsData[key] = Map<String, dynamic>.from(value);
             }
+          });
+        }
+
+        if (_patientsData.isNotEmpty) {
+          // 🌟 ตรวจสอบว่ามีผู้ป่วยที่เลือกไว้ล่าสุดหรือไม่ (activePatientNode)
+          if (relData.containsKey('activePatientNode') &&
+              _patientsData.containsKey(relData['activePatientNode'].toString())) {
+            _currentPatientKey = relData['activePatientNode'].toString();
           } else {
-            _selectedPatMobility = 'ปกติ';
-            _patMobilityController.clear();
+            _currentPatientKey = _patientsData.keys.first;
           }
-
-          if (data['birthdate'] != null) {
-            try {
-              DateTime parsedDate = DateTime.parse(
-                data['birthdate'].toString(),
-              );
-              _patBirthDateController.text =
-                  "${parsedDate.day.toString().padLeft(2, '0')}/${parsedDate.month.toString().padLeft(2, '0')}/${parsedDate.year + 543}";
-            } catch (e) {
-              _patBirthDateController.text = data['birthdate'].toString();
-            }
-            _calculateAge(_patBirthDateController.text);
-          }
-        });
+          _isAddingNewPatient = false;
+          _loadPatientDataToForm(_currentPatientKey);
+        } else {
+          _prepareNewPatient();
+        }
       }
     }
+  }
+
+  void _loadPatientDataToForm(String patientKey) {
+    if (!_patientsData.containsKey(patientKey)) return;
+
+    final data = _patientsData[patientKey]!;
+    
+    setState(() {
+      _patFirstNameController.text = data['firstname']?.toString() ?? '';
+      _patLastNameController.text = data['lastname']?.toString() ?? '';
+      _patIdCardController.text = data['patientId']?.toString() ?? '';
+      _patGenderController.text = data['gender']?.toString() ?? '';
+      _patDiseaseController.text = data['disease']?.toString() ?? '';
+      _patPhoneController.text = data['phonenumber']?.toString() ?? '';
+      _initialPatPhone = _patPhoneController.text.trim();
+
+      if (data['Location'] != null && data['Location'] is Map) {
+        final loc = Map<String, dynamic>.from(data['Location'] as Map);
+        _patAddressController.text = loc['address']?.toString() ?? '';
+        double lat = double.tryParse(loc['latitude']?.toString() ?? '0') ?? 0.0;
+        double lng = double.tryParse(loc['longitude']?.toString() ?? '0') ?? 0.0;
+        if (lat != 0.0 && lng != 0.0) {
+          _selectedLocation = LatLng(lat, lng);
+          _hasPinned = true;
+        } else {
+          _hasPinned = false;
+        }
+      } else {
+        _patAddressController.text = data['address']?.toString() ?? '';
+        double lat = double.tryParse(data['latitude']?.toString() ?? '0') ?? 0.0;
+        double lng = double.tryParse(data['longitude']?.toString() ?? '0') ?? 0.0;
+        if (lat != 0.0 && lng != 0.0) {
+          _selectedLocation = LatLng(lat, lng);
+          _hasPinned = true;
+        } else {
+          _hasPinned = false;
+        }
+      }
+
+      String fetchedMobility = data['mobility']?.toString() ?? 'ปกติ';
+      if (fetchedMobility.startsWith('ไม่ปกติ')) {
+        _selectedPatMobility = 'ไม่ปกติ';
+        if (fetchedMobility.contains(': ')) {
+          _patMobilityController.text = fetchedMobility.split(': ')[1];
+        } else {
+          _patMobilityController.text = fetchedMobility.replaceFirst('ไม่ปกติ', '').trim();
+        }
+      } else {
+        _selectedPatMobility = 'ปกติ';
+        _patMobilityController.clear();
+      }
+
+      if (data['birthdate'] != null) {
+        try {
+          DateTime parsedDate = DateTime.parse(data['birthdate'].toString());
+          _patBirthDateController.text =
+              "${parsedDate.day.toString().padLeft(2, '0')}/${parsedDate.month.toString().padLeft(2, '0')}/${parsedDate.year + 543}";
+        } catch (e) {
+          _patBirthDateController.text = data['birthdate'].toString();
+        }
+        _calculateAge(_patBirthDateController.text);
+      } else {
+        _patBirthDateController.clear();
+        _patAgeController.clear();
+      }
+
+      _profilePhotoBase64 = data['patientphoto']?.toString();
+      _profileImageFile = null;
+    });
+  }
+
+  void _prepareNewPatient() {
+    setState(() {
+      _isAddingNewPatient = true;
+      _currentPatientKey = '';
+      
+      _patFirstNameController.clear();
+      _patLastNameController.clear();
+      _patIdCardController.clear();
+      _patGenderController.clear();
+      _patDiseaseController.clear();
+      _patPhoneController.clear();
+      _patBirthDateController.clear();
+      _patAgeController.clear();
+      _patAddressController.clear();
+      _patMobilityController.clear();
+      
+      _selectedPatMobility = 'ปกติ';
+      _hasPinned = false;
+      _profileImageFile = null;
+      _profilePhotoBase64 = null;
+      _initialPatPhone = '';
+    });
   }
 
   @override
@@ -363,38 +378,38 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     final String relEmail = _relEmailController.text.trim().toLowerCase();
     final String relPhone = _relPhoneController.text.trim();
     final String patPhone = _patPhoneController.text.trim();
+    final String patIdCard = _patIdCardController.text.trim();
 
-    // 🌟 ตรวจสอบรูปแบบเบอร์โทรศัพท์
     if (relPhone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(relPhone)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('กรุณากรอกเบอร์โทรศัพท์ญาติให้ถูกต้อง (ตัวเลข 10 หลัก)'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('กรุณากรอกเบอร์โทรศัพท์ญาติให้ถูกต้อง (ตัวเลข 10 หลัก)'),
+        backgroundColor: Colors.red,
+      ));
       return;
     }
 
-    if (patPhone.isNotEmpty &&
-        (patPhone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(patPhone))) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('กรุณากรอกเบอร์โทรศัพท์ผู้ป่วยให้ถูกต้อง (ตัวเลข 10 หลัก)'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    if (patPhone.isNotEmpty && (patPhone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(patPhone))) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('กรุณากรอกเบอร์โทรศัพท์ผู้ป่วยให้ถูกต้อง (ตัวเลข 10 หลัก)'),
+        backgroundColor: Colors.red,
+      ));
       return;
     }
 
-    // 🌟 ตรวจสอบรูปแบบอีเมล (อนุญาตให้เว้นว่างได้)
+    if (patIdCard.length != 13 || !RegExp(r'^[0-9]+$').hasMatch(patIdCard)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('กรุณากรอกหมายเลขบัตรประชาชนผู้ป่วยให้ครบ 13 หลัก'),
+        backgroundColor: Colors.red,
+      ));
+      return;
+    }
+
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (relEmail.isNotEmpty && !emailRegex.hasMatch(relEmail)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('รูปแบบอีเมลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('รูปแบบอีเมลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง'),
+        backgroundColor: Colors.red,
+      ));
       return;
     }
 
@@ -403,7 +418,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     try {
       String uid = widget.loggedUid;
 
-      // 🌟 ตรวจสอบว่า เบอร์ หรือ อีเมล ซ้ำกับในระบบหรือไม่ (เฉพาะเมื่อมีการแก้ไข)
       bool needCheckRelEmail = relEmail != _initialRelEmail;
       bool needCheckRelPhone = relPhone != _initialRelPhone;
       bool needCheckPatPhone = patPhone.isNotEmpty && patPhone != _initialPatPhone;
@@ -417,10 +431,9 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
             String userKey = entry.key;
             var userData = entry.value;
 
-            if (userKey == uid) continue; // ข้ามบัญชีปัจจุบัน
+            if (userKey == uid) continue;
 
             if (userData is Map) {
-              // 1. ตรวจสอบในโหนด Caretaker
               if (userData['Caretaker'] is Map) {
                 var cData = userData['Caretaker'];
                 String cPhone = (cData['phonenumber'] ?? '').toString().trim();
@@ -428,39 +441,30 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
                 if (needCheckRelEmail && cEmail.isNotEmpty && cEmail == relEmail) {
                   setState(() => _isLoading = false);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('อีเมลนี้ถูกใช้งานแล้วในระบบ กรุณาใช้อีเมลอื่น'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('อีเมลนี้ถูกใช้งานแล้วในระบบ กรุณาใช้อีเมลอื่น'),
+                    backgroundColor: Colors.red,
+                  ));
                   return;
                 }
-
                 if (needCheckRelPhone && cPhone.isNotEmpty && cPhone == relPhone) {
                   setState(() => _isLoading = false);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('เบอร์โทรศัพท์ญาตินี้ถูกใช้งานแล้วในระบบ'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('เบอร์โทรศัพท์ญาตินี้ถูกใช้งานแล้วในระบบ'),
+                    backgroundColor: Colors.red,
+                  ));
                   return;
                 }
-
                 if (needCheckPatPhone && cPhone.isNotEmpty && cPhone == patPhone) {
                   setState(() => _isLoading = false);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('เบอร์โทรศัพท์ผู้ป่วยนี้ถูกใช้งานแล้วในระบบ'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('เบอร์โทรศัพท์ผู้ป่วยนี้ถูกใช้งานแล้วในระบบ'),
+                    backgroundColor: Colors.red,
+                  ));
                   return;
                 }
               }
 
-              // 2. ตรวจสอบในโหนด Relative
               if (userData['Relative'] is Map) {
                 var rData = userData['Relative'];
                 String rPhone = (rData['phonenumber'] ?? '').toString().trim();
@@ -468,51 +472,44 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
                 if (needCheckRelEmail && rEmail.isNotEmpty && rEmail == relEmail) {
                   setState(() => _isLoading = false);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('อีเมลนี้ถูกใช้งานแล้วในระบบ กรุณาใช้อีเมลอื่น'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('อีเมลนี้ถูกใช้งานแล้วในระบบ กรุณาใช้อีเมลอื่น'),
+                    backgroundColor: Colors.red,
+                  ));
                   return;
                 }
-
                 if (needCheckRelPhone && rPhone.isNotEmpty && rPhone == relPhone) {
                   setState(() => _isLoading = false);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('เบอร์โทรศัพท์ญาตินี้ถูกใช้งานแล้วในระบบ'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('เบอร์โทรศัพท์ญาตินี้ถูกใช้งานแล้วในระบบ'),
+                    backgroundColor: Colors.red,
+                  ));
                   return;
                 }
-
                 if (needCheckPatPhone && rPhone.isNotEmpty && rPhone == patPhone) {
                   setState(() => _isLoading = false);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('เบอร์โทรศัพท์ผู้ป่วยนี้ตรงกับเบอร์ญาติคนอื่นในระบบ'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('เบอร์โทรศัพท์ผู้ป่วยนี้ตรงกับเบอร์ญาติคนอื่นในระบบ'),
+                    backgroundColor: Colors.red,
+                  ));
                   return;
                 }
 
-                // ตรวจสอบเบอร์ผู้ป่วยของผู้อื่นด้วย
-                if (rData['Patient'] is Map) {
-                  var pData = rData['Patient'];
-                  String pPhone = (pData['phonenumber'] ?? '').toString().trim();
-                  if (needCheckPatPhone && pPhone.isNotEmpty && pPhone == patPhone) {
-                    setState(() => _isLoading = false);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('เบอร์โทรศัพท์ผู้ป่วยนี้ถูกใช้งานแล้วในระบบ'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                    return;
-                  }
+                dynamic pNode = rData['Patient'] ?? rData['patients'];
+                if (pNode is Map) {
+                  pNode.forEach((k, v) {
+                    if (v is Map) {
+                      String pPhone = (v['phonenumber'] ?? '').toString().trim();
+                      if (needCheckPatPhone && pPhone.isNotEmpty && pPhone == patPhone) {
+                        setState(() => _isLoading = false);
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('เบอร์โทรศัพท์ผู้ป่วยนี้ถูกใช้งานแล้วในระบบ'),
+                          backgroundColor: Colors.red,
+                        ));
+                        return;
+                      }
+                    }
+                  });
                 }
               }
             }
@@ -521,6 +518,13 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
       }
 
       if (uid.isNotEmpty) {
+        // 🌟 กำหนด Key ของผู้ป่วย: ถ้าเพิ่มใหม่ให้ใช้หมายเลขบัตรประชาชน (หรือ Key เดิมกรณีแก้ไข)
+        String targetPatientKey = _isAddingNewPatient ? patIdCard : _currentPatientKey;
+        if (targetPatientKey.isEmpty) {
+          targetPatientKey = patIdCard;
+        }
+
+        // 🌟 บันทึกข้อมูลญาติ และตั้ง activePatientNode
         await FirebaseDatabase.instance.ref('Login/$uid/Relative').update({
           'firstname': _relFirstNameController.text.trim(),
           'lastname': _relLastNameController.text.trim(),
@@ -528,17 +532,18 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           'phonenumber': relPhone,
           'lineId': _relLineIdController.text.trim(),
           'relationship': _relRelationController.text.trim(),
+          'activePatientNode': targetPatientKey,
         });
 
-        // 🌟 รวมข้อความ Mobility
         String finalMobility = _selectedPatMobility == 'ไม่ปกติ'
             ? 'ไม่ปกติ: ${_patMobilityController.text.trim()}'
             : 'ปกติ';
 
+        // 🌟 บันทึกข้อมูลผู้ป่วยลงในโหนด Login/$uid/Relative/Patient/$targetPatientKey
         await FirebaseDatabase.instance
-            .ref('Login/$uid/Relative/Patient')
+            .ref('Login/$uid/Relative/Patient/$targetPatientKey')
             .update({
-              'patientId': _patIdCardController.text.trim(),
+              'patientId': patIdCard,
               'firstname': _patFirstNameController.text.trim(),
               'lastname': _patLastNameController.text.trim(),
               'phonenumber': patPhone,
@@ -550,7 +555,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
               'address': _patAddressController.text.trim(),
               'latitude': _hasPinned ? _selectedLocation.latitude : 0.0,
               'longitude': _hasPinned ? _selectedLocation.longitude : 0.0,
-              'location': {
+              'Location': {
                 'address': _patAddressController.text.trim(),
                 'latitude': _hasPinned ? _selectedLocation.latitude : 0.0,
                 'longitude': _hasPinned ? _selectedLocation.longitude : 0.0,
@@ -563,29 +568,21 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('แก้ไขข้อมูลสำเร็จแล้ว')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('บันทึกข้อมูลสำเร็จแล้ว'))
+        );
 
-        if (Navigator.canPop(context)) {
-          Navigator.pop(context);
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  RelativeHomePage(loggedUid: widget.loggedUid),
-            ),
-          );
-        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RelativeHomePage(loggedUid: widget.loggedUid),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('เกิดข้อผิดพลาด: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('เกิดข้อผิดพลาด: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -597,11 +594,55 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 🌟 ดึงชื่อผู้ป่วยมาแสดงใน Dropdown
+    List<DropdownMenuItem<String>> dropdownItems = [];
+    
+    _patientsData.keys.forEach((key) {
+      final pData = _patientsData[key]!;
+      String fname = pData['firstname']?.toString().trim() ?? '';
+      String lname = pData['lastname']?.toString().trim() ?? '';
+      String displayName = '';
+      
+      if (fname.isNotEmpty || lname.isNotEmpty) {
+        displayName = '$fname $lname';
+      } else {
+        displayName = 'ผู้ป่วย ID: $key';
+      }
+          
+      dropdownItems.add(
+        DropdownMenuItem(
+          value: key,
+          child: Text(
+            displayName, 
+            style: TextStyle(fontWeight: FontWeight.bold, color: darkPurple, fontSize: 16),
+          ),
+        ),
+      );
+    });
+
+    dropdownItems.add(
+      DropdownMenuItem(
+        value: 'NEW',
+        child: Row(
+          children: [
+            Icon(Icons.add_circle, color: primaryColor, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'เพิ่มผู้ป่วยใหม่', 
+              style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor, fontSize: 16),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    String selectedValue = _isAddingNewPatient ? 'NEW' : _currentPatientKey;
+
     return Scaffold(
       backgroundColor: bgGradientBottom,
       appBar: AppBar(
         title: const Text(
-          'แก้ไขข้อมูลผู้ป่วย',
+          'แก้ไขข้อมูลผู้ป่วยและญาติ',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -619,17 +660,12 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            } else {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      RelativeHomePage(loggedUid: widget.loggedUid),
-                ),
-              );
-            }
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => RelativeHomePage(loggedUid: widget.loggedUid),
+              ),
+            );
           },
         ),
       ),
@@ -646,19 +682,58 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           child: _isLoading
               ? Center(child: CircularProgressIndicator(color: primaryColor))
               : SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 15,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                   child: Form(
                     key: _formKey,
                     child: Column(
                       children: [
+                        
+                        // 🌟 ส่วน UI เลือกผู้ป่วยแบบ Dropdown
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 20),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: primaryColor, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryColor.withOpacity(0.15),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: (selectedValue.isNotEmpty && 
+                                     (selectedValue == 'NEW' || _patientsData.containsKey(selectedValue)))
+                                  ? selectedValue 
+                                  : (_patientsData.isNotEmpty ? _patientsData.keys.first : null),
+                              isExpanded: true,
+                              icon: Icon(Icons.keyboard_arrow_down, color: primaryColor, size: 28),
+                              items: dropdownItems,
+                              onChanged: (String? newValue) {
+                                if (newValue == 'NEW') {
+                                  _prepareNewPatient();
+                                } else if (newValue != null) {
+                                  setState(() {
+                                    _isAddingNewPatient = false;
+                                    _currentPatientKey = newValue;
+                                    _loadPatientDataToForm(newValue);
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+
                         _buildProfileImageSection(),
                         const SizedBox(height: 20),
 
                         _buildSectionContainer(
-                          title: 'ข้อมูลผู้ป่วย',
+                          title: _isAddingNewPatient ? 'เพิ่มข้อมูลผู้ป่วยใหม่' : 'ข้อมูลผู้ป่วย',
                           children: [
                             Row(
                               children: [
@@ -681,11 +756,13 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                               hint: 'หมายเลขบัตรประชาชน',
                               controller: _patIdCardController,
                               keyboardType: TextInputType.number,
+                              maxLength: 13,
+                              readOnly: !_isAddingNewPatient, // อนุญาตให้กรอกเฉพาะตอนเพิ่มคนใหม่
                             ),
                             _buildInputField(
                               hint: 'ไอดีไลน์ผู้ป่วย (ถ้ามี)',
                               controller: _patLineIdController,
-                              isRequired: false, // 🌟 ไม่บังคับกรอก
+                              isRequired: false,
                             ),
                             _buildInputField(
                               hint: 'เบอร์โทรศัพท์ผู้ป่วย',
@@ -697,8 +774,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                               hint: 'เพศ',
                               controller: _patGenderController,
                             ),
-
-                            // 🌟 วันเกิด และ อายุ
                             Row(
                               children: [
                                 Expanded(
@@ -726,19 +801,15 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                 ),
                               ],
                             ),
-
                             _buildInputField(
                               hint: 'โรคประจำตัว (ถ้าไม่มีให้เว้นว่าง)',
                               controller: _patDiseaseController,
-                              isRequired: false, // 🌟 ไม่บังคับกรอก
+                              isRequired: false,
                             ),
-
-                            // 🌟 ความคล่องตัว (Mobility Dropdown เปลี่ยนเป็น Radio + TextField)
                             _buildMobilitySection(),
                           ],
                         ),
 
-                        // 🌟 ส่วนข้อมูลที่อยู่ผู้ป่วย
                         _buildSectionContainer(
                           title: 'ข้อมูลที่อยู่ผู้ป่วย',
                           children: [
@@ -760,7 +831,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                         ),
 
                         _buildSectionContainer(
-                          title: 'ข้อมูลติดต่อญาติ',
+                          title: 'ข้อมูลติดต่อญาติ (ข้อมูลเดียวกันทุกผู้ป่วย)',
                           children: [
                             Row(
                               children: [
@@ -783,7 +854,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                               hint: 'อีเมล (Email) (ถ้ามี)',
                               controller: _relEmailController,
                               keyboardType: TextInputType.emailAddress,
-                              isRequired: false, // 🌟 ไม่บังคับกรอก
+                              isRequired: false,
                             ),
                             Row(
                               children: [
@@ -800,7 +871,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                   child: _buildInputField(
                                     hint: 'ไอดีไลน์ญาติ (ถ้ามี)',
                                     controller: _relLineIdController,
-                                    isRequired: false, // 🌟 ไม่บังคับกรอก
+                                    isRequired: false,
                                   ),
                                 ),
                               ],
@@ -830,7 +901,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                   ),
                                   onPressed: _handleSave,
                                   child: const Text(
-                                    'ตกลง',
+                                    'บันทึก',
                                     style: TextStyle(
                                       fontSize: 16,
                                       color: Colors.white,
@@ -855,19 +926,12 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                     ),
                                   ),
                                   onPressed: () {
-                                    if (Navigator.canPop(context)) {
-                                      Navigator.pop(context);
-                                    } else {
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              RelativeHomePage(
-                                                loggedUid: widget.loggedUid,
-                                              ),
-                                        ),
-                                      );
-                                    }
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => RelativeHomePage(loggedUid: widget.loggedUid),
+                                      ),
+                                    );
                                   },
                                   child: Text(
                                     'ยกเลิก',
@@ -919,20 +983,10 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
               Container(
                 width: 6,
                 height: 16,
-                decoration: BoxDecoration(
-                  color: primaryColor,
-                  borderRadius: BorderRadius.circular(4),
-                ),
+                decoration: BoxDecoration(color: primaryColor, borderRadius: BorderRadius.circular(4)),
               ),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: darkPurple,
-                ),
-              ),
+              Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: darkPurple)),
             ],
           ),
           const SizedBox(height: 12),
@@ -944,12 +998,10 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
   Widget _buildProfileImageSection() {
     ImageProvider? imageProvider;
-
     try {
       if (_profileImageFile != null) {
         imageProvider = FileImage(_profileImageFile!);
-      } else if (_profilePhotoBase64 != null &&
-          _profilePhotoBase64!.isNotEmpty) {
+      } else if (_profilePhotoBase64 != null && _profilePhotoBase64!.isNotEmpty) {
         String cleanBase64 = _profilePhotoBase64!.trim();
         if (cleanBase64.contains(',')) {
           cleanBase64 = cleanBase64.split(',').last;
@@ -969,11 +1021,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: [
-                  BoxShadow(
-                    color: primaryColor.withOpacity(0.25),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
-                  ),
+                  BoxShadow(color: primaryColor.withOpacity(0.25), blurRadius: 14, offset: const Offset(0, 6)),
                 ],
               ),
               child: CircleAvatar(
@@ -984,11 +1032,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                   backgroundColor: Colors.white,
                   backgroundImage: imageProvider,
                   child: imageProvider == null
-                      ? Icon(
-                          Icons.person,
-                          size: 55,
-                          color: primaryColor.withOpacity(0.6),
-                        )
+                      ? Icon(Icons.person, size: 55, color: primaryColor.withOpacity(0.6))
                       : null,
                 ),
               ),
@@ -1002,36 +1046,20 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 2),
                   boxShadow: [
-                    BoxShadow(
-                      color: primaryColor.withOpacity(0.4),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
+                    BoxShadow(color: primaryColor.withOpacity(0.4), blurRadius: 6, offset: const Offset(0, 2)),
                   ],
                 ),
-                child: const Icon(
-                  Icons.camera_alt,
-                  size: 16,
-                  color: Colors.white,
-                ),
+                child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
               ),
             ),
           ],
         ),
         const SizedBox(height: 10),
-        const Text(
-          'รูปโปรไฟล์ผู้ป่วย',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 13,
-            color: Colors.black,
-          ),
-        ),
+        const Text('รูปโปรไฟล์ผู้ป่วย', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black)),
       ],
     );
   }
 
-  // 🌟 ฟังก์ชันสร้างส่วนความคล่องตัวแบบใหม่
   Widget _buildMobilitySection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1040,14 +1068,8 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           padding: const EdgeInsets.only(bottom: 4, left: 2),
           child: Row(
             children: const [
-              Text(
-                'สภาพร่างกายในการเคลื่อนไหว',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-              ),
-              Text(
-                ' *',
-                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-              ),
+              Text('สภาพร่างกายในการเคลื่อนไหว', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              Text(' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
             ],
           ),
         ),
@@ -1101,9 +1123,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                     },
                   ),
                 ),
-                crossFadeState: _selectedPatMobility == 'ไม่ปกติ'
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
+                crossFadeState: _selectedPatMobility == 'ไม่ปกติ' ? CrossFadeState.showSecond : CrossFadeState.showFirst,
                 duration: const Duration(milliseconds: 300),
               ),
             ],
@@ -1113,7 +1133,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     );
   }
 
-  // 🌟 เพิ่มตัวแปร isRequired เพื่อให้บางช่องปล่อยว่างได้
   Widget _buildInputField({
     required String hint,
     required TextEditingController controller,
@@ -1124,7 +1143,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     bool enabled = true,
     VoidCallback? onTap,
     Widget? suffixIcon,
-    bool isRequired = true, 
+    bool isRequired = true,
     String? Function(String?)? validator,
   }) {
     return Padding(
@@ -1137,12 +1156,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         readOnly: readOnly,
         enabled: enabled,
         onTap: onTap,
-        style: const TextStyle(
-          fontSize: 14,
-          color: Colors.black,
-          fontWeight: FontWeight.normal,
-        ),
-        // 🌟 ปิดการตรวจสอบว่าห้ามว่างเปล่า ถ้ากำหนดให้ isRequired = false
+        style: const TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.normal),
         validator: validator ?? (v) {
           if (!enabled) return null;
           if (isRequired && (v == null || v.trim().isEmpty)) {
@@ -1158,35 +1172,14 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           labelStyle: const TextStyle(fontSize: 13, color: Color(0xFF9B59B6)),
           filled: true,
           fillColor: const Color(0xFFFAF8FF),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 12,
-          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           counterStyle: const TextStyle(fontSize: 11, color: Colors.grey),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: greyBorder, width: 2.3),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: greyBorder, width: 2.3),
-          ),
-          disabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: greyBorder, width: 2.3),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: primaryColor, width: 2.3),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.redAccent, width: 2.3),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.redAccent, width: 2.3),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: greyBorder, width: 2.3)),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: greyBorder, width: 2.3)),
+          disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: greyBorder, width: 2.3)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor, width: 2.3)),
+          errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.redAccent, width: 2.3)),
+          focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.redAccent, width: 2.3)),
           errorStyle: const TextStyle(fontSize: 11, color: Colors.redAccent),
         ),
       ),

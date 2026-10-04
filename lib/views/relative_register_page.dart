@@ -311,8 +311,10 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
           ? 'ไม่ปกติ: ${_patMobilityController.text.trim()}'
           : 'ปกติ';
 
+      String patientId = _patIdCardController.text.trim();
+
       PatientModel patientData = PatientModel(
-        patientId: _patIdCardController.text.trim(),
+        patientId: patientId,
         patientphoto: _profilePhotoBase64!,
         firstname: _patFirstNameController.text.trim(),
         lastname: _patLastNameController.text.trim(),
@@ -328,8 +330,9 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         ),
       );
 
+      // 🌟 จุดที่ปรับแก้: เปลี่ยนจาก patient: patientData เป็น patients: { patientId: patientData }
       RelativeModel relativeData = RelativeModel(
-        relativeId: _patIdCardController.text.trim(),
+        relativeId: patientId,
         password: _patPasswordController.text.trim(),
         usertype: 'relative',
         firstname: _relFirstNameController.text.trim(),
@@ -338,7 +341,9 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         phonenumber: _relPhoneController.text.trim(),
         lineId: _relLineIdController.text.trim(),
         relationship: _relRelationController.text.trim(),
-        patient: patientData,
+        patients: {
+          patientId: patientData,
+        },
       );
 
       UserCredential? userCredential = await _authService.registerRelative(
