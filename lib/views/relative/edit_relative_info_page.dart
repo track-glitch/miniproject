@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // 🌟 เพิ่ม import สำหรับบังคับกรอกตัวเลข
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'dart:convert';
@@ -374,6 +375,15 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
   void _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    // 🌟 ตรวจสอบว่าเลือกเพศหรือยัง
+    if (_patGenderController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('กรุณาเลือกเพศของผู้ป่วย'),
+        backgroundColor: Colors.red,
+      ));
+      return;
+    }
 
     final String relEmail = _relEmailController.text.trim().toLowerCase();
     final String relPhone = _relPhoneController.text.trim();
@@ -757,7 +767,8 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                               controller: _patIdCardController,
                               keyboardType: TextInputType.number,
                               maxLength: 13,
-                              readOnly: !_isAddingNewPatient, // อนุญาตให้กรอกเฉพาะตอนเพิ่มคนใหม่
+                              readOnly: !_isAddingNewPatient,
+                              inputFormatters: [FilteringTextInputFormatter.digitsOnly], // 🌟 บังคับตัวเลข
                             ),
                             _buildInputField(
                               hint: 'ไอดีไลน์ผู้ป่วย (ถ้ามี)',
@@ -769,11 +780,55 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                               controller: _patPhoneController,
                               keyboardType: TextInputType.phone,
                               maxLength: 10,
+                              inputFormatters: [FilteringTextInputFormatter.digitsOnly], // 🌟 บังคับตัวเลข
                             ),
-                            _buildInputField(
-                              hint: 'เพศ',
-                              controller: _patGenderController,
+                            
+                            // 🌟 ชุด UI เพศ เปลี่ยนเป็นแบบ Radio
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Padding(
+                                  padding: EdgeInsets.only(bottom: 4, left: 2),
+                                  child: Row(
+                                    children: [
+                                      Text('เพศ', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF9B59B6))),
+                                      Text(' *', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: Row(
+                                    children: [
+                                      Radio<String>(
+                                        value: 'ชาย',
+                                        groupValue: _patGenderController.text,
+                                        activeColor: primaryColor,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _patGenderController.text = value!;
+                                          });
+                                        },
+                                      ),
+                                      const Text('ชาย', style: TextStyle(fontSize: 14)),
+                                      const SizedBox(width: 20),
+                                      Radio<String>(
+                                        value: 'หญิง',
+                                        groupValue: _patGenderController.text,
+                                        activeColor: primaryColor,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _patGenderController.text = value!;
+                                          });
+                                        },
+                                      ),
+                                      const Text('หญิง', style: TextStyle(fontSize: 14)),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
+
                             Row(
                               children: [
                                 Expanded(
@@ -864,6 +919,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                     controller: _relPhoneController,
                                     keyboardType: TextInputType.phone,
                                     maxLength: 10,
+                                    inputFormatters: [FilteringTextInputFormatter.digitsOnly], // 🌟 บังคับตัวเลข
                                   ),
                                 ),
                                 const SizedBox(width: 10),
@@ -1145,6 +1201,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     Widget? suffixIcon,
     bool isRequired = true,
     String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters, // 🌟 1. เพิ่ม property รับ Formatter
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -1156,6 +1213,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         readOnly: readOnly,
         enabled: enabled,
         onTap: onTap,
+        inputFormatters: inputFormatters, // 🌟 2. เรียกใช้ Formatter
         style: const TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.normal),
         validator: validator ?? (v) {
           if (!enabled) return null;
