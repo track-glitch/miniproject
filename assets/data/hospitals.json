@@ -31,32 +31,194 @@
   },
   {
     "id": 6,
+    "hospital_name": "โรงพยาบาลประสาทเชียงใหม่",
+    "latitude": 18.7897067,
+    "longitude": 98.9694856
+  },
+  {
+    "id": 7,
+    "hospital_name": "โรงพยาบาลสวนปรุง",
+    "latitude": 18.7801722,
+    "longitude": 98.9790497
+  },
+  {
+    "id": 8,
+    "hospital_name": "โรงพยาบาลค่ายกาวิละ",
+    "latitude": 18.7780238,
+    "longitude": 99.0144532
+  },
+  {
+    "id": 9,
+    "hospital_name": "โรงพยาบาลจอมทอง",
+    "latitude": 18.4067753,
+    "longitude": 98.6738638
+  },
+  {
+    "id": 10,
+    "hospital_name": "โรงพยาบาลแม่แจ่ม",
+    "latitude": 18.4980395,
+    "longitude": 98.3793057
+  },
+  {
+    "id": 11,
+    "hospital_name": "โรงพยาบาลเชียงดาว",
+    "latitude": 19.402936,
+    "longitude": 98.9751993
+  },
+  {
+    "id": 12,
+    "hospital_name": "โรงพยาบาลดอยสะเก็ด",
+    "latitude": 18.8691091,
+    "longitude": 99.128403
+  },
+  {
+    "id": 13,
+    "hospital_name": "โรงพยาบาลแม่แตง",
+    "latitude": 19.1376783,
+    "longitude": 98.9601398
+  },
+  {
+    "id": 14,
+    "hospital_name": "โรงพยาบาลสะเมิง",
+    "latitude": 18.849985,
+    "longitude": 98.733294
+  },
+  {
+    "id": 15,
+    "hospital_name": "โรงพยาบาลฝาง",
+    "latitude": 19.9133292,
+    "longitude": 99.2064742
+  },
+  {
+    "id": 16,
+    "hospital_name": "โรงพยาบาลแม่อาย",
+    "latitude": 20.0388066,
+    "longitude": 99.3023484
+  },
+  {
+    "id": 17,
+    "hospital_name": "โรงพยาบาลพร้าว",
+    "latitude": 19.3674414,
+    "longitude": 99.2001352
+  },
+  {
+    "id": 18,
+    "hospital_name": "โรงพยาบาลสันป่าตอง",
+    "latitude": 18.5956136,
+    "longitude": 98.8853212
+  },
+  {
+    "id": 19,
+    "hospital_name": "โรงพยาบาลหางดง",
+    "latitude": 18.6830881,
+    "longitude": 98.9183669
+  },
+  {
+    "id": 20,
+    "hospital_name": "โรงพยาบาลฮอด",
+    "latitude": 18.1789422,
+    "longitude": 98.6117638
+  },
+  {
+    "id": 21,
+    "hospital_name": "โรงพยาบาลดอยเต่า",
+    "latitude": 17.9500809,
+    "longitude": 98.6910726
+  },
+  {
+    "id": 22,
+    "hospital_name": "โรงพยาบาลอมก๋อย",
+    "latitude": 17.8019723,
+    "longitude": 98.3612098
+  },
+  {
+    "id": 23,
+    "hospital_name": "โรงพยาบาลสารภี",
+    "latitude": 18.6807816,
+    "longitude": 99.0431017
+  },
+  {
+    "id": 24,
+    "hospital_name": "โรงพยาบาลเวียงแหง",
+    "latitude": 19.559883,
+    "longitude": 98.6355637
+  },
+  {
+    "id": 25,
+    "hospital_name": "โรงพยาบาลไชยปราการ",
+    "latitude": 19.7056114,
+    "longitude": 99.1369312
+  },
+  {
+    "id": 26,
+    "hospital_name": "โรงพยาบาลแม่วาง",
+    "latitude": 18.6160501,
+    "longitude": 98.7745598
+  },
+  {
+    "id": 27,
+    "hospital_name": "โรงพยาบาลแม่ออน",
+    "latitude": 18.7435763,
+    "longitude": 99.2219965
+  },
+  {
+    "id": 28,
+    "hospital_name": "โรงพยาบาลดอยหล่อ",
+    "latitude": 18.4776209,
+    "longitude": 98.7803876
+  },
+  {
+    "id": 29,
     "hospital_name": "โรงพยาบาลกรุงเทพเชียงใหม่",
     "latitude": 18.788711,
     "longitude": 99.026184
   },
   {
-    "id": 7,
+    "id": 30,
     "hospital_name": "โรงพยาบาลราชเวช เชียงใหม่",
     "latitude": 18.766898,
     "longitude": 99.00432
   },
   {
-    "id": 8,
+    "id": 31,
     "hospital_name": "โรงพยาบาลเชียงใหม่ราม",
     "latitude": 18.794797,
     "longitude": 98.977983
   },
   {
-    "id": 9,
-    "hospital_name": "โรงพยาบาลไกลหมอ เชียงใหม่",
+    "id": 32,
+    "hospital_name": "โรงพยาบาลเชียงใหม่ใกล้หมอ",
     "latitude": 18.761037,
     "longitude": 98.972741
   },
   {
-    "id": 10,
+    "id": 33,
     "hospital_name": "ศูนย์การแพทย์ศรีพัฒน์",
     "latitude": 18.790708,
     "longitude": 98.970897
+  },
+  {
+    "id": 34,
+    "hospital_name": "โรงพยาบาลลานนา",
+    "latitude": 18.8123878,
+    "longitude": 98.9910114
+  },
+  {
+    "id": 35,
+    "hospital_name": "โรงพยาบาลแมคคอร์มิค",
+    "latitude": 18.7982723,
+    "longitude": 99.0108325
+  },
+  {
+    "id": 36,
+    "hospital_name": "โรงพยาบาลเซนทรัลเชียงใหม่เมโมเรียล",
+    "latitude": 18.7730311,
+    "longitude": 98.9983304
+  },
+  {
+    "id": 37,
+    "hospital_name": "โรงพยาบาลเชียงใหม่ (Chiangmai Hospital)",
+    "latitude": 18.8108033,
+    "longitude": 98.9813464
   }
 ]

@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import 'dart:async';
 
 class LocationPickerWidget extends StatefulWidget {
   final LatLng initialLocation;
@@ -29,7 +30,7 @@ class LocationPickerWidget extends StatefulWidget {
 class _LocationPickerWidgetState extends State<LocationPickerWidget> {
   late MapController mapController;
   late LatLng currentLocation;
-
+  Timer? _debounce;
   final TextEditingController _addressController = TextEditingController();
   TextEditingController addressController = TextEditingController();
 
@@ -112,12 +113,13 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
     }
   }
 
-  // เปิดแผนที่ขยายเต็มจอ
+  // เปิดแผนที่ขยายเต็มจอ (UX แบบ Grab / Lineman)
   void _openFullScreenMap() {
     showDialog(
       context: context,
       builder: (context) {
         LatLng tempLocation = currentLocation;
+        MapController dialogMapController = MapController();
 
         return StatefulBuilder(
           builder: (context, setDialogState) {
@@ -133,11 +135,15 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                   child: Stack(
                     children: [
                       FlutterMap(
+                        mapController: dialogMapController,
                         options: MapOptions(
                           initialCenter: tempLocation,
                           initialZoom: 16.5,
-                          onTap: (tapPosition, point) {
-                            setDialogState(() => tempLocation = point);
+                          // 🌟 อัปเดตพิกัดตลอดเวลาที่ผู้ใช้เลื่อนแผนที่
+                          onPositionChanged: (position, hasGesture) {
+                            if (position.center != null) {
+                              tempLocation = position.center!;
+                            }
                           },
                         ),
                         children: [
@@ -146,50 +152,112 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                                 'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=$maptilerApiKey',
                             userAgentPackageName: 'com.example.caretakerapp',
                           ),
-                          MarkerLayer(
-                            markers: [
-                              Marker(
-                                point: tempLocation,
-                                width: 40,
-                                height: 40,
-                                alignment: Alignment.topCenter,
-                                child: const Icon(
-                                  Icons.location_on,
-                                  color: Colors.red,
-                                  size: 40,
-                                ),
+                          // 🌟 ลบ MarkerLayer ออก เพราะเราจะใช้ Icon วางลอยอยู่ตรงกลางจอแทน
+                        ],
+                      ),
+
+                      // 🌟 หมุดลอยอยู่ตรงกลางหน้าจอ (Grab Style)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.only(
+                            bottom: 35,
+                          ), // ดันขึ้นให้ปลายแหลมชี้ตรงจุดกึ่งกลางพอดี
+                          child: Icon(
+                            Icons.location_on,
+                            color: Colors.redAccent,
+                            size: 50,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black45,
+                                blurRadius: 10,
+                                offset: Offset(0, 4),
                               ),
                             ],
                           ),
-                        ],
+                        ),
                       ),
+
+                      // 🌟 ปุ่มกากบาทปิดหน้าต่าง
                       Positioned(
                         top: 10,
                         right: 10,
-                        child: IconButton(
-                          icon: const Icon(Icons.close, size: 30),
-                          color: Colors.black87,
-                          onPressed: () => Navigator.pop(context),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: const [
+                              BoxShadow(color: Colors.black26, blurRadius: 4),
+                            ],
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.close, size: 24),
+                            color: Colors.black87,
+                            onPressed: () => Navigator.pop(context),
+                          ),
                         ),
                       ),
+
+                      // 🌟 ป้ายบอกใบ้การใช้งาน
                       Positioned(
                         top: 20,
                         left: 20,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                            horizontal: 16,
+                            vertical: 10,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.white.withOpacity(0.95),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: const [
+                              BoxShadow(color: Colors.black26, blurRadius: 4),
+                            ],
                           ),
-                          child: const Text(
-                            'แตะบนแผนที่เพื่อย้ายหมุด',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                          child: const Row(
+                            children: [
+                              Icon(
+                                Icons.pan_tool_rounded,
+                                size: 18,
+                                color: Color(0xFF7D3C98),
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'เลื่อนแผนที่เพื่อปักหมุด',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF7D3C98),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
+
+                      // 🌟 ปุ่มดึงตำแหน่งปัจจุบัน (My Location)
+                      Positioned(
+                        bottom: 85,
+                        right: 20,
+                        child: FloatingActionButton(
+                          mini: true,
+                          backgroundColor: Colors.white,
+                          onPressed: () async {
+                            Position position =
+                                await Geolocator.getCurrentPosition();
+                            LatLng newPos = LatLng(
+                              position.latitude,
+                              position.longitude,
+                            );
+                            dialogMapController.move(newPos, 16.5);
+                            tempLocation = newPos;
+                          },
+                          child: const Icon(
+                            Icons.my_location,
+                            color: Color(0xFF7D3C98),
+                          ),
+                        ),
+                      ),
+
+                      // 🌟 ปุ่มยืนยัน
                       Positioned(
                         bottom: 20,
                         left: 20,
@@ -197,10 +265,11 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF7D3C98),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(14),
                             ),
+                            elevation: 4,
                           ),
                           onPressed: () {
                             setState(() => currentLocation = tempLocation);
@@ -243,20 +312,48 @@ class _LocationPickerWidgetState extends State<LocationPickerWidget> {
               return const Iterable<Map<String, dynamic>>.empty();
             }
 
-            final url = Uri.parse(
-              'https://search.longdo.com/mapsearch/json/search?keyword=${textEditingValue.text}&limit=10&key=$longdoApiKey',
-            );
+            // 🌟 1. ถ้าผู้ใช้ยังพิมพ์ไม่หยุด ให้ยกเลิกการนับเวลาเก่าทิ้ง
+            if (_debounce?.isActive ?? false) _debounce!.cancel();
 
-            try {
-              final response = await http.get(url);
-              if (response.statusCode == 200) {
-                final data = json.decode(response.body);
-                return List<Map<String, dynamic>>.from(data['data'] ?? []);
+            // 🌟 2. ใช้ Completer เพื่อรอส่งค่ากลับเมื่อนับเวลาเสร็จ
+            Completer<Iterable<Map<String, dynamic>>> completer = Completer();
+
+            // 🌟 3. เริ่มจับเวลา 500 มิลลิวินาที ถ้าหยุดพิมพ์ถึงจะยิง API
+            _debounce = Timer(const Duration(milliseconds: 500), () async {
+              final url = Uri.parse(
+                'https://search.longdo.com/mapsearch/json/search?keyword=${textEditingValue.text}&limit=10&key=$longdoApiKey',
+              );
+
+              try {
+                final response = await http.get(
+                  url,
+                  headers: {
+                    'Referer': 'https://localhost',
+                    'User-Agent': 'Mozilla/5.0',
+                  },
+                );
+
+                if (response.statusCode == 200 &&
+                    (response.body.trim().startsWith('{') ||
+                        response.body.trim().startsWith('['))) {
+                  final data = json.decode(response.body);
+                  completer.complete(
+                    List<Map<String, dynamic>>.from(data['data'] ?? []),
+                  );
+                } else {
+                  completer.complete(
+                    const Iterable<Map<String, dynamic>>.empty(),
+                  );
+                }
+              } catch (e) {
+                print("SmartSearch error: $e");
+                completer.complete(
+                  const Iterable<Map<String, dynamic>>.empty(),
+                );
               }
-            } catch (e) {
-              print("SmartSearch error: $e");
-            }
-            return const Iterable<Map<String, dynamic>>.empty();
+            });
+
+            return completer.future;
           },
           onSelected: (Map<String, dynamic> selection) {
             _selectSearchResult(selection['lat'], selection['lon']);

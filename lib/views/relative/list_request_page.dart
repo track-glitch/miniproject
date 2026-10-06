@@ -259,6 +259,15 @@ class _ListRequestPageState extends State<ListRequestPage> {
           .ref('Login/$uid/Relative/Request')
           .get();
 
+      // 🌟 เพิ่มโค้ดดึงข้อมูล Patient ทั้งหมดของญาติคนนี้มาเก็บไว้ก่อน
+      final patientSnap = await FirebaseDatabase.instance
+          .ref('Login/$uid/Relative/Patient')
+          .get();
+      Map<dynamic, dynamic> myPatients = {};
+      if (patientSnap.exists && patientSnap.value is Map) {
+        myPatients = patientSnap.value as Map<dynamic, dynamic>;
+      }
+
       List<RequestCardData> pendingList = [];
       List<RequestCardData> acceptedList = [];
       List<RequestCardData> completedList = [];
@@ -293,11 +302,23 @@ class _ListRequestPageState extends State<ListRequestPage> {
             );
             String statusType = (req.requeststatus ?? 'pending').toLowerCase();
 
-            // 🌟 ดึงชื่อผู้ป่วยจากฐานข้อมูล (ถ้ามี)
-            String patientName =
-                reqData['patientName']?.toString() ?? 'ไม่ระบุชื่อผู้ป่วย';
-            if (patientName.isEmpty) patientName = 'ไม่ระบุชื่อผู้ป่วย';
+            // 🌟 แก้ไขให้เอา patientId ไปค้นหาชื่อจาก myPatients
+            String patientName = 'ไม่ระบุชื่อผู้ป่วย';
+            String? pId = reqData['patientId']?.toString();
 
+            if (pId != null && pId.isNotEmpty && myPatients.containsKey(pId)) {
+              var pData = myPatients[pId];
+              String fName = pData['firstname']?.toString() ?? '';
+              String lName = pData['lastname']?.toString() ?? '';
+              String gender = pData['gender']?.toString() ?? '';
+
+              String prefix = gender == 'ชาย'
+                  ? 'นาย '
+                  : (gender == 'หญิง' ? 'นาง ' : 'คุณ ');
+              if (fName.isNotEmpty || lName.isNotEmpty) {
+                patientName = "$prefix$fName $lName".trim();
+              }
+            }
             String caretakerFullName = 'รอผู้ดูแลตอบรับ';
             String caretakerImage = ''; // 🌟 เก็บรูปลงโมเดลเพื่อใช้ในหน้ารีวิว
 
@@ -363,8 +384,10 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 req.requestdate,
               ),
               category: req.department?.departmentname ?? 'ทั่วไป',
-              // 🌟 เพิ่มบรรทัดนี้ เพื่อส่งชื่อผู้ป่วยเข้าไปในโมเดล (มันดึงค่าไว้รอแล้วในตัวแปร patientName ด้านบน)
+
+              // 🌟 เติมบรรทัดนี้ลงไปครับ 🌟
               patientName: patientName,
+
               caregiverName: caretakerFullName,
               caretakerImage: caretakerImage,
               isReviewed: isRev,
