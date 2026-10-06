@@ -341,9 +341,7 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
         phonenumber: _relPhoneController.text.trim(),
         lineId: _relLineIdController.text.trim(),
         relationship: _relRelationController.text.trim(),
-        patients: {
-          patientId: patientData,
-        },
+        patients: {patientId: patientData},
       );
 
       UserCredential? userCredential = await _authService.registerRelative(
@@ -814,127 +812,29 @@ class _RelativeRegisterPageState extends State<RelativeRegisterPage> {
           ),
 
           // 🌟 ปรับปรุงส่วนที่อยู่ให้เป็นปุ่มกดแล้วกางแผนที่ลงมา (Accordion/Dropdown Style)
+          // 🌟 ปรับปรุงส่วนที่อยู่ให้เรียกใช้ LocationPickerWidget ตัวใหม่ (ปุ่มกดเด้งเต็มจอ)
           _buildSectionContainer(
             title: 'ข้อมูลที่อยู่ผู้ป่วย',
             children: [
-              _buildLabelField('รายละเอียดที่อยู่', isRequired: true),
-              _buildInputField(
-                hint: 'บ้านเลขที่, ซอย, ถนน, ตำบล, อำเภอ, จังหวัด...',
-                controller: _patAddressController,
-                maxLines: 3,
-                maxLength: 500, // 🌟 จำกัดความยาวข้อความที่อยู่ 500 คำ
-                validator: (val) =>
-                    val!.isEmpty ? 'กรุณากรอกที่อยู่ผู้ป่วย' : null,
+              _buildLabelField('ที่อยู่ของผู้ป้วย', isRequired: true),
+              LocationPickerWidget(
+                initialLocation: _selectedLocation,
+                initialAddress: _patAddressController.text,
+                onLocationChanged: (newLocation, newAddress) {
+                  setState(() {
+                    _selectedLocation = newLocation;
+                    _patAddressController.text = newAddress;
+                    _hasPinned = true;
+                  });
+                },
               ),
-              const SizedBox(height: 16),
-
-              _buildLabelField(
-                'พิกัดบนแผนที่ (ค้นหาหรือปักหมุด)',
-                isRequired: true,
-              ),
-
-              // 🌟 ทำเป็นกล่องที่กดแล้วกางแผนที่ลงมาได้
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _hasPinned
-                        ? Colors.green
-                        : primaryColor.withOpacity(0.5),
-                    width: 1.5,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    // ส่วนหัวที่ไว้กดเปิด/ปิด
-                    InkWell(
-                      onTap: () {
-                        setState(() {
-                          _isMapExpanded = !_isMapExpanded; // สลับสถานะเปิดปิด
-                        });
-                      },
-                      borderRadius: _isMapExpanded
-                          ? const BorderRadius.vertical(
-                              top: Radius.circular(10),
-                            )
-                          : BorderRadius.circular(10),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              _hasPinned
-                                  ? Icons.check_circle_rounded
-                                  : Icons.map_rounded,
-                              color: _hasPinned ? Colors.green : primaryColor,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                _hasPinned
-                                    ? 'ปักหมุดพิกัดเรียบร้อยแล้ว'
-                                    : 'ปักหมุดที่อยู่ของผู็ป่วย',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: _hasPinned
-                                      ? Colors.green.shade700
-                                      : primaryColor,
-                                ),
-                              ),
-                            ),
-                            Icon(
-                              _isMapExpanded
-                                  ? Icons.keyboard_arrow_up_rounded
-                                  : Icons.keyboard_arrow_down_rounded,
-                              color: Colors.grey.shade600,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // 🌟 ส่วนเนื้อหาแผนที่จะกางออกเมื่อ _isMapExpanded เป็น true
-                    AnimatedCrossFade(
-                      firstChild: const SizedBox(
-                        width: double.infinity,
-                        height: 0,
-                      ),
-                      secondChild: Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                        child: LocationPickerWidget(
-                          initialLocation: _selectedLocation,
-                          initialAddress: _patAddressController.text,
-                          showAddressTextField:
-                              false, // ปิดช่องกรอกที่อยู่ของเก่าทิ้ง
-                          onLocationChanged: (newLocation, newAddress) {
-                            setState(() {
-                              _selectedLocation = newLocation;
-                              _hasPinned = true;
-                              // ❌ เอาการ Autofill ที่อยู่ทับ Text Box ออกไปแล้วครับ
-                            });
-                          },
-                        ),
-                      ),
-                      crossFadeState: _isMapExpanded
-                          ? CrossFadeState.showSecond
-                          : CrossFadeState.showFirst,
-                      duration: const Duration(milliseconds: 300),
-                    ),
-                  ],
-                ),
-              ),
-
+              // 🌟 แจ้งเตือนสีแดงถ้ายังไม่ปักหมุด
               if (!_hasPinned)
                 const Padding(
                   padding: EdgeInsets.only(top: 8, left: 4),
                   child: Text(
-                    '* กรุณากางแผนที่และปักหมุดพิกัดเพื่อยืนยัน',
-                    style: TextStyle(color: Colors.red, fontSize: 12),
+                    '* กรุณาแตะเพื่อปักหมุดและระบุที่อยู่บนแผนที่ให้เรียบร้อย',
+                    style: TextStyle(color: Colors.red, fontSize: 11),
                   ),
                 ),
             ],

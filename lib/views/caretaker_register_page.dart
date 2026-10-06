@@ -14,6 +14,8 @@ import '../models/document_model.dart';
 import '../models/location_model.dart';
 import '../models/vehicle_model.dart';
 import '../models/vehicle_photo_model.dart';
+import 'package:latlong2/latlong.dart';
+import '../widgets/location_picker_widget.dart';
 
 class CaretakerRegisterPage extends StatefulWidget {
   const CaretakerRegisterPage({super.key});
@@ -60,7 +62,9 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
 
   double _currentLat = 0.0;
   double _currentLng = 0.0;
-
+  // 🌟 เพิ่ม 2 ตัวแปรนี้สำหรับแผนที่
+  LatLng _selectedLocation = const LatLng(13.7563, 100.5018);
+  bool _hasPinned = false;
   // --- Step 3: ข้อมูลยานพาหนะ ---
   final _step3FormKey = GlobalKey<FormState>();
   final TextEditingController _brandController = TextEditingController();
@@ -477,6 +481,12 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
         }
         if (_selectedGender.isEmpty) {
           _showErrorSnackBar('กรุณาเลือกเพศ');
+          return;
+        }
+
+        // 🌟 เพิ่มเงื่อนไขนี้ เพื่อบังคับให้ผู้ดูแลต้องปักหมุดเสมอ
+        if (!_hasPinned || _addressController.text.trim().isEmpty) {
+          _showErrorSnackBar('กรุณาแตะเพื่อปักหมุดและระบุที่อยู่ให้เรียบร้อย');
           return;
         }
 
@@ -1058,17 +1068,30 @@ class _CaretakerRegisterPageState extends State<CaretakerRegisterPage> {
                   },
                 ),
               ),
-              const SizedBox(height: 12),
-              _buildLabelField('ที่อยู่', isRequired: true),
-              _buildTextField(
-                controller: _addressController,
-                hint:
-                    'ระบุที่อยู่ปัจจุบัน, จังหวัด, รหัสไปรษณีย์ หรือพื้นที่สะดวกรับงาน',
-                maxLines: 3,
-                validator: (val) => val == null || val.trim().isEmpty
-                    ? 'กรุณาระบุข้อมูลที่อยู่ จังหวัด และรหัสไปรษณีย์ ให้ครบถ้วน'
-                    : null,
+              _buildLabelField('ที่อยู่ (สำหรับรับงาน)', isRequired: true),
+              LocationPickerWidget(
+                initialLocation: _selectedLocation,
+                initialAddress: _addressController.text,
+                onLocationChanged: (newLocation, newAddress) {
+                  setState(() {
+                    _selectedLocation = newLocation;
+                    _currentLat = newLocation.latitude;
+                    _currentLng = newLocation.longitude;
+                    _addressController.text = newAddress;
+                    _hasPinned = true; // 🌟 ติ๊กไว้ว่าปักหมุดแล้ว
+                  });
+                },
               ),
+              // 🌟 แจ้งเตือนสีแดงถ้ายังไม่ปักหมุด
+              if (!_hasPinned)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8, left: 4),
+                  child: Text(
+                    '* กรุณาแตะเพื่อปักหมุดที่อยู่บนแผนที่',
+                    style: TextStyle(color: Colors.red, fontSize: 11),
+                  ),
+                ),
+              const SizedBox(height: 12),
               _buildLabelField('รายละเอียดประสบการณ์ทำงานเพิ่มเติม (ถ้ามี)'),
               _buildTextField(
                 controller: _experienceController,
