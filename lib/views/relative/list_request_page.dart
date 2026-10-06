@@ -112,6 +112,33 @@ class _ListRequestPageState extends State<ListRequestPage> {
     return (_cancelledPage * _perPage) < _requestsCancelledAll.length;
   }
 
+  // 🌟 ฟังก์ชันแปลงเพศและจัดรูปแบบชื่อผู้ป่วยพร้อมคำนำหน้า นาย / นาง
+  String _getPrefix(String? gender) {
+    if (gender == null) return '';
+    final g = gender.trim();
+    if (g == 'ชาย' || g.toLowerCase() == 'male') {
+      return 'นาย';
+    } else if (g == 'หญิง' || g.toLowerCase() == 'female') {
+      return 'นาง';
+    }
+    return '';
+  }
+
+  String _formatFullNameWithTitle({
+    required String? gender,
+    required String? firstname,
+    required String? lastname,
+  }) {
+    String prefix = _getPrefix(gender);
+    String fName = (firstname ?? '').trim();
+    String lName = (lastname ?? '').trim();
+
+    if (fName.isEmpty && lName.isEmpty) return 'ผู้ป่วย';
+    String prefixWithSpace = prefix.isNotEmpty ? '$prefix ' : '';
+
+    return '$prefixWithSpace$fName $lName'.trim();
+  }
+
   Future<void> _fetchUserName() async {
     String currentUid =
         widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
@@ -144,57 +171,102 @@ class _ListRequestPageState extends State<ListRequestPage> {
                 childData['Relative'] as Map,
               );
 
-              // 🌟 ตรวจหาผู้ป่วยที่เลือกอยู่ (activePatientNode) หรือคนแรกในโหนด Patient ย่อย
+              // 🌟 1. ดึง key ของผู้ป่วยที่เลือกใช้งานอยู่ (activePatientNode)
               String activeNode =
-                  relNode['activePatientNode']?.toString() ?? '';
-              dynamic patientNode;
+                  relNode['activePatientNode']?.toString().trim() ?? '';
+              dynamic targetPatientData;
 
-              if (relNode['Patient'] != null && relNode['Patient'] is Map) {
-                final pMap = Map<String, dynamic>.from(
-                  relNode['Patient'] as Map,
-                );
+              // 🌟 2. ค้นหาในโหนดลูก Patient/{patientId}
+              dynamic patientRoot = relNode['Patient'] ?? relNode['patients'];
+              if (patientRoot != null && patientRoot is Map) {
+                final pMap = Map<String, dynamic>.from(patientRoot);
+
                 if (activeNode.isNotEmpty && pMap.containsKey(activeNode)) {
-                  patientNode = pMap[activeNode];
-                } else if (pMap.isNotEmpty) {
-                  patientNode = pMap.values.first;
+                  targetPatientData = pMap[activeNode];
+                } else {
+                  // หาก activeNode เป็นเลขบัตร ให้ค้นหาจากฟิลด์ patientId ข้างใน
+                  for (var val in pMap.values) {
+                    if (val is Map &&
+                        val['patientId']?.toString() == activeNode) {
+                      targetPatientData = val;
+                      break;
+                    }
+                  }
+                  // ถ้ายังไม่เจอ ให้เลือกผู้ป่วยคนแรกในลิสต์
+                  if (targetPatientData == null && pMap.isNotEmpty) {
+                    targetPatientData = pMap.values.first;
+                  }
                 }
               }
 
-              if (patientNode == null && relNode.containsKey(activeNode)) {
-                patientNode = relNode[activeNode];
+              // Fallback กรณีข้อมูลเก่าที่เก็บเป็น Flat Key ในระดับเดียวกัน
+              if (targetPatientData == null &&
+                  activeNode.isNotEmpty &&
+                  relNode.containsKey(activeNode)) {
+                targetPatientData = relNode[activeNode];
               }
-
-              if (patientNode == null &&
+              if (targetPatientData == null &&
                   relNode['Patient'] != null &&
                   relNode['Patient'] is Map &&
                   relNode['Patient'].containsKey('firstname')) {
-                patientNode = relNode['Patient'];
+                targetPatientData = relNode['Patient'];
               }
 
-              setState(() {
-                _userName =
-                    "${relNode['firstname'] ?? ''} ${relNode['lastname'] ?? ''}"
-                        .trim();
+              // 🌟 3. นำข้อมูลเฉพาะของผู้ป่วยมากำหนดค่าแสดงผล
+              if (targetPatientData != null && targetPatientData is Map) {
+                final pData = Map<String, dynamic>.from(targetPatientData);
 
-                String rawPhoto =
-                    relNode['profilephoto']?.toString() ??
-                    relNode['Patient']?['patientphoto']?.toString() ??
-                    '';
-                _userProfilePhoto = rawPhoto
+                // ดึงรูปโปรไฟล์ของผู้ป่วย
+                String rawPhoto = pData['patientphoto']?.toString() ?? '';
+                if (rawPhoto.contains(',')) {
+                  rawPhoto = rawPhoto.split(',').last;
+                }
+                rawPhoto = rawPhoto
                     .replaceAll('\n', '')
                     .replaceAll('\r', '')
                     .replaceAll(' ', '')
                     .trim();
-                int pad = _userProfilePhoto.length % 4;
-                if (pad > 0) _userProfilePhoto += '=' * (4 - pad);
-              });
+                int pad = rawPhoto.length % 4;
+                if (pad > 0) rawPhoto += '=' * (4 - pad);
+
+                setState(() {
+                  _userName = _formatFullNameWithTitle(
+                    gender: pData['gender']?.toString(),
+                    firstname: pData['firstname']?.toString(),
+                    lastname: pData['lastname']?.toString(),
+                  );
+                  _userProfilePhoto = rawPhoto;
+                });
+              } else {
+                // Fallback ถ้าไม่มีข้อมูลผู้ป่วย ให้แสดงญาติ
+                String rawPhoto = relNode['profilephoto']?.toString() ?? '';
+                if (rawPhoto.contains(',')) {
+                  rawPhoto = rawPhoto.split(',').last;
+                }
+                rawPhoto = rawPhoto
+                    .replaceAll('\n', '')
+                    .replaceAll('\r', '')
+                    .replaceAll(' ', '')
+                    .trim();
+                int pad = rawPhoto.length % 4;
+                if (pad > 0) rawPhoto += '=' * (4 - pad);
+
+                setState(() {
+                  _userName = _formatFullNameWithTitle(
+                    gender: relNode['gender']?.toString(),
+                    firstname: relNode['firstname']?.toString(),
+                    lastname: relNode['lastname']?.toString(),
+                  );
+                  _userProfilePhoto = rawPhoto;
+                });
+              }
             }
             break;
           }
         }
       }
     } catch (e) {
-      print("Error fetching username: $e");
+      print("Error fetching patient name and photo: $e");
     }
   }
 
@@ -509,10 +581,8 @@ class _ListRequestPageState extends State<ListRequestPage> {
                       CircleAvatar(
                         radius: 9,
                         backgroundColor: Colors.white.withOpacity(0.3),
-                        backgroundImage: _userProfilePhoto.isNotEmpty
-                            ? MemoryImage(base64Decode(_userProfilePhoto))
-                            : null,
-                        child: _userProfilePhoto.isEmpty
+                        backgroundImage: userImageProvider,
+                        child: userImageProvider == null
                             ? const Icon(
                                 Icons.person,
                                 color: Colors.white,
