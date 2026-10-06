@@ -1245,7 +1245,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                 ),
                 onPressed: _navigateToDoctorAdvicePage,
                 label: const Text(
-                  'ดูคำแนะนำและนัดหมายถัดไป',
+                  'ดูคำแนะนำและวันนัดหมาย',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.white,

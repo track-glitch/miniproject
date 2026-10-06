@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // 🌟 เพิ่ม import สำหรับบังคับกรอกตัวเลข
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'dart:convert';
@@ -170,7 +170,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
         _patientsData.clear();
 
-        // 🌟 ดึงข้อมูลจากโหนด Patient ย่อย (รองรับทั้ง 'Patient' และ 'patients')
         dynamic patientNode = relData['Patient'] ?? relData['patients'];
         if (patientNode != null && patientNode is Map) {
           final pMap = Map<String, dynamic>.from(patientNode);
@@ -181,7 +180,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           });
         }
 
-        // รองรับ fallback ข้อมูลแบบเดิมถ้ายังมีตกค้าง
         if (_patientsData.isEmpty) {
           relData.forEach((key, value) {
             if (key.startsWith('Patient') && value is Map) {
@@ -191,7 +189,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         }
 
         if (_patientsData.isNotEmpty) {
-          // 🌟 ตรวจสอบว่ามีผู้ป่วยที่เลือกไว้ล่าสุดหรือไม่ (activePatientNode)
           if (relData.containsKey('activePatientNode') &&
               _patientsData.containsKey(
                 relData['activePatientNode'].toString(),
@@ -386,10 +383,90 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     }
   }
 
+  // 🗑️ 🌟 ปรับปรุงฟังก์ชันลบ ให้รับ parameter เป็น ID ของผู้ป่วยรายนั้น
+  Future<void> _handleDeletePatient(String targetPatientKey) async {
+    if (targetPatientKey.isEmpty) return;
+
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+              SizedBox(width: 8),
+              Text('ยืนยันการลบ', style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: const Text(
+            'คุณต้องการลบข้อมูลผู้ป่วยรายนี้ใช่หรือไม่?\nข้อมูลจะไม่สามารถกู้คืนได้',
+            style: TextStyle(fontSize: 15),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey, fontSize: 16)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('ลบข้อมูล', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      String uid = widget.loggedUid;
+      
+      // 🌟 ลบโหนดผู้ป่วยออกจาก Firebase โดยใช้ Key ที่ส่งมา
+      await FirebaseDatabase.instance
+          .ref('Login/$uid/Relative/Patient/$targetPatientKey')
+          .remove();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ลบข้อมูลผู้ป่วยสำเร็จแล้ว'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RelativeHomePage(loggedUid: widget.loggedUid),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('เกิดข้อผิดพลาดในการลบ: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   void _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // 🌟 ตรวจสอบว่าเลือกเพศหรือยัง
     if (_patGenderController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -458,10 +535,10 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
       bool needCheckRelEmail = relEmail != _initialRelEmail;
       bool needCheckRelPhone = relPhone != _initialRelPhone;
-      bool needCheckPatPhone =
-          patPhone.isNotEmpty && patPhone != _initialPatPhone;
+      bool needCheckPatPhone = patPhone.isNotEmpty && patPhone != _initialPatPhone;
+      bool needCheckPatIdCard = _isAddingNewPatient;
 
-      if (needCheckRelEmail || needCheckRelPhone || needCheckPatPhone) {
+      if (needCheckRelEmail || needCheckRelPhone || needCheckPatPhone || needCheckPatIdCard) {
         final snapshot = await FirebaseDatabase.instance.ref('Login').get();
         if (snapshot.exists && snapshot.value is Map) {
           final allUsers = Map<String, dynamic>.from(snapshot.value as Map);
@@ -470,9 +547,31 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
             String userKey = entry.key;
             var userData = entry.value;
 
-            if (userKey == uid) continue;
-
             if (userData is Map) {
+              if (needCheckPatIdCard && userData['Relative'] is Map) {
+                var rData = userData['Relative'];
+                dynamic pNode = rData['Patient'] ?? rData['patients'];
+                if (pNode is Map) {
+                  for (var v in pNode.values) {
+                    if (v is Map) {
+                      String pIdCard = (v['patientId'] ?? '').toString().trim();
+                      if (pIdCard.isNotEmpty && pIdCard == patIdCard) {
+                        setState(() => _isLoading = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('หมายเลขบัตรประชาชนนี้ถูกลงทะเบียนในระบบแล้ว'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+                    }
+                  }
+                }
+              }
+
+              if (userKey == uid) continue;
+
               if (userData['Caretaker'] is Map) {
                 var cData = userData['Caretaker'];
                 String cPhone = (cData['phonenumber'] ?? '').toString().trim();
@@ -603,7 +702,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
       }
 
       if (uid.isNotEmpty) {
-        // 🌟 กำหนด Key ของผู้ป่วย: ถ้าเพิ่มใหม่ให้ใช้หมายเลขบัตรประชาชน (หรือ Key เดิมกรณีแก้ไข)
         String targetPatientKey = _isAddingNewPatient
             ? patIdCard
             : _currentPatientKey;
@@ -611,7 +709,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           targetPatientKey = patIdCard;
         }
 
-        // 🌟 บันทึกข้อมูลญาติ และตั้ง activePatientNode
         await FirebaseDatabase.instance.ref('Login/$uid/Relative').update({
           'firstname': _relFirstNameController.text.trim(),
           'lastname': _relLastNameController.text.trim(),
@@ -626,7 +723,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
             ? 'ไม่ปกติ: ${_patMobilityController.text.trim()}'
             : 'ปกติ';
 
-        // 🌟 บันทึกข้อมูลผู้ป่วยลงในโหนด Login/$uid/Relative/Patient/$targetPatientKey
         await FirebaseDatabase.instance
             .ref('Login/$uid/Relative/Patient/$targetPatientKey')
             .update({
@@ -686,6 +782,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   Widget build(BuildContext context) {
     // 🌟 ดึงชื่อผู้ป่วยมาแสดงใน Dropdown
     List<DropdownMenuItem<String>> dropdownItems = [];
+    List<Widget> selectedItems = []; // 🌟 เพิ่ม List สำหรับตอนเลือกไปแล้วจะไม่ให้โชว์ไอคอนถังขยะในกล่อง
 
     _patientsData.keys.forEach((key) {
       final pData = _patientsData[key]!;
@@ -699,9 +796,46 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         displayName = 'ผู้ป่วย ID: $key';
       }
 
+      // 🌟 รูปแบบตอนที่ "กาง Dropdown ออกมา" (จะเห็นถังขยะ)
       dropdownItems.add(
         DropdownMenuItem(
           value: key,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  displayName,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: darkPurple,
+                    fontSize: 16,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              // ฝังปุ่มลบไว้ด้านใน
+              GestureDetector(
+                onTap: () {
+                  // ปิดตัว Dropdown กลับไปก่อน
+                  Navigator.pop(context);
+                  // เรียกฟังก์ชันลบ และส่ง Key ผู้ป่วยรายนั้นไป
+                  _handleDeletePatient(key);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: const Icon(Icons.delete_outline, color: Colors.red, size: 24),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // 🌟 รูปแบบตอนที่ "โชว์ในกล่องหลักตอนยังไม่กาง" (ไม่มีถังขยะ)
+      selectedItems.add(
+        Container(
+          alignment: Alignment.centerLeft,
           child: Text(
             displayName,
             style: TextStyle(
@@ -709,14 +843,35 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
               color: darkPurple,
               fontSize: 16,
             ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       );
     });
 
+    // 🌟 เพิ่มปุ่ม "เพิ่มผู้ป่วยใหม่" (ทั้งตอนกางและตอนปิดจะแสดงเหมือนกัน ไม่มีถังขยะ)
     dropdownItems.add(
       DropdownMenuItem(
         value: 'NEW',
+        child: Row(
+          children: [
+            Icon(Icons.add_circle, color: primaryColor, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'เพิ่มผู้ป่วยใหม่',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: primaryColor,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    selectedItems.add(
+      Container(
+        alignment: Alignment.centerLeft,
         child: Row(
           children: [
             Icon(Icons.add_circle, color: primaryColor, size: 20),
@@ -789,9 +944,8 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                     key: _formKey,
                     child: Column(
                       children: [
-                        // 🌟 ส่วน UI เลือกผู้ป่วยแบบ Dropdown
+                        // 🌟 ส่วน UI เลือกผู้ป่วยแบบ Dropdown 
                         Container(
-                          width: double.infinity,
                           margin: const EdgeInsets.only(bottom: 20),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
@@ -817,10 +971,10 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                           _patientsData.containsKey(
                                             selectedValue,
                                           )))
-                                  ? selectedValue
-                                  : (_patientsData.isNotEmpty
-                                        ? _patientsData.keys.first
-                                        : null),
+                                      ? selectedValue
+                                      : (_patientsData.isNotEmpty
+                                            ? _patientsData.keys.first
+                                            : null),
                               isExpanded: true,
                               icon: Icon(
                                 Icons.keyboard_arrow_down,
@@ -828,6 +982,10 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                 size: 28,
                               ),
                               items: dropdownItems,
+                              // 🌟 ใช้ selectedItemBuilder เพื่อซ่อนถังขยะในช่องที่กำลังถูกเลือกอยู่
+                              selectedItemBuilder: (BuildContext context) {
+                                return selectedItems;
+                              },
                               onChanged: (String? newValue) {
                                 if (newValue == 'NEW') {
                                   _prepareNewPatient();
@@ -876,7 +1034,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                               readOnly: !_isAddingNewPatient,
                               inputFormatters: [
                                 FilteringTextInputFormatter.digitsOnly,
-                              ], // 🌟 บังคับตัวเลข
+                              ],
                             ),
                             _buildInputField(
                               hint: 'ไอดีไลน์ผู้ป่วย (ถ้ามี)',
@@ -890,10 +1048,9 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                               maxLength: 10,
                               inputFormatters: [
                                 FilteringTextInputFormatter.digitsOnly,
-                              ], // 🌟 บังคับตัวเลข
+                              ],
                             ),
 
-                            // 🌟 ชุด UI เพศ เปลี่ยนเป็นแบบ Radio
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -998,7 +1155,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                           title: 'ข้อมูลที่อยู่ผู้ป่วย',
                           children: [
                             LocationPickerWidget(
-                              // 🌟 แก้ไข Key ให้ผูกกับรหัสผู้ป่วยแทน เพื่อไม่ให้มันรีเซ็ตตอนพิมพ์
                               key: ValueKey('map_picker_$_currentPatientKey'),
                               initialLocation: _selectedLocation,
                               initialAddress: _patAddressController.text,
@@ -1049,7 +1205,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                     maxLength: 10,
                                     inputFormatters: [
                                       FilteringTextInputFormatter.digitsOnly,
-                                    ], // 🌟 บังคับตัวเลข
+                                    ],
                                   ),
                                 ),
                                 const SizedBox(width: 10),
@@ -1379,8 +1535,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     Widget? suffixIcon,
     bool isRequired = true,
     String? Function(String?)? validator,
-    List<TextInputFormatter>?
-    inputFormatters, // 🌟 1. เพิ่ม property รับ Formatter
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -1392,7 +1547,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         readOnly: readOnly,
         enabled: enabled,
         onTap: onTap,
-        inputFormatters: inputFormatters, // 🌟 2. เรียกใช้ Formatter
+        inputFormatters: inputFormatters,
         style: const TextStyle(
           fontSize: 14,
           color: Colors.black,
