@@ -181,7 +181,22 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
     super.initState();
     mapController = MapController();
     centerLocation = widget.initialLocation;
-    detailAddressCtrl.text = widget.initialAddress;
+
+    // 🌟 1. ดักแยกเอาเฉพาะ "รายละเอียดบ้านเลขที่" มาใส่กล่องทันทีที่เปิดหน้าจอ
+    String savedAddress = widget.initialAddress.trim();
+
+    if (savedAddress.contains(',')) {
+      // ถ้ารูปแบบใหม่มีลูกน้ำ (,) คั่น ให้ตัดเอาแค่ข้อความก่อนลูกน้ำ
+      int lastCommaIndex = savedAddress.lastIndexOf(',');
+      detailAddressCtrl.text = savedAddress.substring(0, lastCommaIndex).trim();
+    } else if (savedAddress.startsWith('ต.') ||
+        savedAddress.startsWith('แขวง')) {
+      // ถ้าข้อมูลเก่าขึ้นต้นด้วย ตำบล หรือ แขวง แสดงว่าเซฟมาเพียวๆ ไม่มีบ้านเลขที่ ปล่อยกล่องว่างไปเลย
+      detailAddressCtrl.text = '';
+    } else {
+      // กรณีอื่นๆ ยัดใส่กล่องไปก่อน แล้วให้ API ช่วยตัดตอนโหลดเสร็จ
+      detailAddressCtrl.text = savedAddress;
+    }
 
     _getAddressFromLongdo(centerLocation, isInit: true);
   }
@@ -220,13 +235,22 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
               : fullAddress;
           _isFetchingAddress = false;
 
-          // 🌟 4. ดักไม่ให้มัน Error ตอนเอา String ว่างไป Replace
-          if (isInit &&
-              fullAddress.isNotEmpty &&
-              detailAddressCtrl.text.endsWith(fullAddress)) {
-            detailAddressCtrl.text = detailAddressCtrl.text
-                .replaceAll(fullAddress, '')
-                .trim();
+          // 🌟 4. ช่วยตัดคำตำบล/อำเภอ ออกอีกแรง (สำหรับข้อมูลเก่าที่ไม่มีลูกน้ำคั่น)
+          if (isInit && fullAddress.isNotEmpty) {
+            String currentBoxText = detailAddressCtrl.text.trim();
+            // เช็กว่าข้อความในกล่องลงท้ายด้วยตำบล/อำเภอพอดีเป๊ะไหม
+            if (currentBoxText.endsWith(fullAddress)) {
+              currentBoxText = currentBoxText
+                  .replaceAll(fullAddress, '')
+                  .trim();
+              // ลบลูกน้ำที่อาจจะค้างอยู่ส่วนท้ายสุดทิ้ง
+              if (currentBoxText.endsWith(',')) {
+                currentBoxText = currentBoxText
+                    .substring(0, currentBoxText.length - 1)
+                    .trim();
+              }
+              detailAddressCtrl.text = currentBoxText;
+            }
           }
         });
       } else {
@@ -594,12 +618,10 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
                 // 🌟 กล่องข้อความกรอกรายละเอียด
                 TextField(
                   controller: detailAddressCtrl,
-                  maxLength:
-                      500, // 🌟 กำหนด 500 ตัวอักษร (ตัวนับจะกลับมาโชว์ตรงนี้)
+                  maxLength: 500,
                   maxLines: 2,
                   decoration: InputDecoration(
-                    // ❌ ลบ counterText: "", ของเดิมทิ้งไปเลยครับ
-                    hintText: 'บ้านเลขที่, อาคาร, ชั้น, ซอย...',
+                    hintText: 'บ้านเลขที่ อาคาร ชั้น ซอย...',
                     hintStyle: TextStyle(
                       fontSize: 14,
                       color: Colors.grey.shade400,
@@ -631,7 +653,22 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
                       horizontal: 16,
                       vertical: 14,
                     ),
+                    // 🌟 เพิ่มปุ่ม (X) สำหรับลบข้อมูลเก่าทิ้งในคลิกเดียว
+                    suffixIcon: detailAddressCtrl.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.cancel, color: Colors.grey),
+                            onPressed: () {
+                              setState(() {
+                                detailAddressCtrl.clear();
+                              });
+                            },
+                          )
+                        : null,
                   ),
+                  // 🌟 อัปเดต UI ให้ปุ่มกากบาทโชว์/ซ่อน ตอนกำลังพิมพ์
+                  onChanged: (val) {
+                    setState(() {});
+                  },
                 ),
                 const SizedBox(
                   height: 4,

@@ -1155,6 +1155,7 @@ class _ListRequestPageState extends State<ListRequestPage> {
                                 loggedUid: widget.loggedUid,
                                 requestModel: request.requestModel,
                                 caretakerName: request.caregiverName,
+                                patientName: request.patientName,
                               ),
                             ),
                           ).then((_) => _fetchMyRequests());

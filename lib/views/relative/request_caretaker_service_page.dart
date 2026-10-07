@@ -109,7 +109,8 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   @override
   void initState() {
     super.initState();
-    _selectedDate = widget.initialSelectedDate ?? DateTime.now();
+    DateTime tomorrow = DateTime.now().add(const Duration(days: 1));
+    _selectedDate = widget.initialSelectedDate ?? tomorrow;
 
     _generatedRequestId = _generateCustomRequestId();
     _loadHospitalData();
@@ -269,9 +270,15 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   }
 
   // 🌟 ฟังก์ชันใหม่: ตรวจสอบและปัดวันเริ่มต้นให้ถูกต้องเสมอ
+  // 🌟 ฟังก์ชันใหม่: ตรวจสอบและปัดวันเริ่มต้นให้ถูกต้องเสมอ
   void _adjustSelectedDate() {
     DateTime now = DateTime.now();
-    DateTime today = DateTime(now.year, now.month, now.day);
+    // 🌟 คำนวณเป็น "วันพรุ่งนี้" แทน
+    DateTime tomorrow = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).add(const Duration(days: 1));
 
     DateTime validDate = _selectedDate;
     DateTime validDateOnly = DateTime(
@@ -280,8 +287,9 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
       validDate.day,
     );
 
-    if (validDateOnly.isBefore(today)) {
-      validDate = today;
+    // 🌟 ถ้าวันที่เลือกไว้เป็นก่อนวันพรุ่งนี้ ให้ปัดไปเป็นวันพรุ่งนี้
+    if (validDateOnly.isBefore(tomorrow)) {
+      validDate = tomorrow;
     }
 
     while (true) {
@@ -302,12 +310,17 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
 
   Future<void> _selectDate(BuildContext context) async {
     DateTime now = DateTime.now();
-    DateTime today = DateTime(now.year, now.month, now.day);
+    // 🌟 วันที่น้อยที่สุดที่กดเลือกได้ในปฏิทิน คือ "พรุ่งนี้"
+    DateTime tomorrow = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).add(const Duration(days: 1));
 
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
-      firstDate: today,
+      initialDate: _selectedDate.isBefore(tomorrow) ? tomorrow : _selectedDate,
+      firstDate: tomorrow, // 🌟 บังคับไม่ให้เลือกวันที่ผ่านมาแล้ว หรือ วันนี้
       lastDate: DateTime(now.year + 2, 12, 31),
       helpText: 'กรุณาส่งคำขอก่อนวันนัด 1 วัน',
       selectableDayPredicate: (DateTime val) {
@@ -338,6 +351,23 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
+      // 🌟 เพิ่มบรรทัดนี้: บังคับให้เปิดมาเป็นแบบกล่องพิมพ์ตัวเลข (ไม่ต้องหมุนเข็มนาฬิกา)
+      initialEntryMode: TimePickerEntryMode.input,
+      builder: (BuildContext context, Widget? child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: ColorScheme.light(
+                primary: primaryColor,
+                onPrimary: Colors.white,
+                onSurface: darkPurple,
+              ),
+            ),
+            child: child!,
+          ),
+        );
+      },
     );
     if (picked != null && picked != _selectedTime) {
       setState(() => _selectedTime = picked);
@@ -446,7 +476,19 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
+                Text('ผู้ดูแลที่ให้บริการ', style: _labelStyle()),
+                const SizedBox(height: 8),
+                _buildCaretakerCard(),
+                // ── ข้อมูลบุคคล ──
+                Text('ข้อมูลผู้นัดหมาย', style: _labelStyle()),
+                const SizedBox(height: 8),
+                // 🌟 แสดงการ์ดผู้ป่วยที่กำลัง Active อยู่ได้เลย (ข้อมูลจะดึงจาก _patientData อัตโนมัติ)
+                _buildPatientCard(),
 
+                // 🌟 แสดงการ์ดญาติ
+                _buildRelativeCard(),
+
+                // ── โรงพยาบาลและรายละเอียด ──
                 // ── ข้อมูลนัดหมาย ──
                 Row(
                   children: [
@@ -570,26 +612,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 24),
-
-                // ── ข้อมูลบุคคล ──
-                Text('ข้อมูลผู้ป่วยและญาติ', style: _labelStyle()),
                 const SizedBox(height: 8),
-
-                // 🌟 แสดงการ์ดผู้ป่วยที่กำลัง Active อยู่ได้เลย (ข้อมูลจะดึงจาก _patientData อัตโนมัติ)
-                _buildPatientCard(),
-
-                // 🌟 แสดงการ์ดญาติ
-                _buildRelativeCard(),
-
-                Text('ผู้ดูแลที่ให้บริการ', style: _labelStyle()),
-                const SizedBox(height: 8),
-                _buildCaretakerCard(),
-                const SizedBox(height: 20),
-
-                // ── โรงพยาบาลและรายละเอียด ──
-                // ── โรงพยาบาลและรายละเอียด ──
                 Row(
                   children: [
                     Text('โรงพยาบาลที่ต้องการไปพบแพทย์', style: _labelStyle()),
@@ -713,20 +736,6 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                       value!.isEmpty ? 'กรุณาระบุรายละเอียด' : null,
                 ),
                 const SizedBox(height: 28),
-                const Divider(thickness: 1.5),
-                const SizedBox(height: 12),
-
-                // ── ข้อมูลการเดินทาง (จุดรับ และ จุดส่ง) ──
-                Text(
-                  'ข้อมูลการเดินทาง',
-                  style: _labelStyle().copyWith(fontSize: 16),
-                ),
-                const SizedBox(height: 16),
-
-                _buildPickupDropoffSection(),
-
-                const SizedBox(height: 28),
-
                 // ── ปุ่มยืนยัน/ยกเลิก ──
                 Row(
                   children: [
@@ -883,59 +892,6 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  // ---------------- วิดเจ็ตแยกสำหรับ จุดรับ-จุดส่ง ----------------
-  Widget _buildPickupDropoffSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor, width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                'สรุปข้อมูลการเดินทาง',
-                style: _labelStyle().copyWith(fontSize: 14),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.location_on, color: Colors.blue, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'จุดรับ: ตามที่อยู่ในโปรไฟล์ของผู้ป่วย\n(${_profileAddress.isNotEmpty ? _profileAddress : "ไม่พบที่อยู่"})',
-                  style: const TextStyle(fontSize: 13, height: 1.4),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.location_on, color: Colors.red, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'จุดส่ง: ${_selectedHospital?.hospitalname ?? "กรุณาเลือกโรงพยาบาลจากรายการด้านบน"}',
-                  style: const TextStyle(fontSize: 13, height: 1.4),
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }

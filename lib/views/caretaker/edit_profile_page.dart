@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:miniproject/views/caretaker/view_review_page.dart';
-
+import 'package:latlong2/latlong.dart';
+import '../../widgets/location_picker_widget.dart';
 import '../../services/caretaker_service.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import '../caretaker/list_relative_request_page.dart';
@@ -49,6 +50,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   String? selectedGender;
   final List<String> genderOptions = ['ชาย', 'หญิง', 'อื่นๆ'];
+  // 🌟 เพิ่มตัวแปรสำหรับแผนที่
+  LatLng _selectedLocation = const LatLng(13.7563, 100.5018);
+  bool _hasPinned = false;
 
   TextEditingController fnameController = TextEditingController();
   TextEditingController lnameController = TextEditingController();
@@ -230,25 +234,32 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   if (cId == citizenId || cId == widget.uid) {
                     var reviewData = reqData['Review'] ?? reqData['review'];
                     if (reviewData != null && reviewData is Map) {
-                      
                       // ค้นหาคีย์คะแนน (ทดสอบหาหลายแบบเผื่อไว้)
                       double ratingScore = 0.0;
-                      var rawRating = reviewData['ratingscore'] ?? reviewData['rating'];
+                      var rawRating =
+                          reviewData['ratingscore'] ?? reviewData['rating'];
                       if (rawRating != null) {
-                        ratingScore = double.tryParse(rawRating.toString()) ?? 5.0;
+                        ratingScore =
+                            double.tryParse(rawRating.toString()) ?? 5.0;
                       }
 
-                      String commentStr = reviewData['comment']?.toString() ?? '';
-                      String reviewDateStr = reviewData['reviewdate']?.toString() ?? DateTime.now().toIso8601String();
+                      String commentStr =
+                          reviewData['comment']?.toString() ?? '';
+                      String reviewDateStr =
+                          reviewData['reviewdate']?.toString() ??
+                          DateTime.now().toIso8601String();
 
                       // เตรียมชื่อญาติคนรีวิว
-                      String rFirstname = (relNode['firstname'] ?? '').toString();
+                      String rFirstname = (relNode['firstname'] ?? '')
+                          .toString();
                       String rLastname = (relNode['lastname'] ?? '').toString();
                       String reviewerName = "$rFirstname $rLastname".trim();
                       if (reviewerName.isEmpty) reviewerName = 'ผู้ใช้บริการ';
 
-                      String reviewerImage = relNode['profilephoto']?.toString() ?? 
-                                           relNode['Patient']?['patientphoto']?.toString() ?? '';
+                      String reviewerImage =
+                          relNode['profilephoto']?.toString() ??
+                          relNode['Patient']?['patientphoto']?.toString() ??
+                          '';
 
                       tempReviews.add({
                         'ratingscore': ratingScore,
@@ -270,7 +281,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
       tempReviews.sort((a, b) => b['reviewdate'].compareTo(a['reviewdate']));
 
       // จัดรูปแบบเวลาให้สวยงามก่อนแสดงผล และเอามาแค่ 2 อันล่าสุด
-      List<Map<String, dynamic>> finalReviewsList = tempReviews.take(2).map((item) {
+      List<Map<String, dynamic>> finalReviewsList = tempReviews.take(2).map((
+        item,
+      ) {
         String formattedDate = '';
         try {
           DateTime dt = DateTime.parse(item['reviewdate']);
@@ -300,10 +313,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final data = await _service.getCaretakerProfile(widget.uid);
     if (data != null) {
       setState(() {
-
-        String accStatus = (data['accountstatus']?.toString() ?? '').trim().toLowerCase();
+        String accStatus = (data['accountstatus']?.toString() ?? '')
+            .trim()
+            .toLowerCase();
         isSuspended = (accStatus == 'suspended');
-        
+
         isServiceOn =
             (data['servicestatus'] == 'ON' ||
             data['servicestatus'] == 'online');
@@ -314,11 +328,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
         experienceController.text = data['experience'] ?? '';
         servicedescController.text = data['servicedesc'] ?? '';
-
         var locData = data['Location'] ?? data['location'];
-        serviceAreaController.text = locData != null
-            ? (locData['address'] ?? '')
-            : '';
+        if (locData != null) {
+          serviceAreaController.text = locData['address']?.toString() ?? '';
+
+          // 🌟 ดึงพิกัดเดิมมาใส่แผนที่
+          double lat =
+              double.tryParse(locData['latitude']?.toString() ?? '0') ?? 0.0;
+          double lng =
+              double.tryParse(locData['longitude']?.toString() ?? '0') ?? 0.0;
+          if (lat != 0.0 && lng != 0.0) {
+            _selectedLocation = LatLng(lat, lng);
+            _hasPinned = true;
+          }
+        }
 
         selectedGender = data['gender'];
 
@@ -372,19 +395,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
             'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&w=500',
           ];
         }
-        
       });
-      
+
       // 🌟 หลังจากดึงข้อมูลโปรไฟล์ได้ citizenId แล้ว ให้ไปดึงรีวิวด้วยตัวเองเลย
       await _fetchRecentReviewsDirectly();
-      
-      if(mounted) {
+
+      if (mounted) {
         setState(() {
           _isLoading = false;
         });
       }
     } else {
-      if(mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -393,15 +415,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     // 🌟 ตรวจสอบเบอร์โทรศัพท์
     if (newPhone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('กรุณากรอกเบอร์โทรศัพท์')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('กรุณากรอกเบอร์โทรศัพท์')));
       return;
     }
 
     if (newPhone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(newPhone)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง (ตัวเลข 10 หลัก)')),
+        const SnackBar(
+          content: Text('กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง (ตัวเลข 10 หลัก)'),
+        ),
       );
       return;
     }
@@ -427,12 +451,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
             if (userData is Map) {
               if (userData['Caretaker'] is Map) {
-                String cPhone = (userData['Caretaker']['phonenumber'] ?? '').toString().trim();
+                String cPhone = (userData['Caretaker']['phonenumber'] ?? '')
+                    .toString()
+                    .trim();
                 if (cPhone == newPhone) {
                   if (mounted) Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('เบอร์โทรศัพท์นี้ถูกใช้งานในระบบแล้ว กรุณาใช้เบอร์อื่น'),
+                      content: Text(
+                        'เบอร์โทรศัพท์นี้ถูกใช้งานในระบบแล้ว กรุณาใช้เบอร์อื่น',
+                      ),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -441,12 +469,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
               }
 
               if (userData['Relative'] is Map) {
-                String rPhone = (userData['Relative']['phonenumber'] ?? '').toString().trim();
+                String rPhone = (userData['Relative']['phonenumber'] ?? '')
+                    .toString()
+                    .trim();
                 if (rPhone == newPhone) {
                   if (mounted) Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('เบอร์โทรศัพท์นี้ถูกใช้งานในระบบแล้ว กรุณาใช้เบอร์อื่น'),
+                      content: Text(
+                        'เบอร์โทรศัพท์นี้ถูกใช้งานในระบบแล้ว กรุณาใช้เบอร์อื่น',
+                      ),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -491,8 +523,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
       'birthdate': savedBirthDate?.toIso8601String(),
       'Location': {
         'address': serviceAreaController.text,
-        'latitude': 0.0,
-        'longitude': 0.0,
+        'latitude': _hasPinned ? _selectedLocation.latitude : 0.0,
+        'longitude': _hasPinned ? _selectedLocation.longitude : 0.0,
       },
     };
     try {
@@ -687,12 +719,39 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       _buildSectionContainer(
                         title: 'ที่อยู่ปัจจุบัน',
                         children: [
-                          _buildInputField(
-                            'เขตอำเภอ/พื้นที่ ที่สะดวกให้บริการ',
-                            controller: serviceAreaController,
-                            maxLines: 3,
-                            maxLength: 500,
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 4, left: 2),
+                            child: Text(
+                              'เขตอำเภอ/พื้นที่ ที่สะดวกให้บริการ',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
                           ),
+                          LocationPickerWidget(
+                            initialLocation: _selectedLocation,
+                            initialAddress: serviceAreaController.text,
+                            onLocationChanged: (newLocation, newAddress) {
+                              setState(() {
+                                _selectedLocation = newLocation;
+                                serviceAreaController.text = newAddress;
+                                _hasPinned = true;
+                              });
+                            },
+                          ),
+                          // แจ้งเตือนสีแดงถ้ายังไม่ได้ปักหมุด
+                          if (!_hasPinned)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 8, left: 4),
+                              child: Text(
+                                '* กรุณาแตะเพื่อปักหมุดที่อยู่บนแผนที่',
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
 
@@ -977,8 +1036,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   backgroundColor: Colors.white,
                   backgroundImage: profileImageUrl.isNotEmpty
                       ? (profileImageUrl.startsWith('http')
-                          ? NetworkImage(profileImageUrl)
-                          : _getSafeBase64Image(profileImageUrl))
+                            ? NetworkImage(profileImageUrl)
+                            : _getSafeBase64Image(profileImageUrl))
                       : null,
                   child: profileImageUrl.isEmpty
                       ? Icon(
@@ -996,7 +1055,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 // 🌟 แก้สีจุดวงกลม: ถ้าโดนระงับเป็นสีแดง ถ้าไม่ก็ใช้สีเขียว/เทาตามเดิม
-                color: isSuspended ? Colors.red : (isServiceOn ? Colors.green : Colors.grey.shade400),
+                color: isSuspended
+                    ? Colors.red
+                    : (isServiceOn ? Colors.green : Colors.grey.shade400),
                 border: Border.all(color: Colors.white, width: 3),
                 boxShadow: const [
                   BoxShadow(
@@ -1009,7 +1070,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             ),
           ],
         ),
-        
+
         // 🌟 เช็กเงื่อนไขถ้าถูกระงับการใช้งาน (ซ่อนสวิตช์ โชว์ข้อความสีแดง)
         if (isSuspended) ...[
           const SizedBox(height: 16),
@@ -1031,12 +1092,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
           const SizedBox(height: 4),
           Text(
             'ไม่สามารถเปิดรับบริการได้ในขณะนี้',
-            style: TextStyle(
-              color: Colors.red.shade400,
-              fontSize: 13,
-            ),
+            style: TextStyle(color: Colors.red.shade400, fontSize: 13),
           ),
-        ] 
+        ]
         // 🌟 ถ้าบัญชีปกติ ไม่ถูกระงับ (แสดงสวิตช์ตามปกติ)
         else ...[
           const SizedBox(height: 16),
@@ -1313,7 +1371,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 children: [
                   _buildReviewItem(
                     name: review['reviewerName'] ?? 'ไม่ระบุชื่อ',
-                    rating: review['rating'] ?? 5.0, 
+                    rating: review['rating'] ?? 5.0,
                     comment: review['comment'] ?? 'ไม่มีข้อความ',
                     timeAgo: review['timeAgo'] ?? '',
                     imageUrl: review['reviewerImage'] ?? '',
@@ -1413,9 +1471,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   Row(
                     children: List.generate(5, (index) {
                       return Icon(
-                        index < rating.floor()
-                            ? Icons.star 
-                            : Icons.star_border, 
+                        index < rating.floor() ? Icons.star : Icons.star_border,
                         color: const Color(0xFFFFC107),
                         size: 18,
                       );

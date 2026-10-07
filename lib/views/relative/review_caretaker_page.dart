@@ -230,7 +230,7 @@ class _ReviewCaretakerPageState extends State<ReviewCaretakerPage> {
                 children: [
                   _buildSectionHeaderInside(
                     Icons.support_agent_rounded,
-                    'ผู้ดูแลของคุณ',
+                    'ผู้ให้บริการ',
                   ),
                   Row(
                     children: [

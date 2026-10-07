@@ -91,12 +91,16 @@ class _AddDoctorAdvicePageState extends State<AddDoctorAdvicePage> {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
+      // 🌟 เพิ่ม builder สำหรับบังคับรูปแบบ 24 ชั่วโมง
       builder: (context, child) {
-        return Theme(
-          data: Theme.of(
-            context,
-          ).copyWith(colorScheme: ColorScheme.light(primary: primaryPurple)),
-          child: child!,
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: Theme(
+            data: Theme.of(
+              context,
+            ).copyWith(colorScheme: ColorScheme.light(primary: primaryPurple)),
+            child: child!,
+          ),
         );
       },
     );

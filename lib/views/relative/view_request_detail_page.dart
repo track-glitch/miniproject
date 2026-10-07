@@ -900,7 +900,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       statusColor = const Color(0xFF3498DB);
       statusBgColor = const Color(0xFFEBF5FB);
     } else if (currentStatus == RequestStatus.cancelled) {
-      statusText = 'ยกเลิก/ปฏิเสธ';
+      statusText = 'ยกเลิก';
       statusColor = const Color(0xFFE74C3C);
       statusBgColor = const Color(0xFFFDEDEC);
     }

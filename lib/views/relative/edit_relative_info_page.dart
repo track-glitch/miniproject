@@ -391,12 +391,17 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Row(
             children: [
               Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
               SizedBox(width: 8),
-              Text('ยืนยันการลบ', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                'ยืนยันการลบ',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ],
           ),
           content: const Text(
@@ -406,15 +411,23 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey, fontSize: 16)),
+              child: const Text(
+                'ยกเลิก',
+                style: TextStyle(color: Colors.grey, fontSize: 16),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('ลบข้อมูล', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'ลบข้อมูล',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -427,7 +440,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
     try {
       String uid = widget.loggedUid;
-      
+
       // 🌟 ลบโหนดผู้ป่วยออกจาก Firebase โดยใช้ Key ที่ส่งมา
       await FirebaseDatabase.instance
           .ref('Login/$uid/Relative/Patient/$targetPatientKey')
@@ -535,10 +548,14 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
       bool needCheckRelEmail = relEmail != _initialRelEmail;
       bool needCheckRelPhone = relPhone != _initialRelPhone;
-      bool needCheckPatPhone = patPhone.isNotEmpty && patPhone != _initialPatPhone;
+      bool needCheckPatPhone =
+          patPhone.isNotEmpty && patPhone != _initialPatPhone;
       bool needCheckPatIdCard = _isAddingNewPatient;
 
-      if (needCheckRelEmail || needCheckRelPhone || needCheckPatPhone || needCheckPatIdCard) {
+      if (needCheckRelEmail ||
+          needCheckRelPhone ||
+          needCheckPatPhone ||
+          needCheckPatIdCard) {
         final snapshot = await FirebaseDatabase.instance.ref('Login').get();
         if (snapshot.exists && snapshot.value is Map) {
           final allUsers = Map<String, dynamic>.from(snapshot.value as Map);
@@ -559,7 +576,9 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                         setState(() => _isLoading = false);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('หมายเลขบัตรประชาชนนี้ถูกลงทะเบียนในระบบแล้ว'),
+                            content: Text(
+                              'หมายเลขบัตรประชาชนนี้ถูกลงทะเบียนในระบบแล้ว',
+                            ),
                             backgroundColor: Colors.red,
                           ),
                         );
@@ -782,7 +801,8 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   Widget build(BuildContext context) {
     // 🌟 ดึงชื่อผู้ป่วยมาแสดงใน Dropdown
     List<DropdownMenuItem<String>> dropdownItems = [];
-    List<Widget> selectedItems = []; // 🌟 เพิ่ม List สำหรับตอนเลือกไปแล้วจะไม่ให้โชว์ไอคอนถังขยะในกล่อง
+    List<Widget> selectedItems =
+        []; // 🌟 เพิ่ม List สำหรับตอนเลือกไปแล้วจะไม่ให้โชว์ไอคอนถังขยะในกล่อง
 
     _patientsData.keys.forEach((key) {
       final pData = _patientsData[key]!;
@@ -823,8 +843,15 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                   _handleDeletePatient(key);
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: const Icon(Icons.delete_outline, color: Colors.red, size: 24),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  child: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.red,
+                    size: 24,
+                  ),
                 ),
               ),
             ],
@@ -895,7 +922,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
       backgroundColor: bgGradientBottom,
       appBar: AppBar(
         title: const Text(
-          'แก้ไขข้อมูลผู้ป่วยและญาติ',
+          'แก้ไขข้อมูลญาติและผู้ป่วย',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -944,7 +971,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                     key: _formKey,
                     child: Column(
                       children: [
-                        // 🌟 ส่วน UI เลือกผู้ป่วยแบบ Dropdown 
+                        // 🌟 ส่วน UI เลือกผู้ป่วยแบบ Dropdown
                         Container(
                           margin: const EdgeInsets.only(bottom: 20),
                           padding: const EdgeInsets.symmetric(
@@ -971,10 +998,10 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                           _patientsData.containsKey(
                                             selectedValue,
                                           )))
-                                      ? selectedValue
-                                      : (_patientsData.isNotEmpty
-                                            ? _patientsData.keys.first
-                                            : null),
+                                  ? selectedValue
+                                  : (_patientsData.isNotEmpty
+                                        ? _patientsData.keys.first
+                                        : null),
                               isExpanded: true,
                               icon: Icon(
                                 Icons.keyboard_arrow_down,
@@ -1170,7 +1197,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                         ),
 
                         _buildSectionContainer(
-                          title: 'ข้อมูลติดต่อญาติ (ข้อมูลเดียวกันทุกผู้ป่วย)',
+                          title: 'ข้อมูลติดต่อญาติ',
                           children: [
                             Row(
                               children: [

@@ -59,13 +59,16 @@ class _TrackStatusNotificationPageState
     try {
       // 🌟 3. ไปดึงข้อมูล Request มาเพิ่มเติม เพื่อดึงชื่อผู้ป่วย (กรณีที่ไม่ได้ส่งผ่านพารามิเตอร์มา)
       final reqSnap = await FirebaseDatabase.instance
-          .ref('Login/${widget.loggedUid}/Relative/Request/${widget.requestModel!.requestId}')
+          .ref(
+            'Login/${widget.loggedUid}/Relative/Request/${widget.requestModel!.requestId}',
+          )
           .get();
-      
+
       if (reqSnap.exists && reqSnap.value is Map) {
         final reqData = reqSnap.value as Map;
         if (_currentPatientName.isEmpty) {
-          _currentPatientName = reqData['patientName']?.toString() ?? 'ไม่ระบุชื่อผู้ป่วย';
+          _currentPatientName =
+              reqData['patientName']?.toString() ?? 'ไม่ระบุชื่อผู้ป่วย';
         }
       }
 
@@ -233,7 +236,9 @@ class _TrackStatusNotificationPageState
                     // 🌟 4. เพิ่มชื่อผู้ป่วย
                     _buildCompactInfo(
                       'ผู้รับบริการ',
-                      _currentPatientName.isNotEmpty ? _currentPatientName : 'ไม่ระบุชื่อ',
+                      _currentPatientName.isNotEmpty
+                          ? _currentPatientName
+                          : 'ไม่ระบุชื่อ',
                       isBold: true,
                     ),
                     const SizedBox(height: 12),
@@ -284,7 +289,9 @@ class _TrackStatusNotificationPageState
           style: TextStyle(
             fontSize: 13,
             fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-            color: isBold ? primaryPurple : Colors.black87, // ให้ชื่อผู้รับบริการเด่นขึ้น
+            color: isBold
+                ? primaryPurple
+                : Colors.black87, // ให้ชื่อผู้รับบริการเด่นขึ้น
           ),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
@@ -783,7 +790,9 @@ class _NotificationCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: latest ? Colors.grey.shade800 : Colors.grey.shade600,
+                      color: latest
+                          ? Colors.grey.shade800
+                          : Colors.grey.shade600,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -793,7 +802,9 @@ class _NotificationCard extends StatelessWidget {
                       timeStr,
                       style: TextStyle(
                         fontSize: 12,
-                        color: latest ? Colors.grey.shade600 : Colors.grey.shade400,
+                        color: latest
+                            ? Colors.grey.shade600
+                            : Colors.grey.shade400,
                       ),
                       textAlign: TextAlign.center,
                     ),

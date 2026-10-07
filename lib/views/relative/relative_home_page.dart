@@ -135,7 +135,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
   }
 
   Future<void> _loadUserNameAndLocation() async {
-    String currentUid = widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+    String currentUid =
+        widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
     if (currentUid.isEmpty) return;
 
     try {
@@ -161,15 +162,21 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
           if (isMatch) {
             var childData = allUsers[key];
             if (childData is Map && childData.containsKey('Relative')) {
-              var relNode = Map<String, dynamic>.from(childData['Relative'] as Map);
+              var relNode = Map<String, dynamic>.from(
+                childData['Relative'] as Map,
+              );
 
               // 🌟 เช็ค activePatientNode และรองรับโครงสร้างผู้ป่วยแบบ Sub-node Patient/{patientId}
-              String activeNode = relNode['activePatientNode']?.toString() ?? '';
+              String activeNode =
+                  relNode['activePatientNode']?.toString() ?? '';
               dynamic patientNode;
 
               if (relNode['Patient'] != null && relNode['Patient'] is Map) {
-                final patientsMap = Map<String, dynamic>.from(relNode['Patient'] as Map);
-                if (activeNode.isNotEmpty && patientsMap.containsKey(activeNode)) {
+                final patientsMap = Map<String, dynamic>.from(
+                  relNode['Patient'] as Map,
+                );
+                if (activeNode.isNotEmpty &&
+                    patientsMap.containsKey(activeNode)) {
                   patientNode = patientsMap[activeNode];
                 } else if (patientsMap.isNotEmpty) {
                   patientNode = patientsMap.values.first;
@@ -180,7 +187,10 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
               if (patientNode == null && relNode.containsKey(activeNode)) {
                 patientNode = relNode[activeNode];
               }
-              if (patientNode == null && relNode['Patient'] != null && relNode['Patient'] is Map && !relNode['Patient'].containsKey('firstname')) {
+              if (patientNode == null &&
+                  relNode['Patient'] != null &&
+                  relNode['Patient'] is Map &&
+                  !relNode['Patient'].containsKey('firstname')) {
                 // กรณีเป็น node เปล่า
               } else if (patientNode == null && relNode['Patient'] != null) {
                 patientNode = relNode['Patient'];
@@ -202,7 +212,9 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                 }
 
                 String rawPhoto = '';
-                if (patientNode != null && patientNode is Map && patientNode['patientphoto'] != null) {
+                if (patientNode != null &&
+                    patientNode is Map &&
+                    patientNode['patientphoto'] != null) {
                   rawPhoto = patientNode['patientphoto'].toString();
                 } else {
                   rawPhoto = relNode['profilephoto']?.toString() ?? '';
@@ -223,18 +235,31 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
               });
 
               // 🌟 ค้นหาพิกัดตำแหน่งของผู้ป่วย (คนที่เลือกอยู่)
-              double? pLat = _extractCoordinate(patientNode is Map ? patientNode : null, ['latitude', 'lat']) ??
+              double? pLat =
+                  _extractCoordinate(patientNode is Map ? patientNode : null, [
+                    'latitude',
+                    'lat',
+                  ]) ??
                   _extractCoordinate(relNode, ['latitude', 'lat']);
-              double? pLng = _extractCoordinate(patientNode is Map ? patientNode : null, ['longitude', 'lng', 'long']) ??
+              double? pLng =
+                  _extractCoordinate(patientNode is Map ? patientNode : null, [
+                    'longitude',
+                    'lng',
+                    'long',
+                  ]) ??
                   _extractCoordinate(relNode, ['longitude', 'lng', 'long']);
 
               if (pLat == null || pLng == null) {
-                String pAddress = (patientNode is Map ? patientNode['address'] : null)?.toString() ??
+                String pAddress =
+                    (patientNode is Map ? patientNode['address'] : null)
+                        ?.toString() ??
                     relNode['address']?.toString() ??
                     '';
                 if (pAddress.trim().isNotEmpty) {
                   try {
-                    List<Location> locs = await geocoding.locationFromAddress(pAddress);
+                    List<Location> locs = await geocoding.locationFromAddress(
+                      pAddress,
+                    );
                     if (locs.isNotEmpty) {
                       pLat = locs.first.latitude;
                       pLng = locs.first.longitude;
@@ -245,9 +270,11 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
               if (pLat == null || pLng == null) {
                 try {
-                  bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+                  bool serviceEnabled =
+                      await Geolocator.isLocationServiceEnabled();
                   if (serviceEnabled) {
-                    LocationPermission permission = await Geolocator.checkPermission();
+                    LocationPermission permission =
+                        await Geolocator.checkPermission();
                     if (permission == LocationPermission.whileInUse ||
                         permission == LocationPermission.always) {
                       Position pos = await Geolocator.getCurrentPosition(
@@ -271,8 +298,12 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                 if (requests is Map) {
                   requests.forEach((reqId, reqData) {
                     if (reqData is Map) {
-                      String status = (reqData['requeststatus'] ?? '').toString().toLowerCase();
-                      if (status == 'pending' || status == 'accepted' || status == 'pending_advice') {
+                      String status = (reqData['requeststatus'] ?? '')
+                          .toString()
+                          .toLowerCase();
+                      if (status == 'pending' ||
+                          status == 'accepted' ||
+                          status == 'pending_advice') {
                         String dateStr = reqData['appointmentdate'] ?? '';
                         if (dateStr.isNotEmpty) {
                           try {
@@ -297,11 +328,302 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
     }
   }
 
+  // 🌟 ฟังก์ชันใหม่: แสดงคู่มือการใช้งาน (รวมขั้นตอนและค่าใช้จ่าย)
+  void _showCombinedServiceInfoModal() {
+    final List<Map<String, dynamic>> serviceSteps = [
+      {
+        'step': '1',
+        'title': 'รับผู้ป่วยจากที่พัก',
+        'desc': 'ผู้ดูแลเดินทางไปรับถึงบ้าน ช่วยพยุงและพาขึ้นรถอย่างปลอดภัย',
+        'icon': Icons.home_filled,
+      },
+      {
+        'step': '2',
+        'title': 'เดินทางไปโรงพยาบาล',
+        'desc': 'ขับรถพาผู้ป่วยไปโรงพยาบาล และช่วยพาเข้าจุดบริการ',
+        'icon': Icons.directions_car_filled,
+      },
+      {
+        'step': '3',
+        'title': 'ดูแลตลอดการพบแพทย์',
+        'desc':
+            'ช่วยลงทะเบียน อยู่เป็นเพื่อนหน้าห้องตรวจ เดินเรื่องชำระเงิน และรับยา',
+        'icon': Icons.local_hospital,
+      },
+      {
+        'step': '4',
+        'title': 'ส่งกลับถึงที่พักอย่างปลอดภัย',
+        'desc': 'พาผู้ป่วยเดินทางกลับ ส่งถึงบ้านโดยสวัสดิภาพ และจบงานบริการ',
+        'icon': Icons.check_circle,
+      },
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.85, // ให้สูง 85% ของจอ
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              // ขีดสีเทาด้านบน
+              Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 8),
+                child: Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              ),
+
+              // เนื้อหาที่เลื่อนได้
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ส่วนที่ 1: ขั้นตอนการทำงาน
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.volunteer_activism_rounded,
+                            color: primaryColor,
+                            size: 26,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'ขั้นตอนการให้บริการ',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: headingColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'ผู้ดูแลจะคอยดูแลและช่วยเหลือตลอดการเดินทาง',
+                        style: TextStyle(fontSize: 12.5, color: Colors.black54),
+                      ),
+                      const SizedBox(height: 16),
+                      ...serviceSteps.map((item) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: lightPurple,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  item['icon'] as IconData,
+                                  color: primaryColor,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "${item['step']}. ${item['title']}",
+                                      style: TextStyle(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: headingColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      item['desc'] as String,
+                                      style: const TextStyle(
+                                        fontSize: 12.5,
+                                        color: Colors.black87,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+
+                      const Divider(height: 30, thickness: 1.5),
+
+                      // ส่วนที่ 2: รายละเอียดค่าใช้จ่าย
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.payments_outlined,
+                            color: primaryColor,
+                            size: 26,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'รายละเอียดค่าใช้จ่าย',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: headingColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Icon(Icons.style, size: 18, color: darkPurple),
+                          const SizedBox(width: 6),
+                          Text(
+                            'อัตราค่าบริการแพ็กเกจ',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: darkPurple,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              '• ครึ่งวัน (4 ชั่วโมง): 600 บาท/ครั้ง',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              '• เต็มวัน (8 ชั่วโมง): 1,000 บาท/ครั้ง',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              '• เกินเวลาที่กำหนด: คิดเพิ่มชั่วโมงละ 150 บาท',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              '• ค่าบริการคิดตามแพ็กเกจที่เลือกในการจอง 1 ครั้ง',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.directions_car_outlined,
+                            size: 18,
+                            color: darkPurple,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'ค่าเดินทางเพิ่มเติม',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: darkPurple,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Padding(
+                        padding: EdgeInsets.only(left: 8.0),
+                        child: Text(
+                          'หากจุดรับส่งหรือพื้นที่ใช้บริการอยู่นอกเหนือเขตอำเภอที่ผู้ดูแลกำหนด จะคิดค่าเดินทางเพิ่มเติม กิโลเมตรละ 10 บาท โดยคำนวณตามระยะทางจริงจากระบบแอปพลิเคชัน',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: Colors.black87,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 40), // เผื่อพื้นที่ด้านล่าง
+                    ],
+                  ),
+                ),
+              ),
+
+              // ปุ่มปิด Modal ยึดติดด้านล่างสุด
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, -5),
+                    ),
+                  ],
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'เข้าใจแล้ว',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   // 🌟 ข้อ 5: ห้ามเลือกวันที่ปัจจุบัน (firstDate เริ่มต้นจากวันพรุ่งนี้เป็นต้นไป)
   void _openFilterCalendar() async {
     DateTime now = DateTime.now();
-    DateTime tomorrow = DateTime(now.year, now.month, now.day)
-        .add(const Duration(days: 2)); // 🌟 วันพรุ่งนี้
+    DateTime tomorrow = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).add(const Duration(days: 1)); // 🌟 วันพรุ่งนี้
 
     DateTime initial = _selectedFilterDate ?? tomorrow;
     if (initial.isBefore(tomorrow)) {
@@ -996,9 +1318,10 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                 const SizedBox(height: 2),
                                 Text(
                                   _selectedFilterDate != null
-                                      ? DateFormat('dd/MM/yyyy')
-                                          .format(_selectedFilterDate!)
-                                      : 'แตะเพื่อเลือกวันที่ (เลือกได้ตั้งแต่พรุ่งนี้)',
+                                      ? DateFormat(
+                                          'dd/MM/yyyy',
+                                        ).format(_selectedFilterDate!)
+                                      : 'แตะเพื่อเลือกวันที่ (ไม่สามารถเลือกวันที่ปัจจุบันได้)',
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: _selectedFilterDate != null
@@ -1043,7 +1366,25 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                       ),
                     ),
                   ),
-
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.info_outline, color: Colors.red, size: 15),
+                      SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          'แนะนำให้ส่งคำขอล่วงหน้าก่อน 3 วันเพื่อให้ผู้ดูแลมีเวลาเตรียมตัว',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 10),
 
                   // 🌟 ช่องค้นหา (แยกออกมาเดี่ยวๆ สามารถพิมพ์ค้นหาได้ทันที)
@@ -1101,150 +1442,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                     ),
                   ),
 
-                  const SizedBox(height: 8),
-
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.info_outline, color: Colors.red, size: 15),
-                      SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          'แนะนำให้ส่งคำขอล่วงหน้าก่อน 3 วันเพื่อให้ผู้ดูแลมีเวลาเตรียมตัว',
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
-                  ),
-
                   const SizedBox(height: 10),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Material(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(22),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(22),
-                            onTap: _showServiceStepsModal,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 9,
-                                horizontal: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF0FDF4),
-                                borderRadius: BorderRadius.circular(22),
-                                border: Border.all(
-                                  color: const Color(
-                                    0xFF22C55E,
-                                  ).withOpacity(0.5),
-                                  width: 1.2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFF22C55E,
-                                    ).withOpacity(0.08),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
-                                  Icon(
-                                    Icons.format_list_bulleted_rounded,
-                                    color: Color(0xFF16A34A),
-                                    size: 15,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Flexible(
-                                    child: Text(
-                                      'ขั้นตอนการทำงาน',
-                                      style: TextStyle(
-                                        color: Color(0xFF16A34A),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Material(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(22),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(22),
-                            onTap: _showPricingDetailsDialog,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 9,
-                                horizontal: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFFBEB),
-                                borderRadius: BorderRadius.circular(22),
-                                border: Border.all(
-                                  color: const Color(
-                                    0xFFF59E0B,
-                                  ).withOpacity(0.5),
-                                  width: 1.2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFFF59E0B,
-                                    ).withOpacity(0.08),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: const [
-                                  Icon(
-                                    Icons.payments_outlined,
-                                    color: Color(0xFFD97706),
-                                    size: 15,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Flexible(
-                                    child: Text(
-                                      'รายละเอียดค่าใช้จ่าย',
-                                      style: TextStyle(
-                                        color: Color(0xFFD97706),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
@@ -1341,25 +1539,38 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                                   String reviewerGender = '';
                                   String reviewerImage = '';
 
-                                  if (relativeNode['Patient'] != null && relativeNode['Patient'] is Map) {
+                                  if (relativeNode['Patient'] != null &&
+                                      relativeNode['Patient'] is Map) {
                                     final pMap = relativeNode['Patient'] as Map;
                                     if (pMap.containsKey('gender')) {
-                                      reviewerGender = pMap['gender']?.toString() ?? '';
-                                      reviewerImage = pMap['patientphoto']?.toString() ?? '';
+                                      reviewerGender =
+                                          pMap['gender']?.toString() ?? '';
+                                      reviewerImage =
+                                          pMap['patientphoto']?.toString() ??
+                                          '';
                                     } else if (pMap.isNotEmpty) {
                                       final firstP = pMap.values.first;
                                       if (firstP is Map) {
-                                        reviewerGender = firstP['gender']?.toString() ?? '';
-                                        reviewerImage = firstP['patientphoto']?.toString() ?? '';
+                                        reviewerGender =
+                                            firstP['gender']?.toString() ?? '';
+                                        reviewerImage =
+                                            firstP['patientphoto']
+                                                ?.toString() ??
+                                            '';
                                       }
                                     }
                                   }
 
                                   if (reviewerGender.isEmpty) {
-                                    reviewerGender = relativeNode['gender']?.toString() ?? '';
+                                    reviewerGender =
+                                        relativeNode['gender']?.toString() ??
+                                        '';
                                   }
                                   if (reviewerImage.isEmpty) {
-                                    reviewerImage = relativeNode['profilephoto']?.toString() ?? '';
+                                    reviewerImage =
+                                        relativeNode['profilephoto']
+                                            ?.toString() ??
+                                        '';
                                   }
 
                                   String rFirstname =
@@ -1401,12 +1612,12 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                     rootValue.forEach((userUidKey, userNodeValue) {
                       if (userNodeValue is Map &&
                           userNodeValue.containsKey('Caretaker')) {
-                        String accountStatus = (userNodeValue['Caretaker']
-                                    ['accountstatus']
-                                ?.toString() ??
-                            '')
-                            .trim()
-                            .toLowerCase();
+                        String accountStatus =
+                            (userNodeValue['Caretaker']['accountstatus']
+                                        ?.toString() ??
+                                    '')
+                                .trim()
+                                .toLowerCase();
 
                         if (accountStatus == 'suspended') {
                           return;
@@ -1447,14 +1658,23 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                           }
 
                           // 🌟 ข้อ 2: คำนวณระยะห่างระหว่างผู้ป่วยและผู้ดูแล
-                          double? cLat = _extractCoordinate(
-                                  data, ['latitude', 'lat']) ??
-                              _extractCoordinate(
-                                  userNodeValue, ['latitude', 'lat']);
-                          double? cLng = _extractCoordinate(
-                                  data, ['longitude', 'lng', 'long']) ??
-                              _extractCoordinate(
-                                  userNodeValue, ['longitude', 'lng', 'long']);
+                          double? cLat =
+                              _extractCoordinate(data, ['latitude', 'lat']) ??
+                              _extractCoordinate(userNodeValue, [
+                                'latitude',
+                                'lat',
+                              ]);
+                          double? cLng =
+                              _extractCoordinate(data, [
+                                'longitude',
+                                'lng',
+                                'long',
+                              ]) ??
+                              _extractCoordinate(userNodeValue, [
+                                'longitude',
+                                'lng',
+                                'long',
+                              ]);
 
                           if (cLat != null &&
                               cLng != null &&
@@ -1736,25 +1956,33 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                     }
 
                     PatientModel patient;
-                    String activeNode = relativeMap['activePatientNode']?.toString() ?? '';
+                    String activeNode =
+                        relativeMap['activePatientNode']?.toString() ?? '';
                     dynamic targetPatientNode;
 
                     // 🌟 ดึงข้อมูลผู้ป่วยจากโครงสร้าง Sub-node Patient/{patientId}
-                    if (relativeMap['Patient'] != null && relativeMap['Patient'] is Map) {
-                      final pMap = Map<String, dynamic>.from(relativeMap['Patient'] as Map);
-                      if (activeNode.isNotEmpty && pMap.containsKey(activeNode)) {
+                    if (relativeMap['Patient'] != null &&
+                        relativeMap['Patient'] is Map) {
+                      final pMap = Map<String, dynamic>.from(
+                        relativeMap['Patient'] as Map,
+                      );
+                      if (activeNode.isNotEmpty &&
+                          pMap.containsKey(activeNode)) {
                         targetPatientNode = pMap[activeNode];
                       } else if (pMap.isNotEmpty) {
                         targetPatientNode = pMap.values.first;
                       }
                     }
 
-                    if (targetPatientNode == null && relativeMap.containsKey(activeNode)) {
+                    if (targetPatientNode == null &&
+                        relativeMap.containsKey(activeNode)) {
                       targetPatientNode = relativeMap[activeNode];
                     }
 
                     if (targetPatientNode != null && targetPatientNode is Map) {
-                      final pData = Map<String, dynamic>.from(targetPatientNode as Map);
+                      final pData = Map<String, dynamic>.from(
+                        targetPatientNode as Map,
+                      );
                       patient = PatientModel(
                         patientId: pData['patientId'] ?? '',
                         patientphoto: pData['patientphoto'] ?? '',
@@ -1815,6 +2043,26 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
               },
             ),
           ],
+        ),
+      ),
+      // 🌟 ใช้ SizedBox ครอบเพื่อกำหนดขนาดปุ่ม
+      floatingActionButton: SizedBox(
+        width: 45, // 🌟 ปรับความกว้างของปุ่มตรงนี้ (ขนาดปกติของระบบคือ 56)
+        height: 45, // 🌟 ปรับความสูงของปุ่มตรงนี้
+        child: FloatingActionButton(
+          onPressed: _showCombinedServiceInfoModal,
+          backgroundColor: const Color.fromARGB(255, 163, 163, 163),
+          elevation: 6,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18), // ปรับความมนของขอบปุ่ม
+          ),
+          tooltip: 'คู่มือและค่าบริการ',
+          child: const Icon(
+            Icons.menu_book_rounded,
+            color: Colors.white,
+            size:
+                28, // 🌟 อย่าลืมปรับขนาดไอคอนด้านในให้พอดีกับขนาดปุ่มด้วยนะครับ
+          ),
         ),
       ),
     );
@@ -2079,8 +2327,11 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
 
                   Row(
                     children: [
-                      Icon(Icons.near_me_outlined,
-                          size: 13, color: primaryColor),
+                      Icon(
+                        Icons.near_me_outlined,
+                        size: 13,
+                        color: primaryColor,
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -2122,8 +2373,7 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      Icon(Icons.directions_car,
-                          size: 13, color: primaryColor),
+                      Icon(Icons.directions_car, size: 13, color: primaryColor),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -2153,7 +2403,8 @@ class _RelativeHomePageState extends State<RelativeHomePage> {
                             MaterialPageRoute(
                               builder: (context) => CaretakerProfilePage(
                                 caretakerId: data['id'],
-                                loggedUid: widget.loggedUid ??
+                                loggedUid:
+                                    widget.loggedUid ??
                                     FirebaseAuth.instance.currentUser?.uid,
                                 selectedDate: _selectedFilterDate,
                                 reviews: reviewsList,
