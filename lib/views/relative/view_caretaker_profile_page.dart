@@ -39,11 +39,59 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
   List<Map<String, dynamic>> reviewsList = [];
   double averageRating = 0.0;
   int reviewCount = 0;
+  
 
   final Color primaryColor = const Color(0xFF9B59B6);
   final Color bgColor = const Color.fromARGB(255, 225, 202, 255);
   final Color cardColor = Colors.white;
   final Color borderColor = const Color(0xFFDDD0F0);
+
+  String _loggedInUserName = '';
+  String _loggedInUserPhoto = '';
+
+  // 🌟 2. เพิ่มฟังก์ชันดึงข้อมูลโปรไฟล์ผู้ใช้งาน
+  Future<void> _fetchLoggedUserData() async {
+    String uid = widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (uid.isEmpty) return;
+
+    try {
+      final snapshot = await FirebaseDatabase.instance.ref('Login/$uid/Relative').get();
+      if (snapshot.exists && snapshot.value != null) {
+        final data = Map<String, dynamic>.from(snapshot.value as Map);
+        String activeId = data['activePatientNode']?.toString() ?? '';
+        Map<String, dynamic>? currentPatient;
+
+        if (activeId.isNotEmpty && data['Patient'] != null) {
+          final patientNode = data['Patient'] as Map;
+          if (patientNode[activeId] != null) {
+            currentPatient = Map<String, dynamic>.from(patientNode[activeId]);
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            if (currentPatient != null) {
+              _loggedInUserName = formatFullNameWithTitle(
+                gender: currentPatient['gender']?.toString(),
+                firstname: currentPatient['firstname']?.toString(),
+                lastname: currentPatient['lastname']?.toString(),
+              );
+              _loggedInUserPhoto = currentPatient['patientphoto']?.toString() ?? '';
+            } else {
+              _loggedInUserName = formatFullNameWithTitle(
+                gender: data['gender']?.toString(),
+                firstname: data['firstname']?.toString(),
+                lastname: data['lastname']?.toString(),
+              );
+              _loggedInUserPhoto = data['profilephoto']?.toString() ?? '';
+            }
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetch logged user data: $e");
+    }
+  }
 
   // 🌟 ฟังก์ชันแปลงเพศเป็นคำนำหน้าชื่อ นาย / นาง
   String getPrefix(String? gender) {
@@ -97,6 +145,7 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
       _calculateReviewStats();
     }
     loadCaretaker();
+    _fetchLoggedUserData();
   }
 
   void _showLoginRequiredDialog() {
@@ -283,13 +332,27 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
         ),
       );
     }
+
+    // 🌟 แปลงรูปโปรไฟล์ของผู้ใช้งานที่ล็อกอิน
+    ImageProvider? userImageProvider;
+    if (_loggedInUserPhoto.isNotEmpty) {
+      try {
+        String clean = _loggedInUserPhoto.replaceAll(RegExp(r'\s+'), '');
+        if (clean.contains(',')) clean = clean.split(',').last;
+        int pad = clean.length % 4;
+        if (pad > 0) clean += '=' * (4 - pad);
+        userImageProvider = MemoryImage(base64Decode(clean));
+      } catch (_) {}
+    }
+
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: primaryColor,
         elevation: 2,
         shadowColor: const Color(0xFF7B1FA2).withOpacity(0.3),
-        centerTitle: true,
+        centerTitle: false, // 🌟 ขยับข้อความไปด้านหน้า
+        titleSpacing: 0,    // 🌟 ลดระยะห่างจากปุ่มย้อนกลับ
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_ios_new_rounded,
@@ -306,6 +369,52 @@ class _CaretakerProfilePageState extends State<CaretakerProfilePage> {
             letterSpacing: 0.5,
           ),
         ),
+        // 🌟 เพิ่มป้ายแสดงชื่อคนล็อกอินมุมขวาบน
+        actions: [
+          if (_loggedInUserName.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white38, width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircleAvatar(
+                        radius: 11,
+                        backgroundColor: Colors.white.withOpacity(0.3),
+                        backgroundImage: userImageProvider,
+                        child: userImageProvider == null
+                            ? const Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 14,
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _loggedInUserName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {

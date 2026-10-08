@@ -1291,13 +1291,47 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   // ==========================================
   @override
   Widget build(BuildContext context) {
+    String userName = '';
+    if (_patientData != null) {
+      userName = formatFullNameWithTitle(
+        gender: _patientData?['gender']?.toString(),
+        firstname: _patientData?['firstname']?.toString(),
+        lastname: _patientData?['lastname']?.toString(),
+      );
+    } else if (_relativeData != null) {
+      userName = formatFullNameWithTitle(
+        gender: _relativeData?['gender']?.toString(),
+        firstname: _relativeData?['firstname']?.toString(),
+        lastname: _relativeData?['lastname']?.toString(),
+      );
+    }
+
+    ImageProvider? userImageProvider;
+    String rawPhoto = '';
+    if (_patientData != null && _patientData?['patientphoto'] != null) {
+      rawPhoto = _patientData?['patientphoto'].toString() ?? '';
+    } else if (_relativeData != null && _relativeData?['profilephoto'] != null) {
+      rawPhoto = _relativeData?['profilephoto'].toString() ?? '';
+    }
+
+    if (rawPhoto.isNotEmpty) {
+      try {
+        String clean = rawPhoto.replaceAll(RegExp(r'\s+'), '');
+        if (clean.contains(',')) clean = clean.split(',').last;
+        int pad = clean.length % 4;
+        if (pad > 0) clean += '=' * (4 - pad);
+        userImageProvider = MemoryImage(base64Decode(clean));
+      } catch (_) {}
+    }
+
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: darkPurple,
         elevation: 2,
         shadowColor: const Color.fromARGB(255, 153, 116, 255),
-        centerTitle: true,
+        centerTitle: false,
+        titleSpacing: 0,
         title: const Text(
           'ส่งคำขอบริการ',
           style: TextStyle(
@@ -1314,6 +1348,52 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
           ),
           onPressed: () => Navigator.pop(context),
         ),
+        // 🌟 2. เพิ่ม actions สำหรับแสดงรูปและชื่อโปรไฟล์มุมบนขวา
+        actions: [
+          if (userName.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white38, width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircleAvatar(
+                        radius: 11,
+                        backgroundColor: Colors.white.withOpacity(0.3),
+                        backgroundImage: userImageProvider,
+                        child: userImageProvider == null
+                            ? const Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 14,
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        userName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),

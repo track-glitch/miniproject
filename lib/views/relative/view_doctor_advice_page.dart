@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:miniproject/views/login_page.dart';
 import 'package:miniproject/views/relative/track_status_notification_page.dart';
@@ -40,6 +42,79 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
 
   final Color bottomNavPurple = const Color.fromARGB(255, 153, 116, 255);
   final Color searchPrimaryColor = const Color(0xFF9B59B6);
+
+  // 🌟 1. ตัวแปรเก็บชื่อและรูปของคนที่ล็อกอิน
+  String _loggedInUserName = '';
+  String _loggedInUserPhoto = '';
+
+  // 🌟 2. ฟังก์ชันดึงข้อมูลโปรไฟล์ของคนที่ล็อกอิน
+  Future<void> _fetchLoggedUserData() async {
+    String uid = widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (uid.isEmpty) return;
+
+    try {
+      final snapshot = await FirebaseDatabase.instance.ref('Login/$uid/Relative').get();
+      if (snapshot.exists && snapshot.value != null) {
+        final data = Map<String, dynamic>.from(snapshot.value as Map);
+        String activeId = data['activePatientNode']?.toString() ?? '';
+        Map<String, dynamic>? currentPatient;
+
+        if (activeId.isNotEmpty && data['Patient'] != null) {
+          final patientNode = data['Patient'] as Map;
+          if (patientNode[activeId] != null) {
+            currentPatient = Map<String, dynamic>.from(patientNode[activeId]);
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            if (currentPatient != null) {
+              _loggedInUserName = _formatName(
+                currentPatient['gender']?.toString(),
+                currentPatient['firstname']?.toString(),
+                currentPatient['lastname']?.toString(),
+              );
+              _loggedInUserPhoto = currentPatient['patientphoto']?.toString() ?? '';
+            } else {
+              _loggedInUserName = _formatName(
+                data['gender']?.toString(),
+                data['firstname']?.toString(),
+                data['lastname']?.toString(),
+              );
+              _loggedInUserPhoto = data['profilephoto']?.toString() ?? '';
+            }
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetch logged user data: $e");
+    }
+  }
+
+  // Helper Methods สำหรับประกอบชื่อ
+  String _getPrefix(String? gender) {
+    if (gender == null) return '';
+    final g = gender.trim().toLowerCase();
+    if (g == 'ชาย' || g == 'male') return 'นาย';
+    if (g == 'หญิง' || g == 'female') return 'นาง';
+    return '';
+  }
+
+  String _formatName(String? gender, String? firstname, String? lastname) {
+    String prefix = _getPrefix(gender);
+    String fName = (firstname ?? '').trim();
+    String lName = (lastname ?? '').trim();
+    if (fName.isEmpty && lName.isEmpty) return 'ไม่ระบุ';
+    String prefixSpace = prefix.isNotEmpty ? '$prefix ' : '';
+    return '$prefixSpace$fName $lName'.trim();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLoggedUserData();   
+  }
+  
 
   void _showLoginRequiredDialog() {
     showDialog(
@@ -192,6 +267,18 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    // 🌟 แปลงรูปโปรไฟล์ Base64 เป็น ImageProvider
+    ImageProvider? userImageProvider;
+    if (_loggedInUserPhoto.isNotEmpty) {
+      try {
+        String clean = _loggedInUserPhoto.replaceAll(RegExp(r'\s+'), '');
+        if (clean.contains(',')) clean = clean.split(',').last;
+        int pad = clean.length % 4;
+        if (pad > 0) clean += '=' * (4 - pad);
+        userImageProvider = MemoryImage(base64Decode(clean));
+      } catch (_) {}
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
@@ -211,7 +298,7 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
           const Expanded(
             child: Text(
               'คำแนะนำและวันนัดหมาย',
-              textAlign: TextAlign.center,
+              textAlign: TextAlign.left, // 🌟 ปรับข้อความชิดซ้าย (ไปด้านหน้า)
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -219,7 +306,48 @@ class _ViewDoctorAdvicePageState extends State<ViewDoctorAdvicePage> {
               ),
             ),
           ),
-          const SizedBox(width: 48),
+          // 🌟 เพิ่มป้ายโปรไฟล์ที่ด้านขวา
+          if (_loggedInUserName.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white38, width: 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircleAvatar(
+                      radius: 11,
+                      backgroundColor: Colors.white.withOpacity(0.3),
+                      backgroundImage: userImageProvider,
+                      child: userImageProvider == null
+                          ? const Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 14,
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _loggedInUserName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

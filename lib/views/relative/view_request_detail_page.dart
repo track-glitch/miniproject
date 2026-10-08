@@ -65,6 +65,55 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
 
   Map<dynamic, dynamic>? doctorAdviceData;
 
+  // 🌟 1. ตัวแปรเก็บชื่อและรูปของคนที่ล็อกอิน (สำหรับโชว์มุมขวาบน)
+  String _loggedInUserName = '';
+  String _loggedInUserPhoto = '';
+
+  // 🌟 2. ฟังก์ชันดึงข้อมูลโปรไฟล์ของคนที่ล็อกอิน
+  Future<void> _fetchLoggedUserData() async {
+    String uid = widget.loggedUid;
+    if (uid.isEmpty) return;
+
+    try {
+      final snapshot = await FirebaseDatabase.instance.ref('Login/$uid/Relative').get();
+      if (snapshot.exists && snapshot.value != null) {
+        final data = Map<String, dynamic>.from(snapshot.value as Map);
+        String activeId = data['activePatientNode']?.toString() ?? '';
+        Map<String, dynamic>? currentPatient;
+
+        if (activeId.isNotEmpty && data['Patient'] != null) {
+          final patientNode = data['Patient'] as Map;
+          if (patientNode[activeId] != null) {
+            currentPatient = Map<String, dynamic>.from(patientNode[activeId]);
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            if (currentPatient != null) {
+              _loggedInUserName = formatFullNameWithTitle(
+                gender: currentPatient['gender']?.toString(),
+                firstname: currentPatient['firstname']?.toString(),
+                lastname: currentPatient['lastname']?.toString(),
+              );
+              _loggedInUserPhoto = currentPatient['patientphoto']?.toString() ?? '';
+            } else {
+              _loggedInUserName = formatFullNameWithTitle(
+                gender: data['gender']?.toString(),
+                firstname: data['firstname']?.toString(),
+                lastname: data['lastname']?.toString(),
+              );
+              _loggedInUserPhoto = data['profilephoto']?.toString() ?? '';
+            }
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetch logged user data: $e");
+    }
+  }
+  
+
   // 🌟 ฟังก์ชันแปลงเพศเป็นคำนำหน้าชื่อ นาย / นาง
   String getPrefix(String? gender) {
     if (gender == null) return '';
@@ -105,6 +154,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
 
     _setInitialStatus();
     _fetchDetailData();
+    _fetchLoggedUserData();
   }
 
   void _setInitialStatus() {
@@ -877,14 +927,47 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        appBar: const CustomHeader(
-          title: 'รายละเอียดคำขอ',
-          showBackButton: true,
+        appBar: AppBar(
+          backgroundColor: primaryColor,
+          elevation: 2,
+          shadowColor: const Color(0xFF7B1FA2).withOpacity(0.3),
+          centerTitle: false,
+          titleSpacing: 0,
+          leading: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: const Text(
+            'รายละเอียดคำขอ',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              letterSpacing: 0.5,
+            ),
+          ),
         ),
         body: Center(child: CircularProgressIndicator(color: primaryColor)),
       );
     }
 
+    
+
+    ImageProvider? userImageProvider;
+    if (_loggedInUserPhoto.isNotEmpty) {
+      try {
+        String clean = _loggedInUserPhoto.replaceAll(RegExp(r'\s+'), '');
+        if (clean.contains(',')) clean = clean.split(',').last;
+        int pad = clean.length % 4;
+        if (pad > 0) clean += '=' * (4 - pad);
+        userImageProvider = MemoryImage(base64Decode(clean));
+      } catch (_) {}
+    }
+
+    
     var req = widget.requestModel;
     String statusText = 'รอตอบรับ';
     Color statusColor = const Color(0xFFE65100);
@@ -919,7 +1002,76 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
 
     return Scaffold(
       backgroundColor: bgColor,
-      appBar: const CustomHeader(title: 'รายละเอียดคำขอ', showBackButton: true),
+      // 🌟 2. ลบ CustomHeader ทิ้งแล้วใช้ AppBar นี้แทน
+      appBar: AppBar(
+        backgroundColor: primaryColor,
+        elevation: 2,
+        shadowColor: const Color(0xFF7B1FA2).withOpacity(0.3),
+        centerTitle: false, // 🌟 ขยับข้อความไปด้านหน้า (ชิดซ้าย)
+        titleSpacing: 0,    // 🌟 ลดระยะห่างจากปุ่มย้อนกลับ
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'รายละเอียดคำขอ',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            letterSpacing: 0.5,
+          ),
+        ),
+        // 🌟 3. เพิ่มป้ายแสดงชื่อคนล็อกอินมุมขวาบน
+        actions: [
+          if (_loggedInUserName.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white38, width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircleAvatar(
+                        radius: 11,
+                        backgroundColor: Colors.white.withOpacity(0.3),
+                        backgroundImage: userImageProvider,
+                        child: userImageProvider == null
+                            ? const Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 14,
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _loggedInUserName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(

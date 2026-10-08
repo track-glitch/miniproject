@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -64,6 +66,7 @@ class _TrackStatusNotificationPageState
     super.initState();
     _currentPatientName = widget.patientName ?? '';
     _fetchNotifications();
+    _fetchLoggedUserData();
   }
 
   Future<void> _fetchNotifications() async {
@@ -155,6 +158,73 @@ class _TrackStatusNotificationPageState
       print("Error fetching tracking notifications: $e");
       setState(() => _isLoading = false);
     }
+  }
+
+  // 🌟 1. เพิ่มตัวแปรสำหรับเก็บชื่อและรูปของผู้ใช้งานที่ล็อกอิน
+  String _loggedInUserName = '';
+  String _loggedInUserPhoto = '';
+
+  // 🌟 2. ฟังก์ชันดึงข้อมูลโปรไฟล์ของคนที่ล็อกอิน
+  Future<void> _fetchLoggedUserData() async {
+    String uid = widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (uid.isEmpty) return;
+
+    try {
+      final snapshot = await FirebaseDatabase.instance.ref('Login/$uid/Relative').get();
+      if (snapshot.exists && snapshot.value != null) {
+        final data = Map<String, dynamic>.from(snapshot.value as Map);
+        String activeId = data['activePatientNode']?.toString() ?? '';
+        Map<String, dynamic>? currentPatient;
+
+        if (activeId.isNotEmpty && data['Patient'] != null) {
+          final patientNode = data['Patient'] as Map;
+          if (patientNode[activeId] != null) {
+            currentPatient = Map<String, dynamic>.from(patientNode[activeId]);
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            if (currentPatient != null) {
+              // 🌟 ฟังก์ชัน _getPrefix และ _formatName ต้องประกาศเพิ่มด้านล่างด้วย
+              _loggedInUserName = _formatName(
+                currentPatient['gender']?.toString(),
+                currentPatient['firstname']?.toString(),
+                currentPatient['lastname']?.toString(),
+              );
+              _loggedInUserPhoto = currentPatient['patientphoto']?.toString() ?? '';
+            } else {
+              _loggedInUserName = _formatName(
+                data['gender']?.toString(),
+                data['firstname']?.toString(),
+                data['lastname']?.toString(),
+              );
+              _loggedInUserPhoto = data['profilephoto']?.toString() ?? '';
+            }
+          });
+        }
+      }
+    } catch (e) {
+      print("Error fetch logged user data: $e");
+    }
+  }
+
+  // Helper Methods สำหรับประกอบชื่อ
+  String _getPrefix(String? gender) {
+    if (gender == null) return '';
+    final g = gender.trim().toLowerCase();
+    if (g == 'ชาย' || g == 'male') return 'นาย';
+    if (g == 'หญิง' || g == 'female') return 'นาง';
+    return '';
+  }
+
+  String _formatName(String? gender, String? firstname, String? lastname) {
+    String prefix = _getPrefix(gender);
+    String fName = (firstname ?? '').trim();
+    String lName = (lastname ?? '').trim();
+    if (fName.isEmpty && lName.isEmpty) return 'ไม่ระบุ';
+    String prefixSpace = prefix.isNotEmpty ? '$prefix ' : '';
+    return '$prefixSpace$fName $lName'.trim();
   }
 
   String _formatApptDate(DateTime? date, DateTime? time) {
@@ -601,13 +671,27 @@ class _TrackStatusNotificationPageState
     );
   }
 
-  @override
+ @override
   Widget build(BuildContext context) {
+    // 🌟 แปลงรูปโปรไฟล์ของผู้ใช้งานที่ล็อกอิน
+    ImageProvider? userImageProvider;
+    if (_loggedInUserPhoto.isNotEmpty) {
+      try {
+        String clean = _loggedInUserPhoto.replaceAll(RegExp(r'\s+'), '');
+        if (clean.contains(',')) clean = clean.split(',').last;
+        int pad = clean.length % 4;
+        if (pad > 0) clean += '=' * (4 - pad);
+        userImageProvider = MemoryImage(base64Decode(clean));
+      } catch (_) {}
+    }
+
     return Scaffold(
       backgroundColor: lightPurpleBg,
       appBar: AppBar(
         backgroundColor: primaryPurple,
         elevation: 0,
+        centerTitle: false, // 🌟 เปลี่ยนเป็น false เพื่อให้ข้อความชิดด้านซ้าย
+        titleSpacing: 0,    // 🌟 ลดระยะห่าง
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -620,7 +704,52 @@ class _TrackStatusNotificationPageState
             fontWeight: FontWeight.w600,
           ),
         ),
-        centerTitle: true,
+        // 🌟 เพิ่มกล่องแสดงโปรไฟล์มุมบนขวา
+        actions: [
+          if (_loggedInUserName.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white38, width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircleAvatar(
+                        radius: 11,
+                        backgroundColor: Colors.white.withOpacity(0.3),
+                        backgroundImage: userImageProvider,
+                        child: userImageProvider == null
+                            ? const Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 14,
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _loggedInUserName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: primaryPurple))
