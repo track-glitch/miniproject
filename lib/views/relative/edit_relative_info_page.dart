@@ -440,6 +440,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     }
   }
 
+  // ไม่จำเป็นต้องใช้ฟังก์ชันนี้แล้วในดีไซน์ใหม่ แต่เก็บไว้เพื่อไม่ให้ลบโค้ด
   Widget _buildInfoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6.0),
@@ -465,6 +466,31 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
           ),
         ],
       ),
+    );
+  }
+
+  // 🌟 ฟังก์ชันเสริมสำหรับแสดงข้อมูลย่อในรูปแบบที่จัดเรียงอ่านง่าย
+  Widget _buildCompactInfo(String label, String value) {
+    return Text.rich( // 🟢 เปลี่ยนจาก RichText เป็น Text.rich
+      TextSpan(
+        text: '$label: ',
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.bold,
+          color: Colors.black87,
+        ),
+        children: [
+          TextSpan(
+            text: value,
+            style: const TextStyle(
+              fontWeight: FontWeight.normal,
+              color: Colors.black87,
+            ),
+          ),
+        ],
+      ),
+      maxLines: 1, // 🟢 ย้าย maxLines และ overflow ลงมาไว้ตรงนี้
+      overflow: TextOverflow.ellipsis,
     );
   }
 
@@ -549,6 +575,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                               isRequired: false,
                             ),
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Expanded(
                                   child: _buildInputField(
@@ -581,6 +608,26 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                         // --- ส่วนรายชื่อผู้ป่วย ---
                         _buildSectionContainer(
                           title: 'ข้อมูลผู้ป่วยในความดูแล',
+                          // 🌟 เพิ่มปุ่ม "เพิ่ม" ไว้ข้างหลัง title
+                          trailing: ElevatedButton.icon(
+                            icon: const Icon(Icons.add, color: Colors.white, size: 16),
+                            label: const Text(
+                              'เพิ่ม',
+                              style: TextStyle(fontSize: 13, color: Colors.white),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                              minimumSize: const Size(0, 32),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            onPressed: () => _openPatientForm(
+                              patientKey: null,
+                              initialData: null,
+                            ),
+                          ),
                           children: [
                             if (_patientsData.isEmpty)
                               const Padding(
@@ -593,199 +640,174 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
                             ..._patientsData.entries.map((entry) {
                               final pData = entry.value;
-                              String fname =
-                                  pData['firstname']?.toString().trim() ?? '';
-                              String lname =
-                                  pData['lastname']?.toString().trim() ?? '';
-                              String displayName =
-                                  (fname.isNotEmpty || lname.isNotEmpty)
+                              String fname = pData['firstname']?.toString().trim() ?? '';
+                              String lname = pData['lastname']?.toString().trim() ?? '';
+                              String displayName = (fname.isNotEmpty || lname.isNotEmpty)
                                   ? '$fname $lname'
                                   : 'ผู้ป่วย ID: ${entry.key}';
 
-                              // เช็คว่าคนนี้คือผู้ป่วยหลักหรือไม่
-                              bool isCurrentlyActive =
-                                  entry.key == _activePatientKey;
+                              String patientId = pData['patientId'] ?? '-';
+                              // ทำการปิดบังเลขบัตรประชาชนสำหรับผู้ป่วยที่ไม่ได้ใช้งานอยู่
+                              if (patientId.length > 8 && entry.key != _activePatientKey) {
+                                patientId = patientId.substring(0, 8) + 'xxxxx';
+                              }
 
-                              return Card(
+                              String gender = pData['gender'] ?? '-';
+                              String phone = pData['phonenumber'] ?? '-';
+                              String disease = pData['disease'] ?? '-';
+                              if(disease.isEmpty) disease = '-';
+                              String mobility = pData['mobility'] ?? '-';
+
+                              // เช็คว่าคนนี้คือผู้ป่วยหลักหรือไม่
+                              bool isCurrentlyActive = entry.key == _activePatientKey;
+
+                              return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
-                                shape: RoundedRectangleBorder(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isCurrentlyActive
+                                      ? Colors.green.shade50
+                                      : const Color(0xFFFAF8FF),
                                   borderRadius: BorderRadius.circular(12),
-                                  side: BorderSide(
+                                  border: Border.all(
                                     color: isCurrentlyActive
                                         ? Colors.green
                                         : primaryColor.withOpacity(0.3),
                                     width: isCurrentlyActive ? 2 : 1,
                                   ),
                                 ),
-                                elevation: isCurrentlyActive ? 4 : 0,
-                                color: isCurrentlyActive
-                                    ? Colors.green.shade50
-                                    : const Color(0xFFFAF8FF),
-                                child: ExpansionTile(
-                                  initiallyExpanded: isCurrentlyActive,
-                                  title: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        displayName,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: isCurrentlyActive
-                                              ? Colors.green.shade700
-                                              : darkPurple,
-                                          fontSize: 15,
-                                        ),
-                                      ),
-                                      if (isCurrentlyActive)
-                                        Container(
-                                          margin: const EdgeInsets.only(top: 4),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.green,
-                                            borderRadius: BorderRadius.circular(
-                                              4,
-                                            ),
-                                          ),
-                                          child: const Text(
-                                            '🟢 ผู้รับบริการปัจจุบัน',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                  leading: CircleAvatar(
-                                    backgroundColor: isCurrentlyActive
-                                        ? Colors.green
-                                        : primaryColor,
-                                    backgroundImage:
-                                        (pData['patientphoto'] != null &&
-                                            pData['patientphoto']
-                                                .toString()
-                                                .isNotEmpty)
-                                        ? MemoryImage(
-                                            base64Decode(
-                                              pData['patientphoto']
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 25,
+                                      backgroundColor: isCurrentlyActive ? Colors.green : primaryColor,
+                                      backgroundImage: (pData['patientphoto'] != null &&
+                                              pData['patientphoto'].toString().isNotEmpty)
+                                          ? MemoryImage(
+                                              base64Decode(pData['patientphoto']
                                                   .toString()
                                                   .split(',')
-                                                  .last,
-                                            ),
-                                          )
-                                        : null,
-                                    child:
-                                        (pData['patientphoto'] == null ||
-                                            pData['patientphoto']
-                                                .toString()
-                                                .isEmpty)
-                                        ? const Icon(
-                                            Icons.person,
-                                            color: Colors.white,
-                                          )
-                                        : null,
-                                  ),
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16.0,
-                                        vertical: 12.0,
-                                      ),
-                                      decoration: const BoxDecoration(
-                                        border: Border(
-                                          top: BorderSide(
-                                            color: Colors.black12,
-                                            width: 1,
-                                          ),
-                                        ),
-                                      ),
+                                                  .last))
+                                          : null,
+                                      child: (pData['patientphoto'] == null ||
+                                              pData['patientphoto'].toString().isEmpty)
+                                          ? const Icon(Icons.person, color: Colors.white, size: 30)
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
                                       child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          _buildInfoRow(
-                                            'บัตรประชาชน:',
-                                            pData['patientId'] ?? '-',
-                                          ),
-                                          _buildInfoRow(
-                                            'เพศ:',
-                                            pData['gender'] ?? '-',
-                                          ),
-                                          _buildInfoRow(
-                                            'เบอร์โทร:',
-                                            pData['phonenumber'] ?? '-',
-                                          ),
-                                          _buildInfoRow(
-                                            'โรคประจำตัว:',
-                                            pData['disease'] ?? '-',
-                                          ),
-                                          _buildInfoRow(
-                                            'การเคลื่อนไหว:',
-                                            pData['mobility'] ?? '-',
-                                          ),
-                                          const SizedBox(height: 12),
-
-                                          // ปุ่มแก้ไข/ลบ/และตั้งเป็นผู้ป่วยปัจจุบัน
                                           Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
-                                              if (!isCurrentlyActive)
-                                                ElevatedButton.icon(
-                                                  icon: const Icon(
-                                                    Icons.check_circle,
-                                                    size: 16,
+                                              Expanded(
+                                                child: Text(
+                                                  displayName,
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: isCurrentlyActive
+                                                        ? Colors.green.shade700
+                                                        : darkPurple,
+                                                    fontSize: 16,
                                                   ),
-                                                  label: const Text(
-                                                    'เลือกใช้บริการ',
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              if (isCurrentlyActive)
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
                                                   ),
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor:
-                                                        Colors.green,
-                                                    foregroundColor:
-                                                        Colors.white,
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 10,
-                                                        ),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.green,
+                                                    borderRadius: BorderRadius.circular(20),
                                                   ),
-                                                  onPressed: () =>
-                                                      _setActivePatient(
-                                                        entry.key,
-                                                      ),
+                                                  child: const Text(
+                                                    'ผู้รับบริการปัจจุบัน',
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
                                                 )
                                               else
-                                                const SizedBox(),
-
-                                              Row(
-                                                children: [
-                                                  IconButton(
-                                                    icon: Icon(
-                                                      Icons.edit,
-                                                      color: primaryColor,
+                                                ElevatedButton.icon(
+                                                  icon: const Icon(Icons.check, size: 14),
+                                                  label: const Text('เลือกใช้งาน', style: TextStyle(fontSize: 12)),
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.grey.shade300,
+                                                    foregroundColor: Colors.black87,
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                                                    minimumSize: const Size(0, 28),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(20),
                                                     ),
-                                                    tooltip: 'แก้ไขข้อมูล',
-                                                    onPressed: () =>
-                                                        _openPatientForm(
-                                                          patientKey: entry.key,
-                                                          initialData: pData,
-                                                        ),
                                                   ),
-                                                  IconButton(
-                                                    icon: const Icon(
-                                                      Icons.delete,
-                                                      color: Colors.red,
+                                                  onPressed: () => _setActivePatient(entry.key),
+                                                ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          // 🌟 ข้อมูลผู้ป่วยแบบจัดคอลัมน์ให้อ่านง่าย
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                flex: 3, 
+                                                child: _buildCompactInfo('บัตร', patientId)
+                                              ),
+                                              Expanded(
+                                                flex: 2, 
+                                                child: _buildCompactInfo('เพศ', gender)
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                flex: 3, 
+                                                child: _buildCompactInfo('โทร', phone)
+                                              ),
+                                              Expanded(
+                                                flex: 2, 
+                                                child: _buildCompactInfo('โรค', disease)
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment: CrossAxisAlignment.end,
+                                            children: [
+                                              Expanded(
+                                                child: _buildCompactInfo('เคลื่อนไหว', mobility),
+                                              ),
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  InkWell(
+                                                    onTap: () => _openPatientForm(
+                                                      patientKey: entry.key,
+                                                      initialData: pData,
                                                     ),
-                                                    tooltip: 'ลบผู้ป่วย',
-                                                    onPressed: () =>
-                                                        _handleDeletePatient(
-                                                          entry.key,
-                                                        ),
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.all(4.0),
+                                                      child: Icon(Icons.edit, color: primaryColor, size: 20),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  InkWell(
+                                                    onTap: () => _handleDeletePatient(entry.key),
+                                                    child: const Padding(
+                                                      padding: EdgeInsets.all(4.0),
+                                                      child: Icon(Icons.delete, color: Colors.red, size: 20),
+                                                    ),
                                                   ),
                                                 ],
                                               ),
@@ -799,49 +821,18 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                               );
                             }).toList(),
 
-                            const SizedBox(height: 5),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                icon: const Icon(
-                                  Icons.add_circle,
-                                  color: Colors.white,
-                                ),
-                                label: const Text(
-                                  'เพิ่มข้อมูลผู้ป่วยใหม่',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: primaryColor,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                onPressed: () => _openPatientForm(
-                                  patientKey: null,
-                                  initialData: null,
-                                ),
-                              ),
-                            ),
                           ],
                         ),
 
                         const SizedBox(height: 10),
-                        // ปุ่มบันทึกข้อมูลญาติ
                         // ปุ่มบันทึกข้อมูลญาติและปุ่มกลับ
                         Row(
                           children: [
                             Expanded(
                               child: SizedBox(
                                 height: 50,
-                                child: ElevatedButton(
+                                child: ElevatedButton.icon(
+                                  icon: const Icon(Icons.save, color: Colors.white),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: primaryColor,
                                     shape: RoundedRectangleBorder(
@@ -849,8 +840,8 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                     ),
                                   ),
                                   onPressed: _handleSaveRelative,
-                                  child: const Text(
-                                    'บันทึกข้อมูลญาติ',
+                                  label: const Text(
+                                    'บันทึกข้อมูล',
                                     style: TextStyle(
                                       fontSize: 16,
                                       color: Colors.white,
@@ -864,7 +855,8 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                             Expanded(
                               child: SizedBox(
                                 height: 50,
-                                child: OutlinedButton(
+                                child: OutlinedButton.icon(
+                                  icon: Icon(Icons.arrow_back, color: darkPurple),
                                   style: OutlinedButton.styleFrom(
                                     backgroundColor: Colors.white,
                                     side: BorderSide(
@@ -882,8 +874,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                       ),
                                     ),
                                   ),
-                                  // เปลี่ยนจาก 'ยกเลิก' เป็น 'กลับหน้าหลัก'
-                                  child: Text(
+                                  label: Text(
                                     'กลับหน้าหลัก',
                                     style: TextStyle(
                                       fontSize: 16,
@@ -906,9 +897,11 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
     );
   }
 
+  // 🌟 ปรับปรุง _buildSectionContainer เล็กน้อยเพื่อรองรับ widget ต่อท้ายหัวข้อ (เช่น ปุ่มเพิ่ม)
   Widget _buildSectionContainer({
     required String title,
     required List<Widget> children,
+    Widget? trailing, 
   }) {
     return Container(
       width: double.infinity,
@@ -929,24 +922,30 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                width: 6,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: primaryColor,
-                  borderRadius: BorderRadius.circular(4),
-                ),
+              Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: primaryColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: darkPurple,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: darkPurple,
-                ),
-              ),
+              if (trailing != null) trailing, 
             ],
           ),
           const SizedBox(height: 12),
@@ -1142,8 +1141,9 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
         DateTime today = DateTime.now();
         int age = today.year - birthDate.year;
         if (today.month < birthDate.month ||
-            (today.month == birthDate.month && today.day < birthDate.day))
+            (today.month == birthDate.month && today.day < birthDate.day)) {
           age--;
+        }
         _patAgeController.text = age >= 0 ? '$age ปี' : '0 ปี';
       }
     } catch (e) {
@@ -1256,7 +1256,7 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
         if (snapshot.exists && snapshot.value is Map) {
           final allUsers = Map<String, dynamic>.from(snapshot.value as Map);
           for (var entry in allUsers.entries) {
-            String userKey = entry.key;
+            String userKey = entry.key; // unused
             var userData = entry.value;
 
             if (userData is Map) {
@@ -1728,8 +1728,9 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
       } else if (_profilePhotoBase64 != null &&
           _profilePhotoBase64!.isNotEmpty) {
         String cleanBase64 = _profilePhotoBase64!.trim();
-        if (cleanBase64.contains(','))
+        if (cleanBase64.contains(',')) {
           cleanBase64 = cleanBase64.split(',').last;
+        }
         imageProvider = MemoryImage(base64Decode(cleanBase64));
       }
     } catch (e) {
@@ -1868,8 +1869,9 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
                     isRequired: _selectedPatMobility == 'ไม่ปกติ',
                     validator: (val) {
                       if (_selectedPatMobility == 'ไม่ปกติ' &&
-                          (val == null || val.trim().isEmpty))
+                          (val == null || val.trim().isEmpty)) {
                         return 'กรุณาระบุอาการเมื่อเลือก "ไม่ปกติ"';
+                      }
                       return null;
                     },
                   ),
@@ -1920,8 +1922,9 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
             validator ??
             (v) {
               if (!enabled) return null;
-              if (isRequired && (v == null || v.trim().isEmpty))
+              if (isRequired && (v == null || v.trim().isEmpty)) {
                 return 'กรุณากรอกข้อมูล';
+              }
               return null;
             },
         decoration: InputDecoration(
