@@ -911,6 +911,12 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       lastname: patientData?['lastname']?.toString(),
     );
 
+    String relFullName = formatFullNameWithTitle(
+      gender: '',
+      firstname: relativeData?['firstname']?.toString(),
+      lastname: relativeData?['lastname']?.toString(),
+    );
+
     return Scaffold(
       backgroundColor: bgColor,
       appBar: const CustomHeader(title: 'รายละเอียดคำขอ', showBackButton: true),
@@ -1003,10 +1009,12 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: _buildDocField(
                                 'โรงพยาบาล',
+                                maxLines: 2,
                                 req.department?.hospital?.hospitalname ??
                                     'ไม่ระบุสถานที่',
                               ),
@@ -1183,6 +1191,53 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                     ),
                   ),
 
+                  _buildSectionWrapper(
+                    title: 'ข้อมูลญาติผู้ติดต่อ',
+                    icon: Icons.family_restroom_rounded,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _buildDocField(
+                                'ชื่อ-นามสกุล',
+                                'คุณ $relFullName', // 🌟 ลบคำว่า 'คุณ ' ที่ถูกฮาร์ดโค้ดไว้ออกเรียบร้อยแล้ว
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildDocField(
+                                'ความสัมพันธ์',
+                                relativeData?['relationship'] ?? '-',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _buildDocField(
+                                'เบอร์โทรศัพท์',
+                                relativeData?['phonenumber'] ?? '-',
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildDocField(
+                                'LINE ID',
+                                relativeData?['lineId'] ?? '-',
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
                   const SizedBox(height: 16),
                 ],
               ),
@@ -1196,7 +1251,12 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     );
   }
 
-  Widget _buildDocField(String label, String value, {Color? color}) {
+  Widget _buildDocField(
+    String label,
+    String value, {
+    int maxLines = 1,
+    Color? color,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1210,14 +1270,15 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
         ),
         const SizedBox(height: 4),
         Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            color: color ?? labelColor,
-            fontWeight: FontWeight.bold,
-          ),
-          maxLines: 2,
+          value.isEmpty ? '-' : value,
+          maxLines: maxLines,
           overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF241C2B),
+            height: 1.4,
+          ),
         ),
       ],
     );

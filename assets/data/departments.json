@@ -1,0 +1,3702 @@
+[
+  {
+    "id": 1,
+    "hospital_id": 1,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 2,
+    "hospital_id": 1,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 3,
+    "hospital_id": 1,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 4,
+    "hospital_id": 1,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 5,
+    "hospital_id": 1,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 6,
+    "hospital_id": 1,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 7,
+    "hospital_id": 1,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 8,
+    "hospital_id": 1,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 9,
+    "hospital_id": 1,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 10,
+    "hospital_id": 1,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 11,
+    "hospital_id": 1,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 12,
+    "hospital_id": 1,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 13,
+    "hospital_id": 1,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 14,
+    "hospital_id": 1,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 15,
+    "hospital_id": 1,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 16,
+    "hospital_id": 1,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 17,
+    "hospital_id": 1,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 18,
+    "hospital_id": 1,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 19,
+    "hospital_id": 1,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 20,
+    "hospital_id": 1,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 21,
+    "hospital_id": 2,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 22,
+    "hospital_id": 2,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 23,
+    "hospital_id": 2,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 24,
+    "hospital_id": 2,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 25,
+    "hospital_id": 2,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 26,
+    "hospital_id": 2,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 27,
+    "hospital_id": 2,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 28,
+    "hospital_id": 2,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 29,
+    "hospital_id": 2,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 30,
+    "hospital_id": 2,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 31,
+    "hospital_id": 2,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 32,
+    "hospital_id": 2,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 33,
+    "hospital_id": 2,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 34,
+    "hospital_id": 2,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 35,
+    "hospital_id": 2,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 36,
+    "hospital_id": 2,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 37,
+    "hospital_id": 2,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 38,
+    "hospital_id": 2,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 39,
+    "hospital_id": 2,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 40,
+    "hospital_id": 2,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 41,
+    "hospital_id": 3,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 42,
+    "hospital_id": 3,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 43,
+    "hospital_id": 3,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 44,
+    "hospital_id": 3,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 45,
+    "hospital_id": 3,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 46,
+    "hospital_id": 3,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 47,
+    "hospital_id": 3,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 48,
+    "hospital_id": 3,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 49,
+    "hospital_id": 3,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 50,
+    "hospital_id": 3,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 51,
+    "hospital_id": 3,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 52,
+    "hospital_id": 3,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 53,
+    "hospital_id": 3,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 54,
+    "hospital_id": 3,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 55,
+    "hospital_id": 3,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 56,
+    "hospital_id": 3,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 57,
+    "hospital_id": 3,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 58,
+    "hospital_id": 3,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 59,
+    "hospital_id": 3,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 60,
+    "hospital_id": 3,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 61,
+    "hospital_id": 4,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 62,
+    "hospital_id": 4,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 63,
+    "hospital_id": 4,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 64,
+    "hospital_id": 4,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 65,
+    "hospital_id": 4,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 66,
+    "hospital_id": 4,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 67,
+    "hospital_id": 4,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 68,
+    "hospital_id": 4,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 69,
+    "hospital_id": 4,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 70,
+    "hospital_id": 4,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 71,
+    "hospital_id": 4,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 72,
+    "hospital_id": 4,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 73,
+    "hospital_id": 4,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 74,
+    "hospital_id": 4,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 75,
+    "hospital_id": 4,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 76,
+    "hospital_id": 4,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 77,
+    "hospital_id": 4,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 78,
+    "hospital_id": 4,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 79,
+    "hospital_id": 4,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 80,
+    "hospital_id": 4,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 81,
+    "hospital_id": 5,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 82,
+    "hospital_id": 5,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 83,
+    "hospital_id": 5,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 84,
+    "hospital_id": 5,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 85,
+    "hospital_id": 5,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 86,
+    "hospital_id": 5,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 87,
+    "hospital_id": 5,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 88,
+    "hospital_id": 5,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 89,
+    "hospital_id": 5,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 90,
+    "hospital_id": 5,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 91,
+    "hospital_id": 5,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 92,
+    "hospital_id": 5,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 93,
+    "hospital_id": 5,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 94,
+    "hospital_id": 5,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 95,
+    "hospital_id": 5,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 96,
+    "hospital_id": 5,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 97,
+    "hospital_id": 5,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 98,
+    "hospital_id": 5,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 99,
+    "hospital_id": 5,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 100,
+    "hospital_id": 5,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 101,
+    "hospital_id": 6,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 102,
+    "hospital_id": 6,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 103,
+    "hospital_id": 6,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 104,
+    "hospital_id": 6,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 105,
+    "hospital_id": 6,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 106,
+    "hospital_id": 6,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 107,
+    "hospital_id": 6,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 108,
+    "hospital_id": 6,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 109,
+    "hospital_id": 6,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 110,
+    "hospital_id": 6,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 111,
+    "hospital_id": 6,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 112,
+    "hospital_id": 6,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 113,
+    "hospital_id": 6,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 114,
+    "hospital_id": 6,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 115,
+    "hospital_id": 6,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 116,
+    "hospital_id": 6,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 117,
+    "hospital_id": 6,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 118,
+    "hospital_id": 6,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 119,
+    "hospital_id": 6,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 120,
+    "hospital_id": 6,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 121,
+    "hospital_id": 7,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 122,
+    "hospital_id": 7,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 123,
+    "hospital_id": 7,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 124,
+    "hospital_id": 7,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 125,
+    "hospital_id": 7,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 126,
+    "hospital_id": 7,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 127,
+    "hospital_id": 7,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 128,
+    "hospital_id": 7,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 129,
+    "hospital_id": 7,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 130,
+    "hospital_id": 7,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 131,
+    "hospital_id": 7,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 132,
+    "hospital_id": 7,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 133,
+    "hospital_id": 7,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 134,
+    "hospital_id": 7,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 135,
+    "hospital_id": 7,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 136,
+    "hospital_id": 7,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 137,
+    "hospital_id": 7,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 138,
+    "hospital_id": 7,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 139,
+    "hospital_id": 7,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 140,
+    "hospital_id": 7,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 141,
+    "hospital_id": 8,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 142,
+    "hospital_id": 8,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 143,
+    "hospital_id": 8,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 144,
+    "hospital_id": 8,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 145,
+    "hospital_id": 8,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 146,
+    "hospital_id": 8,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 147,
+    "hospital_id": 8,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 148,
+    "hospital_id": 8,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 149,
+    "hospital_id": 8,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 150,
+    "hospital_id": 8,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 151,
+    "hospital_id": 8,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 152,
+    "hospital_id": 8,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 153,
+    "hospital_id": 8,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 154,
+    "hospital_id": 8,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 155,
+    "hospital_id": 8,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 156,
+    "hospital_id": 8,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 157,
+    "hospital_id": 8,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 158,
+    "hospital_id": 8,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 159,
+    "hospital_id": 8,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 160,
+    "hospital_id": 8,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 161,
+    "hospital_id": 9,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 162,
+    "hospital_id": 9,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 163,
+    "hospital_id": 9,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 164,
+    "hospital_id": 9,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 165,
+    "hospital_id": 9,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 166,
+    "hospital_id": 9,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 167,
+    "hospital_id": 9,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 168,
+    "hospital_id": 9,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 169,
+    "hospital_id": 9,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 170,
+    "hospital_id": 9,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 171,
+    "hospital_id": 9,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 172,
+    "hospital_id": 9,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 173,
+    "hospital_id": 9,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 174,
+    "hospital_id": 9,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 175,
+    "hospital_id": 9,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 176,
+    "hospital_id": 9,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 177,
+    "hospital_id": 9,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 178,
+    "hospital_id": 9,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 179,
+    "hospital_id": 9,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 180,
+    "hospital_id": 9,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 181,
+    "hospital_id": 10,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 182,
+    "hospital_id": 10,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 183,
+    "hospital_id": 10,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 184,
+    "hospital_id": 10,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 185,
+    "hospital_id": 10,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 186,
+    "hospital_id": 10,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 187,
+    "hospital_id": 10,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 188,
+    "hospital_id": 10,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 189,
+    "hospital_id": 10,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 190,
+    "hospital_id": 10,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 191,
+    "hospital_id": 10,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 192,
+    "hospital_id": 10,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 193,
+    "hospital_id": 10,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 194,
+    "hospital_id": 10,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 195,
+    "hospital_id": 10,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 196,
+    "hospital_id": 10,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 197,
+    "hospital_id": 10,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 198,
+    "hospital_id": 10,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 199,
+    "hospital_id": 10,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 200,
+    "hospital_id": 10,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 201,
+    "hospital_id": 11,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 202,
+    "hospital_id": 11,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 203,
+    "hospital_id": 11,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 204,
+    "hospital_id": 11,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 205,
+    "hospital_id": 11,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 206,
+    "hospital_id": 11,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 207,
+    "hospital_id": 11,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 208,
+    "hospital_id": 11,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 209,
+    "hospital_id": 11,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 210,
+    "hospital_id": 11,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 211,
+    "hospital_id": 11,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 212,
+    "hospital_id": 11,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 213,
+    "hospital_id": 11,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 214,
+    "hospital_id": 11,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 215,
+    "hospital_id": 11,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 216,
+    "hospital_id": 11,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 217,
+    "hospital_id": 11,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 218,
+    "hospital_id": 11,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 219,
+    "hospital_id": 11,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 220,
+    "hospital_id": 11,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 221,
+    "hospital_id": 12,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 222,
+    "hospital_id": 12,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 223,
+    "hospital_id": 12,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 224,
+    "hospital_id": 12,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 225,
+    "hospital_id": 12,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 226,
+    "hospital_id": 12,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 227,
+    "hospital_id": 12,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 228,
+    "hospital_id": 12,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 229,
+    "hospital_id": 12,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 230,
+    "hospital_id": 12,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 231,
+    "hospital_id": 12,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 232,
+    "hospital_id": 12,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 233,
+    "hospital_id": 12,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 234,
+    "hospital_id": 12,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 235,
+    "hospital_id": 12,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 236,
+    "hospital_id": 12,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 237,
+    "hospital_id": 12,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 238,
+    "hospital_id": 12,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 239,
+    "hospital_id": 12,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 240,
+    "hospital_id": 12,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 241,
+    "hospital_id": 13,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 242,
+    "hospital_id": 13,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 243,
+    "hospital_id": 13,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 244,
+    "hospital_id": 13,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 245,
+    "hospital_id": 13,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 246,
+    "hospital_id": 13,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 247,
+    "hospital_id": 13,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 248,
+    "hospital_id": 13,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 249,
+    "hospital_id": 13,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 250,
+    "hospital_id": 13,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 251,
+    "hospital_id": 13,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 252,
+    "hospital_id": 13,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 253,
+    "hospital_id": 13,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 254,
+    "hospital_id": 13,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 255,
+    "hospital_id": 13,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 256,
+    "hospital_id": 13,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 257,
+    "hospital_id": 13,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 258,
+    "hospital_id": 13,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 259,
+    "hospital_id": 13,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 260,
+    "hospital_id": 13,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 261,
+    "hospital_id": 14,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 262,
+    "hospital_id": 14,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 263,
+    "hospital_id": 14,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 264,
+    "hospital_id": 14,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 265,
+    "hospital_id": 14,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 266,
+    "hospital_id": 14,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 267,
+    "hospital_id": 14,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 268,
+    "hospital_id": 14,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 269,
+    "hospital_id": 14,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 270,
+    "hospital_id": 14,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 271,
+    "hospital_id": 14,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 272,
+    "hospital_id": 14,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 273,
+    "hospital_id": 14,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 274,
+    "hospital_id": 14,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 275,
+    "hospital_id": 14,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 276,
+    "hospital_id": 14,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 277,
+    "hospital_id": 14,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 278,
+    "hospital_id": 14,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 279,
+    "hospital_id": 14,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 280,
+    "hospital_id": 14,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 281,
+    "hospital_id": 15,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 282,
+    "hospital_id": 15,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 283,
+    "hospital_id": 15,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 284,
+    "hospital_id": 15,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 285,
+    "hospital_id": 15,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 286,
+    "hospital_id": 15,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 287,
+    "hospital_id": 15,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 288,
+    "hospital_id": 15,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 289,
+    "hospital_id": 15,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 290,
+    "hospital_id": 15,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 291,
+    "hospital_id": 15,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 292,
+    "hospital_id": 15,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 293,
+    "hospital_id": 15,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 294,
+    "hospital_id": 15,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 295,
+    "hospital_id": 15,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 296,
+    "hospital_id": 15,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 297,
+    "hospital_id": 15,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 298,
+    "hospital_id": 15,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 299,
+    "hospital_id": 15,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 300,
+    "hospital_id": 15,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 301,
+    "hospital_id": 16,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 302,
+    "hospital_id": 16,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 303,
+    "hospital_id": 16,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 304,
+    "hospital_id": 16,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 305,
+    "hospital_id": 16,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 306,
+    "hospital_id": 16,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 307,
+    "hospital_id": 16,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 308,
+    "hospital_id": 16,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 309,
+    "hospital_id": 16,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 310,
+    "hospital_id": 16,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 311,
+    "hospital_id": 16,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 312,
+    "hospital_id": 16,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 313,
+    "hospital_id": 16,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 314,
+    "hospital_id": 16,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 315,
+    "hospital_id": 16,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 316,
+    "hospital_id": 16,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 317,
+    "hospital_id": 16,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 318,
+    "hospital_id": 16,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 319,
+    "hospital_id": 16,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 320,
+    "hospital_id": 16,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 321,
+    "hospital_id": 17,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 322,
+    "hospital_id": 17,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 323,
+    "hospital_id": 17,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 324,
+    "hospital_id": 17,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 325,
+    "hospital_id": 17,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 326,
+    "hospital_id": 17,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 327,
+    "hospital_id": 17,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 328,
+    "hospital_id": 17,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 329,
+    "hospital_id": 17,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 330,
+    "hospital_id": 17,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 331,
+    "hospital_id": 17,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 332,
+    "hospital_id": 17,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 333,
+    "hospital_id": 17,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 334,
+    "hospital_id": 17,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 335,
+    "hospital_id": 17,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 336,
+    "hospital_id": 17,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 337,
+    "hospital_id": 17,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 338,
+    "hospital_id": 17,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 339,
+    "hospital_id": 17,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 340,
+    "hospital_id": 17,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 341,
+    "hospital_id": 18,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 342,
+    "hospital_id": 18,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 343,
+    "hospital_id": 18,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 344,
+    "hospital_id": 18,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 345,
+    "hospital_id": 18,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 346,
+    "hospital_id": 18,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 347,
+    "hospital_id": 18,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 348,
+    "hospital_id": 18,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 349,
+    "hospital_id": 18,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 350,
+    "hospital_id": 18,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 351,
+    "hospital_id": 18,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 352,
+    "hospital_id": 18,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 353,
+    "hospital_id": 18,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 354,
+    "hospital_id": 18,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 355,
+    "hospital_id": 18,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 356,
+    "hospital_id": 18,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 357,
+    "hospital_id": 18,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 358,
+    "hospital_id": 18,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 359,
+    "hospital_id": 18,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 360,
+    "hospital_id": 18,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 361,
+    "hospital_id": 19,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 362,
+    "hospital_id": 19,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 363,
+    "hospital_id": 19,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 364,
+    "hospital_id": 19,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 365,
+    "hospital_id": 19,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 366,
+    "hospital_id": 19,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 367,
+    "hospital_id": 19,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 368,
+    "hospital_id": 19,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 369,
+    "hospital_id": 19,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 370,
+    "hospital_id": 19,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 371,
+    "hospital_id": 19,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 372,
+    "hospital_id": 19,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 373,
+    "hospital_id": 19,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 374,
+    "hospital_id": 19,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 375,
+    "hospital_id": 19,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 376,
+    "hospital_id": 19,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 377,
+    "hospital_id": 19,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 378,
+    "hospital_id": 19,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 379,
+    "hospital_id": 19,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 380,
+    "hospital_id": 19,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 381,
+    "hospital_id": 20,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 382,
+    "hospital_id": 20,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 383,
+    "hospital_id": 20,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 384,
+    "hospital_id": 20,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 385,
+    "hospital_id": 20,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 386,
+    "hospital_id": 20,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 387,
+    "hospital_id": 20,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 388,
+    "hospital_id": 20,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 389,
+    "hospital_id": 20,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 390,
+    "hospital_id": 20,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 391,
+    "hospital_id": 20,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 392,
+    "hospital_id": 20,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 393,
+    "hospital_id": 20,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 394,
+    "hospital_id": 20,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 395,
+    "hospital_id": 20,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 396,
+    "hospital_id": 20,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 397,
+    "hospital_id": 20,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 398,
+    "hospital_id": 20,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 399,
+    "hospital_id": 20,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 400,
+    "hospital_id": 20,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 401,
+    "hospital_id": 21,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 402,
+    "hospital_id": 21,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 403,
+    "hospital_id": 21,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 404,
+    "hospital_id": 21,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 405,
+    "hospital_id": 21,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 406,
+    "hospital_id": 21,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 407,
+    "hospital_id": 21,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 408,
+    "hospital_id": 21,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 409,
+    "hospital_id": 21,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 410,
+    "hospital_id": 21,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 411,
+    "hospital_id": 21,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 412,
+    "hospital_id": 21,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 413,
+    "hospital_id": 21,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 414,
+    "hospital_id": 21,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 415,
+    "hospital_id": 21,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 416,
+    "hospital_id": 21,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 417,
+    "hospital_id": 21,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 418,
+    "hospital_id": 21,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 419,
+    "hospital_id": 21,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 420,
+    "hospital_id": 21,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 421,
+    "hospital_id": 22,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 422,
+    "hospital_id": 22,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 423,
+    "hospital_id": 22,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 424,
+    "hospital_id": 22,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 425,
+    "hospital_id": 22,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 426,
+    "hospital_id": 22,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 427,
+    "hospital_id": 22,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 428,
+    "hospital_id": 22,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 429,
+    "hospital_id": 22,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 430,
+    "hospital_id": 22,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 431,
+    "hospital_id": 22,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 432,
+    "hospital_id": 22,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 433,
+    "hospital_id": 22,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 434,
+    "hospital_id": 22,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 435,
+    "hospital_id": 22,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 436,
+    "hospital_id": 22,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 437,
+    "hospital_id": 22,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 438,
+    "hospital_id": 22,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 439,
+    "hospital_id": 22,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 440,
+    "hospital_id": 22,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 441,
+    "hospital_id": 23,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 442,
+    "hospital_id": 23,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 443,
+    "hospital_id": 23,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 444,
+    "hospital_id": 23,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 445,
+    "hospital_id": 23,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 446,
+    "hospital_id": 23,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 447,
+    "hospital_id": 23,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 448,
+    "hospital_id": 23,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 449,
+    "hospital_id": 23,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 450,
+    "hospital_id": 23,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 451,
+    "hospital_id": 23,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 452,
+    "hospital_id": 23,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 453,
+    "hospital_id": 23,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 454,
+    "hospital_id": 23,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 455,
+    "hospital_id": 23,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 456,
+    "hospital_id": 23,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 457,
+    "hospital_id": 23,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 458,
+    "hospital_id": 23,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 459,
+    "hospital_id": 23,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 460,
+    "hospital_id": 23,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 461,
+    "hospital_id": 24,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 462,
+    "hospital_id": 24,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 463,
+    "hospital_id": 24,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 464,
+    "hospital_id": 24,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 465,
+    "hospital_id": 24,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 466,
+    "hospital_id": 24,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 467,
+    "hospital_id": 24,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 468,
+    "hospital_id": 24,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 469,
+    "hospital_id": 24,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 470,
+    "hospital_id": 24,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 471,
+    "hospital_id": 24,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 472,
+    "hospital_id": 24,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 473,
+    "hospital_id": 24,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 474,
+    "hospital_id": 24,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 475,
+    "hospital_id": 24,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 476,
+    "hospital_id": 24,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 477,
+    "hospital_id": 24,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 478,
+    "hospital_id": 24,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 479,
+    "hospital_id": 24,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 480,
+    "hospital_id": 24,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 481,
+    "hospital_id": 25,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 482,
+    "hospital_id": 25,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 483,
+    "hospital_id": 25,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 484,
+    "hospital_id": 25,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 485,
+    "hospital_id": 25,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 486,
+    "hospital_id": 25,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 487,
+    "hospital_id": 25,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 488,
+    "hospital_id": 25,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 489,
+    "hospital_id": 25,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 490,
+    "hospital_id": 25,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 491,
+    "hospital_id": 25,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 492,
+    "hospital_id": 25,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 493,
+    "hospital_id": 25,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 494,
+    "hospital_id": 25,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 495,
+    "hospital_id": 25,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 496,
+    "hospital_id": 25,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 497,
+    "hospital_id": 25,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 498,
+    "hospital_id": 25,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 499,
+    "hospital_id": 25,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 500,
+    "hospital_id": 25,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 501,
+    "hospital_id": 26,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 502,
+    "hospital_id": 26,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 503,
+    "hospital_id": 26,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 504,
+    "hospital_id": 26,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 505,
+    "hospital_id": 26,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 506,
+    "hospital_id": 26,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 507,
+    "hospital_id": 26,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 508,
+    "hospital_id": 26,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 509,
+    "hospital_id": 26,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 510,
+    "hospital_id": 26,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 511,
+    "hospital_id": 26,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 512,
+    "hospital_id": 26,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 513,
+    "hospital_id": 26,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 514,
+    "hospital_id": 26,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 515,
+    "hospital_id": 26,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 516,
+    "hospital_id": 26,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 517,
+    "hospital_id": 26,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 518,
+    "hospital_id": 26,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 519,
+    "hospital_id": 26,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 520,
+    "hospital_id": 26,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 521,
+    "hospital_id": 27,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 522,
+    "hospital_id": 27,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 523,
+    "hospital_id": 27,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 524,
+    "hospital_id": 27,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 525,
+    "hospital_id": 27,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 526,
+    "hospital_id": 27,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 527,
+    "hospital_id": 27,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 528,
+    "hospital_id": 27,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 529,
+    "hospital_id": 27,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 530,
+    "hospital_id": 27,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 531,
+    "hospital_id": 27,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 532,
+    "hospital_id": 27,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 533,
+    "hospital_id": 27,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 534,
+    "hospital_id": 27,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 535,
+    "hospital_id": 27,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 536,
+    "hospital_id": 27,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 537,
+    "hospital_id": 27,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 538,
+    "hospital_id": 27,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 539,
+    "hospital_id": 27,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 540,
+    "hospital_id": 27,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 541,
+    "hospital_id": 28,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 542,
+    "hospital_id": 28,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 543,
+    "hospital_id": 28,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 544,
+    "hospital_id": 28,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 545,
+    "hospital_id": 28,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 546,
+    "hospital_id": 28,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 547,
+    "hospital_id": 28,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 548,
+    "hospital_id": 28,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 549,
+    "hospital_id": 28,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 550,
+    "hospital_id": 28,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 551,
+    "hospital_id": 28,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 552,
+    "hospital_id": 28,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 553,
+    "hospital_id": 28,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 554,
+    "hospital_id": 28,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 555,
+    "hospital_id": 28,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 556,
+    "hospital_id": 28,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 557,
+    "hospital_id": 28,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 558,
+    "hospital_id": 28,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 559,
+    "hospital_id": 28,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 560,
+    "hospital_id": 28,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 561,
+    "hospital_id": 29,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 562,
+    "hospital_id": 29,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 563,
+    "hospital_id": 29,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 564,
+    "hospital_id": 29,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 565,
+    "hospital_id": 29,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 566,
+    "hospital_id": 29,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 567,
+    "hospital_id": 29,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 568,
+    "hospital_id": 29,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 569,
+    "hospital_id": 29,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 570,
+    "hospital_id": 29,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 571,
+    "hospital_id": 29,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 572,
+    "hospital_id": 29,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 573,
+    "hospital_id": 29,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 574,
+    "hospital_id": 29,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 575,
+    "hospital_id": 29,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 576,
+    "hospital_id": 29,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 577,
+    "hospital_id": 29,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 578,
+    "hospital_id": 29,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 579,
+    "hospital_id": 29,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 580,
+    "hospital_id": 29,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 581,
+    "hospital_id": 30,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 582,
+    "hospital_id": 30,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 583,
+    "hospital_id": 30,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 584,
+    "hospital_id": 30,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 585,
+    "hospital_id": 30,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 586,
+    "hospital_id": 30,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 587,
+    "hospital_id": 30,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 588,
+    "hospital_id": 30,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 589,
+    "hospital_id": 30,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 590,
+    "hospital_id": 30,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 591,
+    "hospital_id": 30,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 592,
+    "hospital_id": 30,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 593,
+    "hospital_id": 30,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 594,
+    "hospital_id": 30,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 595,
+    "hospital_id": 30,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 596,
+    "hospital_id": 30,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 597,
+    "hospital_id": 30,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 598,
+    "hospital_id": 30,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 599,
+    "hospital_id": 30,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 600,
+    "hospital_id": 30,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 601,
+    "hospital_id": 31,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 602,
+    "hospital_id": 31,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 603,
+    "hospital_id": 31,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 604,
+    "hospital_id": 31,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 605,
+    "hospital_id": 31,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 606,
+    "hospital_id": 31,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 607,
+    "hospital_id": 31,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 608,
+    "hospital_id": 31,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 609,
+    "hospital_id": 31,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 610,
+    "hospital_id": 31,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 611,
+    "hospital_id": 31,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 612,
+    "hospital_id": 31,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 613,
+    "hospital_id": 31,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 614,
+    "hospital_id": 31,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 615,
+    "hospital_id": 31,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 616,
+    "hospital_id": 31,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 617,
+    "hospital_id": 31,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 618,
+    "hospital_id": 31,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 619,
+    "hospital_id": 31,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 620,
+    "hospital_id": 31,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 621,
+    "hospital_id": 32,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 622,
+    "hospital_id": 32,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 623,
+    "hospital_id": 32,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 624,
+    "hospital_id": 32,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 625,
+    "hospital_id": 32,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 626,
+    "hospital_id": 32,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 627,
+    "hospital_id": 32,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 628,
+    "hospital_id": 32,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 629,
+    "hospital_id": 32,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 630,
+    "hospital_id": 32,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 631,
+    "hospital_id": 32,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 632,
+    "hospital_id": 32,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 633,
+    "hospital_id": 32,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 634,
+    "hospital_id": 32,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 635,
+    "hospital_id": 32,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 636,
+    "hospital_id": 32,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 637,
+    "hospital_id": 32,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 638,
+    "hospital_id": 32,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 639,
+    "hospital_id": 32,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 640,
+    "hospital_id": 32,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 641,
+    "hospital_id": 33,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 642,
+    "hospital_id": 33,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 643,
+    "hospital_id": 33,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 644,
+    "hospital_id": 33,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 645,
+    "hospital_id": 33,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 646,
+    "hospital_id": 33,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 647,
+    "hospital_id": 33,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 648,
+    "hospital_id": 33,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 649,
+    "hospital_id": 33,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 650,
+    "hospital_id": 33,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 651,
+    "hospital_id": 33,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 652,
+    "hospital_id": 33,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 653,
+    "hospital_id": 33,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 654,
+    "hospital_id": 33,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 655,
+    "hospital_id": 33,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 656,
+    "hospital_id": 33,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 657,
+    "hospital_id": 33,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 658,
+    "hospital_id": 33,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 659,
+    "hospital_id": 33,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 660,
+    "hospital_id": 33,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 661,
+    "hospital_id": 34,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 662,
+    "hospital_id": 34,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 663,
+    "hospital_id": 34,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 664,
+    "hospital_id": 34,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 665,
+    "hospital_id": 34,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 666,
+    "hospital_id": 34,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 667,
+    "hospital_id": 34,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 668,
+    "hospital_id": 34,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 669,
+    "hospital_id": 34,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 670,
+    "hospital_id": 34,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 671,
+    "hospital_id": 34,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 672,
+    "hospital_id": 34,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 673,
+    "hospital_id": 34,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 674,
+    "hospital_id": 34,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 675,
+    "hospital_id": 34,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 676,
+    "hospital_id": 34,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 677,
+    "hospital_id": 34,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 678,
+    "hospital_id": 34,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 679,
+    "hospital_id": 34,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 680,
+    "hospital_id": 34,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 681,
+    "hospital_id": 35,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 682,
+    "hospital_id": 35,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 683,
+    "hospital_id": 35,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 684,
+    "hospital_id": 35,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 685,
+    "hospital_id": 35,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 686,
+    "hospital_id": 35,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 687,
+    "hospital_id": 35,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 688,
+    "hospital_id": 35,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 689,
+    "hospital_id": 35,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 690,
+    "hospital_id": 35,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 691,
+    "hospital_id": 35,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 692,
+    "hospital_id": 35,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 693,
+    "hospital_id": 35,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 694,
+    "hospital_id": 35,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 695,
+    "hospital_id": 35,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 696,
+    "hospital_id": 35,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 697,
+    "hospital_id": 35,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 698,
+    "hospital_id": 35,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 699,
+    "hospital_id": 35,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 700,
+    "hospital_id": 35,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 701,
+    "hospital_id": 36,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 702,
+    "hospital_id": 36,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 703,
+    "hospital_id": 36,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 704,
+    "hospital_id": 36,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 705,
+    "hospital_id": 36,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 706,
+    "hospital_id": 36,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 707,
+    "hospital_id": 36,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 708,
+    "hospital_id": 36,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 709,
+    "hospital_id": 36,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 710,
+    "hospital_id": 36,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 711,
+    "hospital_id": 36,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 712,
+    "hospital_id": 36,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 713,
+    "hospital_id": 36,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 714,
+    "hospital_id": 36,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 715,
+    "hospital_id": 36,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 716,
+    "hospital_id": 36,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 717,
+    "hospital_id": 36,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 718,
+    "hospital_id": 36,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 719,
+    "hospital_id": 36,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 720,
+    "hospital_id": 36,
+    "department_name": "โภชนาการ"
+  },
+  {
+    "id": 721,
+    "hospital_id": 37,
+    "department_name": "ห้องฉุกเฉิน"
+  },
+  {
+    "id": 722,
+    "hospital_id": 37,
+    "department_name": "อายุรกรรม"
+  },
+  {
+    "id": 723,
+    "hospital_id": 37,
+    "department_name": "ศัลยกรรม"
+  },
+  {
+    "id": 724,
+    "hospital_id": 37,
+    "department_name": "กุมารเวชกรรม"
+  },
+  {
+    "id": 725,
+    "hospital_id": 37,
+    "department_name": "สูติ-นรีเวชกรรม"
+  },
+  {
+    "id": 726,
+    "hospital_id": 37,
+    "department_name": "ศัลยกรรมกระดูกและข้อ"
+  },
+  {
+    "id": 727,
+    "hospital_id": 37,
+    "department_name": "จักษุวิทยา"
+  },
+  {
+    "id": 728,
+    "hospital_id": 37,
+    "department_name": "โสต ศอ นาสิก"
+  },
+  {
+    "id": 729,
+    "hospital_id": 37,
+    "department_name": "ทันตกรรม"
+  },
+  {
+    "id": 730,
+    "hospital_id": 37,
+    "department_name": "จิตเวช"
+  },
+  {
+    "id": 731,
+    "hospital_id": 37,
+    "department_name": "ผิวหนัง"
+  },
+  {
+    "id": 732,
+    "hospital_id": 37,
+    "department_name": "รังสีวิทยา"
+  },
+  {
+    "id": 733,
+    "hospital_id": 37,
+    "department_name": "เวชศาสตร์ฟื้นฟู"
+  },
+  {
+    "id": 734,
+    "hospital_id": 37,
+    "department_name": "แพทย์แผนไทย"
+  },
+  {
+    "id": 735,
+    "hospital_id": 37,
+    "department_name": "เภสัชกรรม"
+  },
+  {
+    "id": 736,
+    "hospital_id": 37,
+    "department_name": "ผู้ป่วยนอก"
+  },
+  {
+    "id": 737,
+    "hospital_id": 37,
+    "department_name": "ผู้ป่วยใน"
+  },
+  {
+    "id": 738,
+    "hospital_id": 37,
+    "department_name": "ห้องผ่าตัด"
+  },
+  {
+    "id": 739,
+    "hospital_id": 37,
+    "department_name": "หอผู้ป่วยวิกฤต (ICU)"
+  },
+  {
+    "id": 740,
+    "hospital_id": 37,
+    "department_name": "โภชนาการ"
+  }
+]

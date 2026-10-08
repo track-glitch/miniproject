@@ -95,18 +95,22 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
 
   void _updateAvailableStatuses() {
     _availableStatusList.clear();
-    for (String s in _statusList) {
-      bool exists = _notificationHistory.any((n) {
-        String title = n['notifystatus'] ?? n['status'] ?? '';
-        return title == s && !title.contains('ยกเลิก');
-      });
 
-      if (!exists) {
-        _availableStatusList.add(s);
+    // 🌟 หาลำดับสูงสุดของสถานะที่เคยส่งไปแล้ว เพื่อปิดไม่ให้เลือกสถานะข้างหลัง
+    int maxSentIndex = -1;
+    for (var n in _notificationHistory) {
+      String title = n['notifystatus'] ?? n['status'] ?? '';
+      int idx = _statusList.indexOf(title);
+      if (idx > maxSentIndex) {
+        maxSentIndex = idx;
       }
     }
 
-    // 🌟 แก้ไขตรงนี้: บังคับให้ดึง 'ตัวบนสุด' ในลิสต์ที่ยังไม่ส่งเสมอ ห้ามจำค่าเก่า
+    // 🌟 ดึงสถานะที่เหลือทั้งหมดมาใส่ลิสต์ (ตั้งแต่ตัวถัดไปจนจบ)
+    for (int i = maxSentIndex + 1; i < _statusList.length; i++) {
+      _availableStatusList.add(_statusList[i]);
+    }
+
     if (_availableStatusList.isNotEmpty) {
       _selectedStatus = _availableStatusList.first;
     } else {
@@ -184,6 +188,33 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
       String statusToSubmit = _selectedStatus!;
       String detailToSubmit = _detailController.text.trim();
 
+      // 🌟 1. หา Index ของสถานะล่าสุดที่เคยส่งไปแล้ว
+      int maxSentIndex = -1;
+      for (var n in _notificationHistory) {
+        String title = n['notifystatus'] ?? n['status'] ?? '';
+        int idx = _statusList.indexOf(title);
+        if (idx > maxSentIndex) {
+          maxSentIndex = idx;
+        }
+      }
+
+      int targetIndex = _statusList.indexOf(statusToSubmit);
+
+      // 🌟 2. ถ้ายอมข้ามสเต็ป ให้ระบบส่งสเต็ปที่ถูกข้ามไปให้ "อัตโนมัติ" ก่อน
+      if (targetIndex > maxSentIndex + 1) {
+        for (int i = maxSentIndex + 1; i < targetIndex; i++) {
+          await _service.addStatusNotification(
+            relativeUid: widget.requestData.relativeUid,
+            requestId: widget.requestData.id,
+            status: _statusList[i],
+            detail: '', // โน้ตไว้ให้รู้ว่าระบบติ๊กให้
+          );
+          // 🌟 หน่วงเวลาเล็กน้อยเพื่อให้ Timestamp ในระบบเรียงลำดับสวยงาม ไม่ทับซ้อนกัน
+          await Future.delayed(const Duration(milliseconds: 400));
+        }
+      }
+
+      // 🌟 3. ค่อยเซฟสถานะล่าสุดที่ผู้ดูแลกดเลือกจริงๆ ลงไป
       await _service.addStatusNotification(
         relativeUid: widget.requestData.relativeUid,
         requestId: widget.requestData.id,
@@ -506,50 +537,86 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // 🌟 กล่องโชว์สถานะถัดไป (แทนที่ Dropdown เดิม)
-                                    Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 14,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: primaryPurple.withOpacity(0.5),
-                                          width: 1.5,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.flag_circle_rounded,
-                                            color: primaryPurple,
-                                            size: 24,
-                                          ),
-                                          const SizedBox(width: 10),
-                                          const Text(
-                                            'สถานะถัดไป:',
+                                    // 🌟 กล่อง Dropdown แบบจำกัดการข้าม
+                                    DropdownButtonFormField<String>(
+                                      value: _selectedStatus,
+                                      items: _availableStatusList.asMap().entries.map((
+                                        entry,
+                                      ) {
+                                        int index = entry.key;
+                                        String value = entry.value;
+
+                                        // 🌟 อนุญาตให้เลือกข้ามได้ไม่เกิน 2 สถานะ (index 0=ปกติ, 1=ข้าม 1 ขั้น, 2=ข้าม 2 ขั้น)
+                                        bool isEnabled = index <= 2;
+
+                                        return DropdownMenuItem<String>(
+                                          value: value,
+                                          enabled:
+                                              isEnabled, // ปิดการเลือกถ้าเกินโควต้า
+                                          child: Text(
+                                            value,
                                             style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.black87,
+                                              color: isEnabled
+                                                  ? primaryPurple
+                                                  : Colors.grey.shade400,
+                                              fontWeight: isEnabled
+                                                  ? FontWeight.bold
+                                                  : FontWeight.normal,
                                             ),
                                           ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              _selectedStatus ?? '',
-                                              style: TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.bold,
-                                                color: primaryPurple,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (newValue) {
+                                        if (newValue != null) {
+                                          setState(() {
+                                            _selectedStatus = newValue;
+                                          });
+                                        }
+                                      },
+                                      decoration: InputDecoration(
+                                        labelText: 'อัปเดตสถานะถัดไป',
+                                        labelStyle: TextStyle(
+                                          color: Colors.grey.shade600,
+                                          fontSize: 13,
+                                        ),
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
                                           ),
-                                        ],
+                                          borderSide: BorderSide(
+                                            color: primaryPurple.withOpacity(
+                                              0.5,
+                                            ),
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          borderSide: BorderSide(
+                                            color: primaryPurple.withOpacity(
+                                              0.5,
+                                            ),
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          borderSide: BorderSide(
+                                            color: primaryPurple,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 14,
+                                              vertical: 12,
+                                            ),
                                       ),
                                     ),
                                     const SizedBox(height: 12),
@@ -630,7 +697,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'ไทม์ไลน์สถานะ',
+                                    'ประวัติส่งการแจ้งเตือน', // 🌟 แก้ชื่อหัวข้อตรงนี้
                                     style: TextStyle(
                                       color: primaryPurple,
                                       fontWeight: FontWeight.bold,
@@ -655,13 +722,19 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
     );
   }
 
-  // 🌟 ปรับปรุงการแสดงผล Timeline ให้โชว์สถานะทั้งหมดจาก _statusList แบบบนลงล่าง
+  // 🌟 กลับมาโชว์ Timeline ทุกสถานะ อันไหนยังไม่ส่งหรือข้ามไปให้เป็นสีเทา
   Widget _buildTimeline() {
-    _notificationHistory.sort((a, b) {
-      String timeA = a['notifydate'] ?? a['timestamp'] ?? "";
-      String timeB = b['notifydate'] ?? b['timestamp'] ?? "";
-      return timeA.compareTo(timeB);
-    });
+    // 🌟 1. หา Index ที่อยู่ล่างสุด (ไกลสุด) ของสถานะที่เคยส่งไปแล้ว
+    int maxCompletedIndex = -1;
+    for (int i = 0; i < _statusList.length; i++) {
+      bool exists = _notificationHistory.any((n) {
+        String title = n['notifystatus'] ?? n['status'] ?? '';
+        return title == _statusList[i];
+      });
+      if (exists) {
+        maxCompletedIndex = i; // จะเก็บค่า Index ที่ลึกที่สุดเสมอ
+      }
+    }
 
     return ListView.builder(
       shrinkWrap: true,
@@ -671,7 +744,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
         String currentStatusName = _statusList[index];
         bool isLastInList = index == _statusList.length - 1;
 
-        // ค้นหาว่าสถานะนี้ถูกส่งหรือยังใน _notificationHistory
+        // ค้นหาข้อมูลของสถานะนี้ในประวัติ
         var historyItemIndex = _notificationHistory.indexWhere((n) {
           String title = n['notifystatus'] ?? n['status'] ?? '';
           return title == currentStatusName;
@@ -682,12 +755,8 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
             ? _notificationHistory[historyItemIndex]
             : null;
 
-        // เช็กว่าเป็นสถานะสีเขียวอันสุดท้าย (เพื่อแสดงปุ่มลบ)
-        bool isLatestCompleted = false;
-        if (isCompleted) {
-          isLatestCompleted =
-              historyItemIndex == _notificationHistory.length - 1;
-        }
+        // 🌟 2. เช็กว่ามันคือสถานะล่าสุด (ล่างสุด) ที่ส่งไปหรือยัง
+        bool isLatestCompleted = index == maxCompletedIndex;
 
         return _buildTimelineTile(
           statusName: currentStatusName,

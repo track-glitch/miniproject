@@ -43,6 +43,22 @@ class _TrackStatusNotificationPageState
   // 🌟 ปรับเป็นสีเหลือง (Amber/Golden Yellow) เพื่อให้อ่านง่ายบนพื้นขาว
   static const Color highlightColor = Color(0xFFE69500);
 
+  final List<String> _statusList = [
+    'กำลังเดินทางไปรับ',
+    'ถึงจุดรับผู้ป่วย',
+    'กำลังเดินทางไปโรงพยาบาล',
+    'ถึงโรงพยาบาล',
+    'กำลังลงทะเบียน',
+    'รอพบแพทย์',
+    'กำลังตรวจรักษา',
+    'รอดำเนินการหลังตรวจ',
+    'รอชำระเงิน',
+    'รอรับยา',
+    'กำลังเดินทางกลับ',
+    'ถึงจุดหมายปลายทาง',
+    'เสร็จสิ้นการให้บริการ',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -158,6 +174,215 @@ class _TrackStatusNotificationPageState
       'ธ.ค.',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year + 543} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')} น.';
+  }
+
+  // 🌟 1. ฟังก์ชันสร้างโครงสร้างไทม์ไลน์ทั้งหมด
+  Widget _buildTimeline() {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _statusList.length,
+      itemBuilder: (context, index) {
+        String currentStatusName = _statusList[index];
+        bool isLastInList = index == _statusList.length - 1;
+
+        // ค้นหาว่าสถานะนี้ถูกส่งหรือยังใน _items ที่ดึงมาจาก Firebase
+        var historyItemIndex = _items.indexWhere((n) {
+          return n.status == currentStatusName;
+        });
+
+        bool isCompleted = historyItemIndex != -1;
+        _NotificationItem? itemData = isCompleted
+            ? _items[historyItemIndex]
+            : null;
+
+        // เช็กว่าสถานะนี้คือสถานะล่าสุดใช่ไหม
+        bool isLatestCompleted = isCompleted ? itemData!.isLatest : false;
+
+        return _buildTimelineTile(
+          statusName: currentStatusName,
+          itemData: itemData,
+          isCompleted: isCompleted,
+          isLastInList: isLastInList,
+          isLatestCompleted: isLatestCompleted,
+        );
+      },
+    );
+  }
+
+  // 🌟 2. ฟังก์ชันวาดเส้นประเชื่อมไทม์ไลน์แบบยืดหยุ่นตามความสูง
+  Widget _buildDashedLine(Color color) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 🌟 ดักบัคตรงนี้! ถ้าระบบยังคำนวณความสูงไม่เสร็จ (เป็น Infinity) ให้ข้ามไปก่อน แอปจะได้ไม่เด้ง
+        if (!constraints.hasBoundedHeight) {
+          return const SizedBox();
+        }
+
+        final boxHeight = constraints.constrainHeight();
+        const double dashHeight = 4.0;
+        const double dashSpace = 3.0;
+
+        // 🌟 คำนวณจำนวนเส้นประอัตโนมัติจากความสูงจริง
+        final int dashCount = (boxHeight / (dashHeight + dashSpace)).floor();
+
+        return Flex(
+          direction: Axis.vertical,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(
+            dashCount,
+            (_) => Container(width: 2, height: dashHeight, color: color),
+          ),
+        );
+      },
+    );
+  }
+
+  // 🌟 ฟังก์ชันสร้างรายการ Timeline (ใช้เทคนิค Stack แทน IntrinsicHeight เพื่อแก้บัคข้อมูลหาย)
+  Widget _buildTimelineTile({
+    required String statusName,
+    required _NotificationItem? itemData,
+    required bool isCompleted,
+    required bool isLastInList,
+    required bool isLatestCompleted,
+  }) {
+    Color historyColor = highlightColor;
+    Color currentColor = highlightColor;
+
+    Color dotColor = isLatestCompleted
+        ? currentColor
+        : (isCompleted ? historyColor : Colors.grey.shade300);
+    Color lineColor = (isCompleted && !isLatestCompleted)
+        ? historyColor
+        : Colors.grey.shade300;
+
+    IconData statusIcon = Icons.check;
+    Color iconColor = isCompleted ? Colors.white : Colors.transparent;
+
+    String detailText = itemData?.detail ?? '';
+    String dateTimeText = itemData?.dateTime ?? '';
+
+    return Stack(
+      children: [
+        // 🌟 1. เลเยอร์หลัง: เส้นประ (ยืดตามความสูงของเนื้อหาอัตโนมัติ)
+        if (!isLastInList)
+          Positioned(
+            left: 13, // กึ่งกลางของวงกลมพอดี
+            top: 28, // เริ่มวาดใต้จุดวงกลม
+            bottom: 0, // ยืดลงไปจนสุดขอบของรายการ
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                if (!constraints.hasBoundedHeight ||
+                    constraints.maxHeight <= 0) {
+                  return const SizedBox();
+                }
+                // คำนวณจำนวนขีด (ขีด 4px + ช่องว่าง 3px = 7)
+                final int dashCount = (constraints.maxHeight / 7).floor();
+                return Flex(
+                  direction: Axis.vertical,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(
+                    dashCount,
+                    (_) => Container(width: 2, height: 4, color: lineColor),
+                  ),
+                );
+              },
+            ),
+          ),
+
+        // 🌟 2. เลเยอร์หน้า: จุดวงกลม และ ข้อความ
+        Padding(
+          padding: const EdgeInsets.only(
+            bottom: 24.0,
+          ), // ดันระยะห่างไปหาสเต็ปถัดไป
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: dotColor,
+                  border: isLatestCompleted
+                      ? Border.all(
+                          color: currentColor.withOpacity(0.3),
+                          width: 3,
+                        )
+                      : null,
+                ),
+                child: Icon(
+                  statusIcon,
+                  color: iconColor,
+                  size: isLatestCompleted ? 14 : 16,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      statusName,
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.bold,
+                        color: isLatestCompleted
+                            ? currentColor
+                            : (isCompleted
+                                  ? const Color(0xFF241C2B)
+                                  : Colors.grey.shade400),
+                      ),
+                    ),
+                    if (isCompleted) ...[
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.access_time,
+                            size: 13,
+                            color: Colors.grey.shade500,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            dateTimeText,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (detailText.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Text(
+                              detailText,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade700,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildServiceInfoCard() {
@@ -436,16 +661,57 @@ class _TrackStatusNotificationPageState
                       ),
                     )
                   else
-                    ..._items.asMap().entries.map((entry) {
-                      var item = entry.value;
-                      return Column(
-                        children: [
-                          if (item.isLatest) _buildLatestDivider(),
-                          _NotificationCard(item: item),
-                          const SizedBox(height: 16),
+                    // 🌟 กล่องครอบ Timeline
+                    Container(
+                      padding: const EdgeInsets.only(
+                        top: 20,
+                        left: 16,
+                        right: 16,
+                        bottom: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Colors.grey.shade300,
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
                         ],
-                      );
-                    }).toList(),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.history_rounded,
+                                color: primaryPurple,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'ประวัติไทม์ไลน์',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: primaryPurple,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+
+                          // 🌟 เปลี่ยนมาเรียกใช้ _buildTimeline() ตรงนี้ครับ
+                          _buildTimeline(),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),

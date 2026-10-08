@@ -280,7 +280,7 @@ class _ReviewCaretakerPageState extends State<ReviewCaretakerPage> {
                         child: Icon(
                           index < _rating ? Icons.star : Icons.star_border,
                           color: const Color(0xFFF5A623),
-                          size: 52,
+                          size: 32,
                         ),
                       );
                     }),
