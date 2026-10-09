@@ -697,7 +697,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'ประวัติส่งการแจ้งเตือน', // 🌟 แก้ชื่อหัวข้อตรงนี้
+                                    'สถานะการแจ้งเตือนปัจุบัน', // 🌟 แก้ชื่อหัวข้อตรงนี้
                                     style: TextStyle(
                                       color: primaryPurple,
                                       fontWeight: FontWeight.bold,

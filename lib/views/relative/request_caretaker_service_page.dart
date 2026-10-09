@@ -602,59 +602,6 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildPreviewSectionWrapper(
-                          title: 'ผู้ให้บริการ',
-                          icon: Icons.support_agent_rounded,
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.check_circle,
-                                color: Colors.green.shade600,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  '${widget.caretakerData['firstname']} ${widget.caretakerData['lastname']}',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: primaryColor,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        _buildPreviewSectionWrapper(
-                          title: 'ผู้นัดหมาย',
-                          icon: Icons.person_rounded,
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildPreviewDocField(
-                                      'ชื่อผู้ป่วย',
-                                      patientName,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildPreviewDocField(
-                                      'ญาติผู้ติดต่อ',
-                                      relativeName,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        _buildPreviewSectionWrapper(
                           title: 'ข้อมูลการนัดหมาย',
                           icon: Icons.calendar_month_rounded,
                           child: Column(
@@ -672,11 +619,13 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                               ),
                               const SizedBox(height: 16),
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Expanded(
                                     child: _buildPreviewDocField(
                                       'โรงพยาบาล',
                                       _selectedHospital?.hospitalname ?? '-',
+                                      maxLines: 2,
                                     ),
                                   ),
                                   Expanded(
@@ -708,6 +657,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                               const SizedBox(height: 16),
                               _buildPreviewDocField(
                                 'รายละเอียดคำขอ',
+                                maxLines: 50,
                                 _detailController.text.trim().isEmpty
                                     ? '-'
                                     : _detailController.text.trim(),
@@ -854,7 +804,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
     );
   }
 
-  Widget _buildPreviewDocField(String label, String value) {
+  Widget _buildPreviewDocField(String label, String value, {maxLines = 1}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -868,14 +818,15 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
         ),
         const SizedBox(height: 4),
         Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            color: labelColor,
-            fontWeight: FontWeight.bold,
-          ),
-          maxLines: 2,
+          value.isEmpty ? '-' : value,
+          maxLines: maxLines,
           overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF241C2B),
+            height: 1.4,
+          ),
         ),
       ],
     );
@@ -1310,7 +1261,8 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
     String rawPhoto = '';
     if (_patientData != null && _patientData?['patientphoto'] != null) {
       rawPhoto = _patientData?['patientphoto'].toString() ?? '';
-    } else if (_relativeData != null && _relativeData?['profilephoto'] != null) {
+    } else if (_relativeData != null &&
+        _relativeData?['profilephoto'] != null) {
       rawPhoto = _relativeData?['profilephoto'].toString() ?? '';
     }
 

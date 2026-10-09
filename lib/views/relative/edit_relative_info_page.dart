@@ -471,7 +471,8 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
   // 🌟 ฟังก์ชันเสริมสำหรับแสดงข้อมูลย่อในรูปแบบที่จัดเรียงอ่านง่าย
   Widget _buildCompactInfo(String label, String value) {
-    return Text.rich( // 🟢 เปลี่ยนจาก RichText เป็น Text.rich
+    return Text.rich(
+      // 🟢 เปลี่ยนจาก RichText เป็น Text.rich
       TextSpan(
         text: '$label: ',
         style: const TextStyle(
@@ -549,7 +550,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                       children: [
                         // --- ส่วนข้อมูลญาติ ---
                         _buildSectionContainer(
-                          title: 'ข้อมูลติดต่อญาติ',
+                          title: 'ข้อมูลญาติ',
                           children: [
                             Row(
                               children: [
@@ -607,17 +608,27 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
                         // --- ส่วนรายชื่อผู้ป่วย ---
                         _buildSectionContainer(
-                          title: 'ข้อมูลผู้ป่วยในความดูแล',
+                          title: 'ข้อมูลผู้ป่วย',
                           // 🌟 เพิ่มปุ่ม "เพิ่ม" ไว้ข้างหลัง title
                           trailing: ElevatedButton.icon(
-                            icon: const Icon(Icons.add, color: Colors.white, size: 16),
+                            icon: const Icon(
+                              Icons.add,
+                              color: Colors.white,
+                              size: 16,
+                            ),
                             label: const Text(
                               'เพิ่ม',
-                              style: TextStyle(fontSize: 13, color: Colors.white),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.white,
+                              ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryColor,
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                              backgroundColor: Colors.yellow[800],
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 0,
+                              ),
                               minimumSize: const Size(0, 32),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -640,26 +651,31 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
 
                             ..._patientsData.entries.map((entry) {
                               final pData = entry.value;
-                              String fname = pData['firstname']?.toString().trim() ?? '';
-                              String lname = pData['lastname']?.toString().trim() ?? '';
-                              String displayName = (fname.isNotEmpty || lname.isNotEmpty)
+                              String fname =
+                                  pData['firstname']?.toString().trim() ?? '';
+                              String lname =
+                                  pData['lastname']?.toString().trim() ?? '';
+                              String displayName =
+                                  (fname.isNotEmpty || lname.isNotEmpty)
                                   ? '$fname $lname'
                                   : 'ผู้ป่วย ID: ${entry.key}';
 
                               String patientId = pData['patientId'] ?? '-';
                               // ทำการปิดบังเลขบัตรประชาชนสำหรับผู้ป่วยที่ไม่ได้ใช้งานอยู่
-                              if (patientId.length > 8 && entry.key != _activePatientKey) {
+                              if (patientId.length > 8 &&
+                                  entry.key != _activePatientKey) {
                                 patientId = patientId.substring(0, 8) + 'xxxxx';
                               }
 
                               String gender = pData['gender'] ?? '-';
                               String phone = pData['phonenumber'] ?? '-';
                               String disease = pData['disease'] ?? '-';
-                              if(disease.isEmpty) disease = '-';
+                              if (disease.isEmpty) disease = '-';
                               String mobility = pData['mobility'] ?? '-';
 
                               // เช็คว่าคนนี้คือผู้ป่วยหลักหรือไม่
-                              bool isCurrentlyActive = entry.key == _activePatientKey;
+                              bool isCurrentlyActive =
+                                  entry.key == _activePatientKey;
 
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
@@ -681,27 +697,44 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                   children: [
                                     CircleAvatar(
                                       radius: 25,
-                                      backgroundColor: isCurrentlyActive ? Colors.green : primaryColor,
-                                      backgroundImage: (pData['patientphoto'] != null &&
-                                              pData['patientphoto'].toString().isNotEmpty)
-                                          ? MemoryImage(
-                                              base64Decode(pData['patientphoto']
+                                      backgroundColor: isCurrentlyActive
+                                          ? Colors.green
+                                          : primaryColor,
+                                      backgroundImage:
+                                          (pData['patientphoto'] != null &&
+                                              pData['patientphoto']
                                                   .toString()
-                                                  .split(',')
-                                                  .last))
+                                                  .isNotEmpty)
+                                          ? MemoryImage(
+                                              base64Decode(
+                                                pData['patientphoto']
+                                                    .toString()
+                                                    .split(',')
+                                                    .last,
+                                              ),
+                                            )
                                           : null,
-                                      child: (pData['patientphoto'] == null ||
-                                              pData['patientphoto'].toString().isEmpty)
-                                          ? const Icon(Icons.person, color: Colors.white, size: 30)
+                                      child:
+                                          (pData['patientphoto'] == null ||
+                                              pData['patientphoto']
+                                                  .toString()
+                                                  .isEmpty)
+                                          ? const Icon(
+                                              Icons.person,
+                                              color: Colors.white,
+                                              size: 30,
+                                            )
                                           : null,
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
                                             children: [
                                               Expanded(
                                                 child: Text(
@@ -714,42 +747,71 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                                     fontSize: 16,
                                                   ),
                                                   maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
                                               ),
                                               if (isCurrentlyActive)
                                                 Container(
-                                                  padding: const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 4,
-                                                  ),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 4,
+                                                      ),
                                                   decoration: BoxDecoration(
                                                     color: Colors.green,
-                                                    borderRadius: BorderRadius.circular(20),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          20,
+                                                        ),
                                                   ),
                                                   child: const Text(
                                                     'ผู้รับบริการปัจจุบัน',
                                                     style: TextStyle(
                                                       color: Colors.white,
                                                       fontSize: 11,
-                                                      fontWeight: FontWeight.bold,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                     ),
                                                   ),
                                                 )
                                               else
                                                 ElevatedButton.icon(
-                                                  icon: const Icon(Icons.check, size: 14),
-                                                  label: const Text('เลือกใช้งาน', style: TextStyle(fontSize: 12)),
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor: Colors.grey.shade300,
-                                                    foregroundColor: Colors.black87,
-                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                                                    minimumSize: const Size(0, 28),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius: BorderRadius.circular(20),
+                                                  icon: const Icon(
+                                                    Icons.check,
+                                                    size: 14,
+                                                  ),
+                                                  label: const Text(
+                                                    'เลือกใช้งาน',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
                                                     ),
                                                   ),
-                                                  onPressed: () => _setActivePatient(entry.key),
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor:
+                                                        Colors.grey.shade300,
+                                                    foregroundColor:
+                                                        Colors.black87,
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 8,
+                                                          vertical: 0,
+                                                        ),
+                                                    minimumSize: const Size(
+                                                      0,
+                                                      28,
+                                                    ),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            20,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                  onPressed: () =>
+                                                      _setActivePatient(
+                                                        entry.key,
+                                                      ),
                                                 ),
                                             ],
                                           ),
@@ -758,12 +820,18 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                           Row(
                                             children: [
                                               Expanded(
-                                                flex: 3, 
-                                                child: _buildCompactInfo('บัตร', patientId)
+                                                flex: 3,
+                                                child: _buildCompactInfo(
+                                                  'บัตร',
+                                                  patientId,
+                                                ),
                                               ),
                                               Expanded(
-                                                flex: 2, 
-                                                child: _buildCompactInfo('เพศ', gender)
+                                                flex: 2,
+                                                child: _buildCompactInfo(
+                                                  'เพศ',
+                                                  gender,
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -771,42 +839,70 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                           Row(
                                             children: [
                                               Expanded(
-                                                flex: 3, 
-                                                child: _buildCompactInfo('โทร', phone)
+                                                flex: 3,
+                                                child: _buildCompactInfo(
+                                                  'โทร',
+                                                  phone,
+                                                ),
                                               ),
                                               Expanded(
-                                                flex: 2, 
-                                                child: _buildCompactInfo('โรค', disease)
+                                                flex: 2,
+                                                child: _buildCompactInfo(
+                                                  'โรค',
+                                                  disease,
+                                                ),
                                               ),
                                             ],
                                           ),
                                           const SizedBox(height: 4),
                                           Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            crossAxisAlignment: CrossAxisAlignment.end,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.end,
                                             children: [
                                               Expanded(
-                                                child: _buildCompactInfo('เคลื่อนไหว', mobility),
+                                                child: _buildCompactInfo(
+                                                  'เคลื่อนไหว',
+                                                  mobility,
+                                                ),
                                               ),
                                               Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   InkWell(
-                                                    onTap: () => _openPatientForm(
-                                                      patientKey: entry.key,
-                                                      initialData: pData,
-                                                    ),
+                                                    onTap: () =>
+                                                        _openPatientForm(
+                                                          patientKey: entry.key,
+                                                          initialData: pData,
+                                                        ),
                                                     child: Padding(
-                                                      padding: const EdgeInsets.all(4.0),
-                                                      child: Icon(Icons.edit, color: primaryColor, size: 20),
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            4.0,
+                                                          ),
+                                                      child: Icon(
+                                                        Icons.edit,
+                                                        color: primaryColor,
+                                                        size: 20,
+                                                      ),
                                                     ),
                                                   ),
                                                   const SizedBox(width: 8),
                                                   InkWell(
-                                                    onTap: () => _handleDeletePatient(entry.key),
+                                                    onTap: () =>
+                                                        _handleDeletePatient(
+                                                          entry.key,
+                                                        ),
                                                     child: const Padding(
-                                                      padding: EdgeInsets.all(4.0),
-                                                      child: Icon(Icons.delete, color: Colors.red, size: 20),
+                                                      padding: EdgeInsets.all(
+                                                        4.0,
+                                                      ),
+                                                      child: Icon(
+                                                        Icons.delete,
+                                                        color: Colors.red,
+                                                        size: 20,
+                                                      ),
                                                     ),
                                                   ),
                                                 ],
@@ -820,7 +916,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                 ),
                               );
                             }).toList(),
-
                           ],
                         ),
 
@@ -832,7 +927,10 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                               child: SizedBox(
                                 height: 50,
                                 child: ElevatedButton.icon(
-                                  icon: const Icon(Icons.save, color: Colors.white),
+                                  icon: const Icon(
+                                    Icons.save,
+                                    color: Colors.white,
+                                  ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: primaryColor,
                                     shape: RoundedRectangleBorder(
@@ -856,7 +954,10 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                               child: SizedBox(
                                 height: 50,
                                 child: OutlinedButton.icon(
-                                  icon: Icon(Icons.arrow_back, color: darkPurple),
+                                  icon: Icon(
+                                    Icons.arrow_back,
+                                    color: darkPurple,
+                                  ),
                                   style: OutlinedButton.styleFrom(
                                     backgroundColor: Colors.white,
                                     side: BorderSide(
@@ -901,7 +1002,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
   Widget _buildSectionContainer({
     required String title,
     required List<Widget> children,
-    Widget? trailing, 
+    Widget? trailing,
   }) {
     return Container(
       width: double.infinity,
@@ -945,7 +1046,7 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                   ),
                 ],
               ),
-              if (trailing != null) trailing, 
+              if (trailing != null) trailing,
             ],
           ),
           const SizedBox(height: 12),

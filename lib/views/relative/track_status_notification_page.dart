@@ -166,11 +166,14 @@ class _TrackStatusNotificationPageState
 
   // 🌟 2. ฟังก์ชันดึงข้อมูลโปรไฟล์ของคนที่ล็อกอิน
   Future<void> _fetchLoggedUserData() async {
-    String uid = widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+    String uid =
+        widget.loggedUid ?? FirebaseAuth.instance.currentUser?.uid ?? '';
     if (uid.isEmpty) return;
 
     try {
-      final snapshot = await FirebaseDatabase.instance.ref('Login/$uid/Relative').get();
+      final snapshot = await FirebaseDatabase.instance
+          .ref('Login/$uid/Relative')
+          .get();
       if (snapshot.exists && snapshot.value != null) {
         final data = Map<String, dynamic>.from(snapshot.value as Map);
         String activeId = data['activePatientNode']?.toString() ?? '';
@@ -192,7 +195,8 @@ class _TrackStatusNotificationPageState
                 currentPatient['firstname']?.toString(),
                 currentPatient['lastname']?.toString(),
               );
-              _loggedInUserPhoto = currentPatient['patientphoto']?.toString() ?? '';
+              _loggedInUserPhoto =
+                  currentPatient['patientphoto']?.toString() ?? '';
             } else {
               _loggedInUserName = _formatName(
                 data['gender']?.toString(),
@@ -576,7 +580,10 @@ class _TrackStatusNotificationPageState
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+          style: TextStyle(
+            fontSize: 12,
+            color: const Color.fromARGB(255, 78, 78, 78),
+          ),
         ),
         const SizedBox(height: 2),
         Text(
@@ -671,7 +678,7 @@ class _TrackStatusNotificationPageState
     );
   }
 
- @override
+  @override
   Widget build(BuildContext context) {
     // 🌟 แปลงรูปโปรไฟล์ของผู้ใช้งานที่ล็อกอิน
     ImageProvider? userImageProvider;
@@ -691,7 +698,7 @@ class _TrackStatusNotificationPageState
         backgroundColor: primaryPurple,
         elevation: 0,
         centerTitle: false, // 🌟 เปลี่ยนเป็น false เพื่อให้ข้อความชิดด้านซ้าย
-        titleSpacing: 0,    // 🌟 ลดระยะห่าง
+        titleSpacing: 0, // 🌟 ลดระยะห่าง
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () => Navigator.pop(context),
