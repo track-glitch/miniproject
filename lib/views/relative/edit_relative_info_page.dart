@@ -649,8 +649,14 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                 ),
                               ),
 
-                            ..._patientsData.entries.map((entry) {
+                            ..._patientsData.entries.toList().asMap().entries.map((
+                              item,
+                            ) {
+                              int index =
+                                  item.key + 1; // ลำดับผู้ป่วย 1, 2, 3...
+                              var entry = item.value;
                               final pData = entry.value;
+
                               String fname =
                                   pData['firstname']?.toString().trim() ?? '';
                               String lname =
@@ -661,7 +667,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                   : 'ผู้ป่วย ID: ${entry.key}';
 
                               String patientId = pData['patientId'] ?? '-';
-                              // ทำการปิดบังเลขบัตรประชาชนสำหรับผู้ป่วยที่ไม่ได้ใช้งานอยู่
                               if (patientId.length > 8 &&
                                   entry.key != _activePatientKey) {
                                 patientId = patientId.substring(0, 8) + 'xxxxx';
@@ -673,7 +678,6 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                               if (disease.isEmpty) disease = '-';
                               String mobility = pData['mobility'] ?? '-';
 
-                              // เช็คว่าคนนี้คือผู้ป่วยหลักหรือไม่
                               bool isCurrentlyActive =
                                   entry.key == _activePatientKey;
 
@@ -692,225 +696,267 @@ class _EditRelativeInfoPageState extends State<EditRelativeInfoPage> {
                                     width: isCurrentlyActive ? 2 : 1,
                                   ),
                                 ),
-                                child: Row(
+                                child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    CircleAvatar(
-                                      radius: 25,
-                                      backgroundColor: isCurrentlyActive
-                                          ? Colors.green
-                                          : primaryColor,
-                                      backgroundImage:
-                                          (pData['patientphoto'] != null &&
-                                              pData['patientphoto']
-                                                  .toString()
-                                                  .isNotEmpty)
-                                          ? MemoryImage(
-                                              base64Decode(
-                                                pData['patientphoto']
-                                                    .toString()
-                                                    .split(',')
-                                                    .last,
-                                              ),
-                                            )
-                                          : null,
-                                      child:
-                                          (pData['patientphoto'] == null ||
-                                              pData['patientphoto']
-                                                  .toString()
-                                                  .isEmpty)
-                                          ? const Icon(
-                                              Icons.person,
-                                              color: Colors.white,
-                                              size: 30,
-                                            )
-                                          : null,
+                                    // 🌟 เพิ่มส่วนป้ายกำกับ "ผู้ป่วย X" ไว้ที่แถวหน้าสุด (มุมซ้ายบน)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 8.0,
+                                      ),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: primaryColor.withOpacity(0.12),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'ผู้ป่วย $index',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(0xFF6C3483),
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  displayName,
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    color: isCurrentlyActive
-                                                        ? Colors.green.shade700
-                                                        : darkPurple,
-                                                    fontSize: 16,
-                                                  ),
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                              if (isCurrentlyActive)
-                                                Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 4,
-                                                      ),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.green,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          20,
-                                                        ),
-                                                  ),
-                                                  child: const Text(
-                                                    'ผู้รับบริการปัจจุบัน',
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 11,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
+
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 25,
+                                          backgroundColor: isCurrentlyActive
+                                              ? Colors.green
+                                              : primaryColor,
+                                          backgroundImage:
+                                              (pData['patientphoto'] != null &&
+                                                  pData['patientphoto']
+                                                      .toString()
+                                                      .isNotEmpty)
+                                              ? MemoryImage(
+                                                  base64Decode(
+                                                    pData['patientphoto']
+                                                        .toString()
+                                                        .split(',')
+                                                        .last,
                                                   ),
                                                 )
-                                              else
-                                                ElevatedButton.icon(
-                                                  icon: const Icon(
-                                                    Icons.check,
-                                                    size: 14,
-                                                  ),
-                                                  label: const Text(
-                                                    'เลือกใช้งาน',
-                                                    style: TextStyle(
-                                                      fontSize: 12,
-                                                    ),
-                                                  ),
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor:
-                                                        Colors.grey.shade300,
-                                                    foregroundColor:
-                                                        Colors.black87,
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
-                                                          horizontal: 8,
-                                                          vertical: 0,
-                                                        ),
-                                                    minimumSize: const Size(
-                                                      0,
-                                                      28,
-                                                    ),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            20,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                  onPressed: () =>
-                                                      _setActivePatient(
-                                                        entry.key,
-                                                      ),
-                                                ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 8),
-                                          // 🌟 ข้อมูลผู้ป่วยแบบจัดคอลัมน์ให้อ่านง่าย
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                flex: 3,
-                                                child: _buildCompactInfo(
-                                                  'บัตร',
-                                                  patientId,
-                                                ),
-                                              ),
-                                              Expanded(
-                                                flex: 2,
-                                                child: _buildCompactInfo(
-                                                  'เพศ',
-                                                  gender,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                flex: 3,
-                                                child: _buildCompactInfo(
-                                                  'โทร',
-                                                  phone,
-                                                ),
-                                              ),
-                                              Expanded(
-                                                flex: 2,
-                                                child: _buildCompactInfo(
-                                                  'โรค',
-                                                  disease,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
+                                              : null,
+                                          child:
+                                              (pData['patientphoto'] == null ||
+                                                  pData['patientphoto']
+                                                      .toString()
+                                                      .isEmpty)
+                                              ? const Icon(
+                                                  Icons.person,
+                                                  color: Colors.white,
+                                                  size: 30,
+                                                )
+                                              : null,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
                                             crossAxisAlignment:
-                                                CrossAxisAlignment.end,
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              Expanded(
-                                                child: _buildCompactInfo(
-                                                  'เคลื่อนไหว',
-                                                  mobility,
-                                                ),
-                                              ),
                                               Row(
-                                                mainAxisSize: MainAxisSize.min,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
                                                 children: [
-                                                  InkWell(
-                                                    onTap: () =>
-                                                        _openPatientForm(
-                                                          patientKey: entry.key,
-                                                          initialData: pData,
-                                                        ),
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                            4.0,
-                                                          ),
-                                                      child: Icon(
-                                                        Icons.edit,
-                                                        color: primaryColor,
-                                                        size: 20,
+                                                  Expanded(
+                                                    child: Text(
+                                                      displayName,
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: isCurrentlyActive
+                                                            ? Colors
+                                                                  .green
+                                                                  .shade700
+                                                            : darkPurple,
+                                                        fontSize: 16,
                                                       ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 8),
-                                                  InkWell(
-                                                    onTap: () =>
-                                                        _handleDeletePatient(
-                                                          entry.key,
+                                                  if (isCurrentlyActive)
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 8,
+                                                            vertical: 4,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.green,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              20,
+                                                            ),
+                                                      ),
+                                                      child: const Text(
+                                                        'ผู้รับบริการปัจจุบัน',
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 11,
+                                                          fontWeight:
+                                                              FontWeight.bold,
                                                         ),
-                                                    child: const Padding(
-                                                      padding: EdgeInsets.all(
-                                                        4.0,
                                                       ),
-                                                      child: Icon(
-                                                        Icons.delete,
-                                                        color: Colors.red,
-                                                        size: 20,
+                                                    )
+                                                  else
+                                                    ElevatedButton.icon(
+                                                      icon: const Icon(
+                                                        Icons.check,
+                                                        size: 14,
                                                       ),
+                                                      label: const Text(
+                                                        'เลือกใช้งาน',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                      style: ElevatedButton.styleFrom(
+                                                        backgroundColor: Colors
+                                                            .grey
+                                                            .shade300,
+                                                        foregroundColor:
+                                                            Colors.black87,
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 8,
+                                                              vertical: 0,
+                                                            ),
+                                                        minimumSize: const Size(
+                                                          0,
+                                                          28,
+                                                        ),
+                                                        shape: RoundedRectangleBorder(
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                20,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                      onPressed: () =>
+                                                          _setActivePatient(
+                                                            entry.key,
+                                                          ),
                                                     ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    flex: 3,
+                                                    child: _buildCompactInfo(
+                                                      'บัตร',
+                                                      patientId,
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    flex: 2,
+                                                    child: _buildCompactInfo(
+                                                      'เพศ',
+                                                      gender,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    flex: 3,
+                                                    child: _buildCompactInfo(
+                                                      'โทร',
+                                                      phone,
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    flex: 2,
+                                                    child: _buildCompactInfo(
+                                                      'โรค',
+                                                      disease,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.end,
+                                                children: [
+                                                  Expanded(
+                                                    child: _buildCompactInfo(
+                                                      'เคลื่อนไหว',
+                                                      mobility,
+                                                    ),
+                                                  ),
+                                                  Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      InkWell(
+                                                        onTap: () =>
+                                                            _openPatientForm(
+                                                              patientKey:
+                                                                  entry.key,
+                                                              initialData:
+                                                                  pData,
+                                                            ),
+                                                        child: Padding(
+                                                          padding:
+                                                              const EdgeInsets.all(
+                                                                4.0,
+                                                              ),
+                                                          child: Icon(
+                                                            Icons.edit,
+                                                            color: primaryColor,
+                                                            size: 20,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      InkWell(
+                                                        onTap: () =>
+                                                            _handleDeletePatient(
+                                                              entry.key,
+                                                            ),
+                                                        child: const Padding(
+                                                          padding:
+                                                              EdgeInsets.all(
+                                                                4.0,
+                                                              ),
+                                                          child: Icon(
+                                                            Icons.delete,
+                                                            color: Colors.red,
+                                                            size: 20,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ],
                                               ),
                                             ],
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
