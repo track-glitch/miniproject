@@ -44,6 +44,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   String vehicleBrand = '';
   String vehicleModel = '';
   String vehiclePlate = '';
+  String vehicleProvince = '';
   List<String> vehicleImages = [];
   List<Map<String, dynamic>> recentReviews = [];
   int _currentImageIndex = 0;
@@ -212,7 +213,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  // 🌟 เพิ่มฟังก์ชันใหม่สำหรับดึงรีวิวโดยตรงจากฐานข้อมูล (อ่านคีย์ได้ครบถ้วน)
+  // 🌟 ฟังก์ชันใหม่สำหรับดึงรีวิวโดยตรงจากฐานข้อมูล (รองรับกรณีญาติมีผู้ป่วยหลายคน)
   Future<void> _fetchRecentReviewsDirectly() async {
     try {
       final snapshot = await FirebaseDatabase.instance.ref('Login').get();
@@ -234,7 +235,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   if (cId == citizenId || cId == widget.uid) {
                     var reviewData = reqData['Review'] ?? reqData['review'];
                     if (reviewData != null && reviewData is Map) {
-                      // ค้นหาคีย์คะแนน (ทดสอบหาหลายแบบเผื่อไว้)
+                      // 1. ดึงคะแนน
                       double ratingScore = 0.0;
                       var rawRating =
                           reviewData['ratingscore'] ?? reviewData['rating'];
@@ -243,23 +244,51 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             double.tryParse(rawRating.toString()) ?? 5.0;
                       }
 
+                      // 2. ดึงคอมเมนต์และวันที่
                       String commentStr =
                           reviewData['comment']?.toString() ?? '';
                       String reviewDateStr =
                           reviewData['reviewdate']?.toString() ??
                           DateTime.now().toIso8601String();
 
-                      // เตรียมชื่อญาติคนรีวิว
+                      // 3. เตรียมชื่อญาติ (ใช้ชื่อญาติเป็นหลักในการโชว์คนรีวิว)
                       String rFirstname = (relNode['firstname'] ?? '')
                           .toString();
                       String rLastname = (relNode['lastname'] ?? '').toString();
                       String reviewerName = "$rFirstname $rLastname".trim();
                       if (reviewerName.isEmpty) reviewerName = 'ผู้ใช้บริการ';
 
+                      // 4. ดึงรูปโปรไฟล์ (พยายามดึงรูปญาติก่อน ถ้าไม่มีค่อยไปหารูปผู้ป่วยในคำขอนั้นๆ)
                       String reviewerImage =
-                          relNode['profilephoto']?.toString() ??
-                          relNode['Patient']?['patientphoto']?.toString() ??
-                          '';
+                          relNode['profilephoto']?.toString() ?? '';
+
+                      // 🌟 ส่วนที่ปรับแก้เพื่อรองรับผู้ป่วยหลายคน (หา PatientId จากคำขอ แล้วไปค้นรูปในโหนด Patient/patients)
+                      if (reviewerImage.isEmpty) {
+                        String requestedPatientId =
+                            reqData['patientId']?.toString() ?? '';
+                        dynamic pNode =
+                            relNode['Patient'] ?? relNode['patients'];
+
+                        if (pNode != null && pNode is Map) {
+                          // ถ้ามี patientId ระบุในคำขอ ให้ดึงรูปคนนั้นมา
+                          if (requestedPatientId.isNotEmpty &&
+                              pNode.containsKey(requestedPatientId)) {
+                            reviewerImage =
+                                pNode[requestedPatientId]['patientphoto']
+                                    ?.toString() ??
+                                '';
+                          }
+                          // ถ้าหาไม่เจอ หรือเป็นโครงสร้างแบบเก่า ดึงรูปคนแรกมาแสดงแทน
+                          else if (pNode.isNotEmpty) {
+                            final firstPatient = pNode.values.first;
+                            if (firstPatient is Map) {
+                              reviewerImage =
+                                  firstPatient['patientphoto']?.toString() ??
+                                  '';
+                            }
+                          }
+                        }
+                      }
 
                       tempReviews.add({
                         'ratingscore': ratingScore,
@@ -367,6 +396,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           vehicleBrand = data['Vehicle']['brand'] ?? '';
           vehicleModel = data['Vehicle']['model'] ?? '';
           vehiclePlate = data['Vehicle']['licenseplate'] ?? '';
+          vehicleProvince = data['Vehicle']['province'] ?? '';
 
           vehicleImages.clear();
           final photos =
@@ -800,12 +830,28 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               ),
                             ],
                           ),
-                          _buildInputField(
-                            'ป้ายทะเบียน',
-                            initialValue: vehiclePlate,
-                            isReadOnly: true,
-                            isEnabled: false,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildInputField(
+                                  'เลขป้ายทะเบียน',
+                                  initialValue: vehiclePlate,
+                                  isReadOnly: true,
+                                  isEnabled: false,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _buildInputField(
+                                  'จังหวัดป้ายทะเบียน',
+                                  initialValue: vehicleProvince,
+                                  isReadOnly: true,
+                                  isEnabled: false,
+                                ),
+                              ),
+                            ],
                           ),
+
                           const SizedBox(height: 5),
                           Text(
                             'ภาพถ่ายยานพาหนะ',

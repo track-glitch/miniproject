@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:async';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // =======================================================
 // 🌟 1. Widget หลัก (แสดงเป็นปุ่มสวยๆ ในหน้ากรอกข้อมูล)
@@ -173,8 +174,8 @@ class _FullScreenMapPickerState extends State<FullScreenMapPicker> {
   Timer? _searchDebounce;
   Timer? _mapDragDebounce;
 
-  final String longdoApiKey = '3f1eabefb61f80a37abf70743fe9fc33';
-  final String maptilerApiKey = 'JCT1H6ehzlMaKZyrC5mp';
+  final String longdoApiKey = dotenv.env['LONGDO_API_KEY'] ?? '';
+  final String maptilerApiKey = dotenv.env['MAPTILER_API_KEY'] ?? '';
 
   @override
   void initState() {

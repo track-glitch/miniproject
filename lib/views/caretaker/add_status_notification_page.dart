@@ -188,33 +188,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
       String statusToSubmit = _selectedStatus!;
       String detailToSubmit = _detailController.text.trim();
 
-      // 🌟 1. หา Index ของสถานะล่าสุดที่เคยส่งไปแล้ว
-      int maxSentIndex = -1;
-      for (var n in _notificationHistory) {
-        String title = n['notifystatus'] ?? n['status'] ?? '';
-        int idx = _statusList.indexOf(title);
-        if (idx > maxSentIndex) {
-          maxSentIndex = idx;
-        }
-      }
-
-      int targetIndex = _statusList.indexOf(statusToSubmit);
-
-      // 🌟 2. ถ้ายอมข้ามสเต็ป ให้ระบบส่งสเต็ปที่ถูกข้ามไปให้ "อัตโนมัติ" ก่อน
-      if (targetIndex > maxSentIndex + 1) {
-        for (int i = maxSentIndex + 1; i < targetIndex; i++) {
-          await _service.addStatusNotification(
-            relativeUid: widget.requestData.relativeUid,
-            requestId: widget.requestData.id,
-            status: _statusList[i],
-            detail: '', // โน้ตไว้ให้รู้ว่าระบบติ๊กให้
-          );
-          // 🌟 หน่วงเวลาเล็กน้อยเพื่อให้ Timestamp ในระบบเรียงลำดับสวยงาม ไม่ทับซ้อนกัน
-          await Future.delayed(const Duration(milliseconds: 400));
-        }
-      }
-
-      // 🌟 3. ค่อยเซฟสถานะล่าสุดที่ผู้ดูแลกดเลือกจริงๆ ลงไป
+      // 🌟 บันทึกสถานะปัจจุบันลง Firebase ทันที (ไม่ต้องมีลูปเช็กการข้ามสเต็ปแล้ว)
       await _service.addStatusNotification(
         relativeUid: widget.requestData.relativeUid,
         requestId: widget.requestData.id,
@@ -538,6 +512,7 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     // 🌟 กล่อง Dropdown แบบจำกัดการข้าม
+                                    // 🌟 กล่อง Dropdown แบบห้ามเลือกข้ามสถานะ (บังคับตามลำดับ)
                                     DropdownButtonFormField<String>(
                                       value: _selectedStatus,
                                       items: _availableStatusList.asMap().entries.map((
@@ -546,13 +521,13 @@ class _AddStatusNotificationPageState extends State<AddStatusNotificationPage> {
                                         int index = entry.key;
                                         String value = entry.value;
 
-                                        // 🌟 อนุญาตให้เลือกข้ามได้ไม่เกิน 2 สถานะ (index 0=ปกติ, 1=ข้าม 1 ขั้น, 2=ข้าม 2 ขั้น)
-                                        bool isEnabled = index <= 2;
+                                        // 🌟 เปลี่ยนเป็น index == 0 เพื่อบังคับให้เลือกได้เฉพาะสถานะถัดไปเท่านั้น (ห้ามข้าม)
+                                        bool isEnabled = index == 0;
 
                                         return DropdownMenuItem<String>(
                                           value: value,
                                           enabled:
-                                              isEnabled, // ปิดการเลือกถ้าเกินโควต้า
+                                              isEnabled, // ปิดการเลือกสถานะอื่นที่ยังไม่ถึงคิว
                                           child: Text(
                                             value,
                                             style: TextStyle(

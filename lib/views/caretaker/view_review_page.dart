@@ -45,7 +45,8 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
     String citizenId = '';
 
     if (profile != null) {
-      caretakerName = "${profile['firstname'] ?? ''} ${profile['lastname'] ?? ''}".trim();
+      caretakerName =
+          "${profile['firstname'] ?? ''} ${profile['lastname'] ?? ''}".trim();
       caretakerCitizenId = profile['caretakerId']?.toString() ?? '';
       citizenId = caretakerCitizenId; // เก็บไว้เทียบคีย์
       caretakerImage = profile['profilephoto']?.toString() ?? '';
@@ -56,7 +57,7 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
       final snapshot = await FirebaseDatabase.instance.ref('Login').get();
       if (snapshot.exists && snapshot.value != null) {
         final allUsers = Map<dynamic, dynamic>.from(snapshot.value as Map);
-        
+
         allUsers.forEach((userKey, userValue) {
           if (userValue is Map && userValue.containsKey('Relative')) {
             var relNode = userValue['Relative'];
@@ -66,34 +67,71 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
                 requests.forEach((reqId, reqData) {
                   if (reqData is Map && reqData['caretakerId'] != null) {
                     String cId = reqData['caretakerId'].toString();
-                    
-                    // 🌟 2. เช็คเทียบทั้ง UID (widget.caretakerId) และ Citizen ID 
-                    if (cId == widget.caretakerId || (citizenId.isNotEmpty && cId == citizenId)) {
+
+                    // 🌟 2. เช็คเทียบทั้ง UID (widget.caretakerId) และ Citizen ID
+                    if (cId == widget.caretakerId ||
+                        (citizenId.isNotEmpty && cId == citizenId)) {
                       var reviewData = reqData['Review'] ?? reqData['review'];
                       if (reviewData != null && reviewData is Map) {
-                        
-                        // 🌟 3. อ่านค่าดาวด้วยโค้ดเดียวกับหน้า Home เป๊ะๆ เพื่อกันพลาด
+                        // 🌟 3. อ่านค่าดาว
                         double ratingScore = 0.0;
-                        var rawRating = reviewData['rating'] ?? reviewData['ratingscore'];
+                        var rawRating =
+                            reviewData['rating'] ?? reviewData['ratingscore'];
                         if (rawRating != null) {
-                          ratingScore = double.tryParse(rawRating.toString()) ?? 0.0;
+                          ratingScore =
+                              double.tryParse(rawRating.toString()) ?? 0.0;
                         }
 
-                        String commentStr = reviewData['comment']?.toString() ?? '';
-                        String reviewDateStr = reviewData['reviewdate']?.toString() ?? DateTime.now().toIso8601String();
+                        String commentStr =
+                            reviewData['comment']?.toString() ?? '';
+                        String reviewDateStr =
+                            reviewData['reviewdate']?.toString() ??
+                            DateTime.now().toIso8601String();
 
-                        String rFirstname = (relNode['firstname'] ?? '').toString();
-                        String rLastname = (relNode['lastname'] ?? '').toString();
+                        // 🌟 4. เตรียมชื่อคนรีวิว (ยึดชื่อญาติเป็นหลัก)
+                        String rFirstname = (relNode['firstname'] ?? '')
+                            .toString();
+                        String rLastname = (relNode['lastname'] ?? '')
+                            .toString();
                         String reviewerName = "$rFirstname $rLastname".trim();
                         if (reviewerName.isEmpty) reviewerName = 'ผู้ใช้บริการ';
 
-                        String reviewerImage = relNode['profilephoto']?.toString() ?? 
-                                             relNode['Patient']?['patientphoto']?.toString() ?? '';
+                        // 🌟 5. ดึงรูปโปรไฟล์แบบแยกผู้ป่วยหลายคน
+                        String reviewerImage =
+                            relNode['profilephoto']?.toString() ?? '';
+
+                        if (reviewerImage.isEmpty) {
+                          String requestedPatientId =
+                              reqData['patientId']?.toString() ?? '';
+                          dynamic pNode =
+                              relNode['Patient'] ?? relNode['patients'];
+
+                          if (pNode != null && pNode is Map) {
+                            // ถ้ามี patientId ระบุในคำขอ ให้ดึงรูปคนนั้นมา
+                            if (requestedPatientId.isNotEmpty &&
+                                pNode.containsKey(requestedPatientId)) {
+                              reviewerImage =
+                                  pNode[requestedPatientId]['patientphoto']
+                                      ?.toString() ??
+                                  '';
+                            }
+                            // ถ้าหาไม่เจอ หรือเป็นโครงสร้างแบบเก่า ให้ดึงรูปคนแรกมาแสดงแทน
+                            else if (pNode.isNotEmpty) {
+                              final firstPatient = pNode.values.first;
+                              if (firstPatient is Map) {
+                                reviewerImage =
+                                    firstPatient['patientphoto']?.toString() ??
+                                    '';
+                              }
+                            }
+                          }
+                        }
 
                         String formattedDate = '';
                         try {
                           DateTime dt = DateTime.parse(reviewDateStr);
-                          formattedDate = "${dt.day}/${dt.month}/${dt.year + 543}";
+                          formattedDate =
+                              "${dt.day}/${dt.month}/${dt.year + 543}";
                         } catch (_) {}
 
                         fetchedReviews.add({
@@ -102,7 +140,7 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
                           'timeAgo': formattedDate,
                           'reviewerName': reviewerName,
                           'reviewerImage': reviewerImage,
-                          'rawDate': reviewDateStr, 
+                          'rawDate': reviewDateStr,
                         });
                       }
                     }
@@ -112,7 +150,7 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
             }
           }
         });
-        
+
         fetchedReviews.sort((a, b) => b['rawDate'].compareTo(a['rawDate']));
       }
     } catch (e) {
@@ -311,7 +349,7 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
         setState(() {
           _selectedFilter = label;
           if (label == 'ทั้งหมด') {
-            filteredReviews = allReviews; 
+            filteredReviews = allReviews;
           } else {
             double targetStar = double.parse(label);
             filteredReviews = allReviews.where((review) {
@@ -322,12 +360,10 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(right: 8), 
+        margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected
-              ? primaryColor
-              : Colors.grey.shade100, 
+          color: isSelected ? primaryColor : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? primaryColor : Colors.grey.shade300,
@@ -338,11 +374,7 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (label != 'ทั้งหมด') ...[
-              const Icon(
-                Icons.star,
-                color: Color(0xFFFFC107),
-                size: 16,
-              ),
+              const Icon(Icons.star, color: Color(0xFFFFC107), size: 16),
               const SizedBox(width: 4),
             ],
             Text(
@@ -434,9 +466,7 @@ class _ViewReviewPageState extends State<ViewReviewPage> {
                   Row(
                     children: List.generate(5, (index) {
                       return Icon(
-                        index < rating.floor()
-                            ? Icons.star
-                            : Icons.star_border,
+                        index < rating.floor() ? Icons.star : Icons.star_border,
                         color: const Color(0xFFFFC107),
                         size: 16,
                       );

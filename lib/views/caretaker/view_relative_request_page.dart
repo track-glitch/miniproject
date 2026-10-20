@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import '../../widgets/custom_header_nav.dart';
 import '../../widgets/custom_bottom_nav.dart';
@@ -54,7 +55,7 @@ class _ViewRelativeRequestPageStage extends State<ViewRelativeRequestPage> {
 
   String _distanceText = 'กำลังคำนวณ...';
 
-  final String maptilerApiKey = 'JCT1H6ehzlMaKZyrC5mp';
+  final String maptilerApiKey = dotenv.env['MAPTILER_API_KEY'] ?? '';
 
   // 🌟 ฟังก์ชันแปลงเพศเป็นคำนำหน้าชื่อ (บังคับใช้ นาย / นาง เท่านั้น)
   String getPrefix(String? gender) {

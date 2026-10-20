@@ -75,7 +75,9 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
     if (uid.isEmpty) return;
 
     try {
-      final snapshot = await FirebaseDatabase.instance.ref('Login/$uid/Relative').get();
+      final snapshot = await FirebaseDatabase.instance
+          .ref('Login/$uid/Relative')
+          .get();
       if (snapshot.exists && snapshot.value != null) {
         final data = Map<String, dynamic>.from(snapshot.value as Map);
         String activeId = data['activePatientNode']?.toString() ?? '';
@@ -96,7 +98,8 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                 firstname: currentPatient['firstname']?.toString(),
                 lastname: currentPatient['lastname']?.toString(),
               );
-              _loggedInUserPhoto = currentPatient['patientphoto']?.toString() ?? '';
+              _loggedInUserPhoto =
+                  currentPatient['patientphoto']?.toString() ?? '';
             } else {
               _loggedInUserName = formatFullNameWithTitle(
                 gender: data['gender']?.toString(),
@@ -112,7 +115,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       print("Error fetch logged user data: $e");
     }
   }
-  
 
   // 🌟 ฟังก์ชันแปลงเพศเป็นคำนำหน้าชื่อ นาย / นาง
   String getPrefix(String? gender) {
@@ -954,8 +956,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       );
     }
 
-    
-
     ImageProvider? userImageProvider;
     if (_loggedInUserPhoto.isNotEmpty) {
       try {
@@ -967,7 +967,6 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
       } catch (_) {}
     }
 
-    
     var req = widget.requestModel;
     String statusText = 'รอตอบรับ';
     Color statusColor = const Color(0xFFE65100);
@@ -1008,7 +1007,7 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
         elevation: 2,
         shadowColor: const Color(0xFF7B1FA2).withOpacity(0.3),
         centerTitle: false, // 🌟 ขยับข้อความไปด้านหน้า (ชิดซ้าย)
-        titleSpacing: 0,    // 🌟 ลดระยะห่างจากปุ่มย้อนกลับ
+        titleSpacing: 0, // 🌟 ลดระยะห่างจากปุ่มย้อนกลับ
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back_ios_new_rounded,
@@ -1335,6 +1334,24 @@ class _ViewRequestDetailPageState extends State<ViewRequestDetailPage> {
                               child: _buildDocField(
                                 'เบอร์โทร',
                                 patientData?['phonenumber'] ?? '-',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildDocField(
+                                'โรคประจำตัว',
+                                patientData?['disease'] ?? '-',
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: _buildDocField(
+                                'สภาพร่างกาย',
+                                patientData?['mobility'] ?? '-',
                               ),
                             ),
                           ],

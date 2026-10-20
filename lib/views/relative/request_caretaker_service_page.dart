@@ -7,6 +7,9 @@ import 'dart:math';
 import 'dart:convert';
 import '../../models/hospital_model.dart';
 import '../../models/department_model.dart';
+import '../../models/hospital_model.dart';
+import '../../models/department_model.dart';
+import 'package:miniproject/widgets/location_picker_widget.dart'; // 🌟 เพิ่มบรรทัดนี้
 
 class ServiceRequestPage extends StatefulWidget {
   final Map<String, dynamic> caretakerData;
@@ -50,11 +53,15 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
   final TextEditingController _departmentController = TextEditingController();
 
   // สำหรับจุดรับ (Pickup)
-  final int _pickupOption = 1; // 1 = ตามหน้าโปรไฟล์, 2 = ระบุที่อยู่ใหม่
+  int _pickupOption =
+      1; // 🌟 เอา final ออก (1 = ตามหน้าโปรไฟล์, 2 = ระบุที่อยู่ใหม่)
   final TextEditingController _pickupAddressController =
       TextEditingController();
-  final LatLng _pickupLocation = const LatLng(13.7563, 100.5018);
-  final bool _pickupHasPinned = false;
+  LatLng _pickupLocation = const LatLng(
+    13.7563,
+    100.5018,
+  ); // 🌟 เอา final ออก (หรือตั้งเป็นพิกัดเชียงใหม่ LatLng(18.7883, 98.9853))
+  bool _pickupHasPinned = false; // 🌟 เอา final ออก
   final bool _pickupMapExpanded = false;
 
   // สำหรับโรงพยาบาลและจุดส่ง (Dropoff)
@@ -484,19 +491,30 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
     String realCaretakerIdCard =
         widget.caretakerData['caretakerId']?.toString() ?? widget.caretakerId;
 
+    // 🌟 เช็กว่าใช้ที่อยู่จากโปรไฟล์ หรือ ที่อยู่ปักหมุดใหม่
+    String finalPickupAddress = _pickupOption == 1
+        ? _profileAddress
+        : _pickupAddressController.text.trim();
+    double finalLat = _pickupOption == 1
+        ? _profileLat
+        : _pickupLocation.latitude;
+    double finalLng = _pickupOption == 1
+        ? _profileLng
+        : _pickupLocation.longitude;
+
     await requestRef.set({
       "requestId": _generatedRequestId,
       "caretakerId": realCaretakerIdCard,
       "patientId": _activePatientId,
-      "pickupaddress": _profileAddress,
+      "pickupaddress": finalPickupAddress, // 🌟 ใช้ตัวแปรที่เช็กแล้ว
       "requestdetail": _detailController.text.trim(),
       "Department": departmentNode.toJson(),
       "appointmentdate": _selectedDate.toIso8601String(),
       "appointmenttime": apptDT.toIso8601String(),
       "requestdate": DateTime.now().toIso8601String(),
       "requeststatus": "pending",
-      "longitude": _profileLng,
-      "latitude": _profileLat,
+      "longitude": finalLng, // 🌟 ใช้ตัวแปรที่เช็กแล้ว
+      "latitude": finalLat, // 🌟 ใช้ตัวแปรที่เช็กแล้ว
     });
 
     if (!mounted) return;
@@ -525,6 +543,14 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
       firstname: _relativeData?['firstname']?.toString(),
       lastname: _relativeData?['lastname']?.toString(),
     );
+
+    // 🌟 เพิ่มตัวแปรดึงที่อยู่จุดรับตาม Option ที่เลือก (1 = โปรไฟล์, 2 = ปักหมุดใหม่)
+    String previewPickupAddress = _pickupOption == 1
+        ? _profileAddress
+        : _pickupAddressController.text.trim();
+    String pickupTypeLabel = _pickupOption == 1
+        ? '(ใช้ที่อยู่ตามหน้าโปรไฟล์)'
+        : '(ระบุจุดรับ-ส่งกลับใหม่)';
 
     showDialog(
       context: context,
@@ -661,6 +687,30 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                                 _detailController.text.trim().isEmpty
                                     ? '-'
                                     : _detailController.text.trim(),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // 🌟 เพิ่มกล่องแสดงจุดรับ-ส่ง ตรงนี้ครับ!
+                        _buildPreviewSectionWrapper(
+                          title: 'ข้อมูลจุดรับส่ง',
+                          icon: Icons.location_on_rounded,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildPreviewDocField(
+                                'จุดรับและส่ง (บ้าน)',
+                                previewPickupAddress.isEmpty
+                                    ? '-'
+                                    : previewPickupAddress,
+                                maxLines: 4,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildPreviewDocField(
+                                'จุดหมายปลายทาง (โรงพยาบาล)',
+                                _selectedHospital?.hospitalname ?? '-',
+                                maxLines: 2,
                               ),
                             ],
                           ),
@@ -1159,7 +1209,7 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFF8F5FF),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor, width: 1.5),
       ),
@@ -1168,40 +1218,123 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
         children: [
           Row(
             children: [
+              Icon(Icons.location_on_rounded, color: primaryColor, size: 20),
+              const SizedBox(width: 8),
               Text(
-                'สรุปข้อมูลการเดินทาง',
-                style: _labelStyle().copyWith(fontSize: 14),
+                'ข้อมูลจุดรับส่ง',
+                style: _labelStyle().copyWith(fontSize: 15),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.location_on, color: Colors.blue, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'จุดรับ: ตามที่อยู่ในโปรไฟล์ของผู้ป่วย\n(${_profileAddress.isNotEmpty ? _profileAddress : "ไม่พบที่อยู่"})',
-                  style: const TextStyle(fontSize: 13, height: 1.4),
+              const Text(
+                ' *',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.location_on, color: Colors.red, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'จุดส่ง: ${_selectedHospital?.hospitalname ?? "กรุณาเลือกโรงพยาบาลจากรายการด้านบน"}',
-                  style: const TextStyle(fontSize: 13, height: 1.4),
-                ),
-              ),
-            ],
+          const SizedBox(height: 8),
+
+          // 🌟 ตัวเลือกที่ 1: ใช้ที่อยู่ตามหน้าโปรไฟล์
+          RadioListTile<int>(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            value: 1,
+            groupValue: _pickupOption,
+            activeColor: primaryColor,
+            title: const Text(
+              'ใช้ที่อยู่ตามหน้าโปรไฟล์',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            onChanged: (val) {
+              setState(() {
+                _pickupOption = val!;
+              });
+            },
           ),
+
+          // แสดงกล่องที่อยู่เดิมเมื่อเลือก Option 1
+          if (_pickupOption == 1)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(left: 12, bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: greyBorder),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.home_rounded, color: Colors.blue, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _profileAddress.isNotEmpty
+                          ? _profileAddress
+                          : 'ไม่พบที่อยู่ในโปรไฟล์ (กรุณาเลือกจุดรับ-ส่งกลับใหม่)',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: _profileAddress.isNotEmpty
+                            ? Colors.black87
+                            : Colors.red,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // 🌟 ตัวเลือกที่ 2: เลือกจุดรับ-ส่งกลับใหม่
+          RadioListTile<int>(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            value: 2,
+            groupValue: _pickupOption,
+            activeColor: primaryColor,
+            title: const Text(
+              'เลือกจุดรับส่งใหม่',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            onChanged: (val) {
+              setState(() {
+                _pickupOption = val!;
+                if (!_pickupHasPinned &&
+                    _profileLat != 0.0 &&
+                    _profileLng != 0.0) {
+                  _pickupLocation = LatLng(_profileLat, _profileLng);
+                }
+              });
+            },
+          ),
+
+          // แสดง LocationPickerWidget เหมือนหน้า edit_relative เมื่อเลือก Option 2
+          if (_pickupOption == 2) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: greyBorder),
+              ),
+              child: LocationPickerWidget(
+                key: const ValueKey('request_pickup_map_picker'),
+                initialLocation: _pickupLocation,
+                initialAddress: _pickupAddressController.text,
+                onLocationChanged: (newLocation, newAddress) {
+                  setState(() {
+                    _pickupLocation = newLocation;
+                    _pickupAddressController.text = newAddress;
+                    _pickupHasPinned = true;
+                  });
+                },
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1750,6 +1883,10 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                 ),
                 const SizedBox(height: 24),
 
+                // 🌟 8. วางเรียกใช้งานตรงนี้ครับ! (อยู่ก่อนปุ่มตรวจสอบข้อมูล)
+                _buildPickupDropoffSection(),
+                const SizedBox(height: 24),
+
                 // 9. ปุ่มยืนยัน/ยกเลิก
                 Row(
                   children: [
@@ -1776,10 +1913,16 @@ class _ServiceRequestPageState extends State<ServiceRequestPage> {
                             );
                             return;
                           }
-                          if (_pickupOption == 2 && !_pickupHasPinned) {
+                          if (_pickupOption == 2 &&
+                              (!_pickupHasPinned ||
+                                  _pickupAddressController.text
+                                      .trim()
+                                      .isEmpty)) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text("กรุณาปักหมุดพิกัดจุดรับ"),
+                                content: Text(
+                                  "กรุณาปักหมุดและระบุรายละเอียดที่อยู่จุดรับ-ส่งกลับใหม่",
+                                ),
                                 backgroundColor: Colors.red,
                               ),
                             );
